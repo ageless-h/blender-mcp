@@ -10,6 +10,7 @@ from blender_mcp.security.allowlist import Allowlist
 from blender_mcp.security.audit import AuditEvent, AuditLogger
 from blender_mcp.security.permissions import PermissionPolicy
 from blender_mcp.security.rate_limit import RateLimiter
+from blender_mcp.transport.base import TransportAdapter
 
 
 @dataclass
@@ -62,3 +63,25 @@ class MCPServer:
 
     def set_allowed_capabilities(self, capabilities: Iterable[str]) -> None:
         self.allowlist.replace(capabilities)
+        if self.allowlist.audit_logger is None:
+            self.audit_logger.record(
+                AuditEvent(
+                    capability="allowlist.update",
+                    ok=True,
+                )
+            )
+
+    def handle_transport(self, transport: TransportAdapter) -> None:
+        import json
+
+        for raw in transport.receive():
+            if not raw:
+                continue
+            payload = json.loads(raw.decode("utf-8"))
+            request = Request(
+                capability=payload.get("capability", ""),
+                payload=payload.get("payload", {}),
+                scopes=payload.get("scopes", []),
+            )
+            response = self.handle_request(request)
+            transport.send(json.dumps(response.__dict__).encode("utf-8"))
