@@ -58,6 +58,12 @@ class TestWorkflowScenarios(unittest.TestCase):
         self.assertFalse(response.ok)
         self.assertEqual(response.error, "rate_limited")
 
+    def test_rate_limit_window_reset(self) -> None:
+        self.rate_limiter.window_seconds = 0.0
+        request = Request(capability="scene.write", payload={}, scopes=["scene:write"])
+        self.assertTrue(self.server.handle_request(request).ok)
+        self.assertTrue(self.server.handle_request(request).ok)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -64,10 +64,16 @@ class MCPServer:
     def set_allowed_capabilities(self, capabilities: Iterable[str]) -> None:
         self.allowlist.replace(capabilities)
         if self.allowlist.audit_logger is None:
+            current = set(self.allowlist.allowed)
             self.audit_logger.record(
                 AuditEvent(
                     capability="allowlist.update",
                     ok=True,
+                    data={
+                        "count": len(current),
+                        "added": sorted(current),
+                        "removed": [],
+                    },
                 )
             )
 
