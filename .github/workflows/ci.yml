@@ -47,3 +47,5 @@ jobs:
           pip install .
       - name: Integration placeholder
         run: python -m unittest tests.integration.test_workflows
+      - name: Integration example
+        run: python -m examples.stdio_loop < /dev/null
