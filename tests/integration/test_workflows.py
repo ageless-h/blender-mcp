@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import unittest
 
+from blender_mcp.catalog.catalog import CapabilityCatalog, CapabilityMeta
 from blender_mcp.core.lifecycle import ServiceLifecycle
 from blender_mcp.core.server import MCPServer
 from blender_mcp.core.types import Request
@@ -29,6 +30,13 @@ class TestWorkflowScenarios(unittest.TestCase):
         request = Request(capability="scene.read", payload={}, scopes=[])
         response = self.server.handle_request(request)
         self.assertTrue(response.ok)
+
+    def test_capability_discovery_returns_catalog(self) -> None:
+        catalog = CapabilityCatalog()
+        catalog.register(CapabilityMeta(name="scene.read", description="Read scene"))
+        capabilities = list(catalog.list())
+        self.assertEqual(len(capabilities), 1)
+        self.assertEqual(capabilities[0].name, "scene.read")
 
     def test_disallowed_capability_rejected(self) -> None:
         request = Request(capability="scene.delete", payload={}, scopes=[])
