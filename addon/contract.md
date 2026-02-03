@@ -4,11 +4,11 @@
 - Version: 0.1.0
 
 ## Entrypoints
-- `<entrypoint_name>`: <purpose>
+- `addon_entrypoint`: Minimal addon readiness entrypoint
 
 ## Supported Blender Versions
-- LTS: <versions>
-- Latest: <version>
+- LTS: 3.6
+- Latest: 4.x
 
 ## Compatibility Notes
-- <notes>
+- Minimal stub for MCP core validation
