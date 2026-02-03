@@ -13,8 +13,8 @@ The system SHALL provide an in-memory audit logger implementation for tests.
 - **THEN** it is stored in memory for inspection
 
 ### Requirement: File or JSON export is supported
-The system SHALL support exporting audit events to a file or JSON format.
+The system SHALL support exporting audit events to a file or JSON format, including optional metadata fields.
 
 #### Scenario: Audit export
 - **WHEN** an export is requested
-- **THEN** audit events are written in JSON format
+- **THEN** audit events are written in JSON format with metadata if present
