@@ -1,7 +1,17 @@
 # Blender MCP Example Workflows
 
-## Example 1: Capability Discovery
-Request the catalog and list available capabilities with required scopes.
+## Example 1: Minimal Stdio Loop
+Run:
+
+```
+python -m examples.stdio_loop
+```
+
+Send:
+
+```
+{ "capability": "scene.read", "payload": {}, "scopes": [] }
+```
 
 ## Example 2: Safe Scene Update
 Use a scoped capability to modify scene properties with allowlist enforcement.
