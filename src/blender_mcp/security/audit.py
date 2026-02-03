@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import List
+from typing import Any, Dict, List
 
 
 @dataclass(frozen=True)
@@ -11,6 +11,7 @@ class AuditEvent:
     capability: str
     ok: bool
     error: str | None = None
+    data: Dict[str, Any] | None = None
     timestamp: str = field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
     )

@@ -16,11 +16,19 @@ class Allowlist:
         return capability in self.allowed
 
     def replace(self, capabilities: Iterable[str]) -> None:
+        previous = self.allowed
         self.allowed = set(capabilities)
+        added = sorted(self.allowed - previous)
+        removed = sorted(previous - self.allowed)
         if self.audit_logger is not None:
             self.audit_logger.record(
                 AuditEvent(
                     capability="allowlist.update",
                     ok=True,
+                    data={
+                        "count": len(self.allowed),
+                        "added": added,
+                        "removed": removed,
+                    },
                 )
             )
