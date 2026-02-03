@@ -1,31 +1,34 @@
 # Project Context
 
 ## Purpose
-[Describe your project's purpose and goals]
+Provide a minimal, secure MCP server surface for Blender automation.
 
 ## Tech Stack
-- [List your primary technologies]
-- [e.g., TypeScript, React, Node.js]
+- Python 3.12
+- MCP server core
 
 ## Project Conventions
 
 ### Code Style
-[Describe your code style preferences, formatting rules, and naming conventions]
+- Prefer explicit, readable code with minimal dependencies.
+- Use UTF-8 for file I/O.
 
 ### Architecture Patterns
-[Document your architectural decisions and patterns]
+- Transport adapters are isolated from core server logic.
+- Security primitives live under `security/`.
 
 ### Testing Strategy
-[Explain your testing approach and requirements]
+- Unittest-based unit and integration tests under `tests/`.
+- Integration tests must align to the documented plan.
 
 ### Git Workflow
-[Describe your branching strategy and commit conventions]
+- Small, focused commits with English messages.
 
 ## Domain Context
-[Add domain-specific knowledge that AI assistants need to understand]
+- Blender automation via MCP requires strict allowlist and auditability.
 
 ## Important Constraints
-[List any technical, business, or regulatory constraints]
+- Avoid private Blender APIs.
 
 ## External Dependencies
-[Document key external services, APIs, or systems]
+- None required beyond standard Python for the minimal loop.
