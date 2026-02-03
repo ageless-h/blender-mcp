@@ -6,8 +6,8 @@ TBD.
 ## Requirements
 
 ### Requirement: AGENTS defines execution guidance
-AGENTS.md SHALL define the minimal execution and collaboration guidance.
+AGENTS.md SHALL include verification steps and where to record changes.
 
 #### Scenario: Agent workflow setup
 - **WHEN** a contributor reads AGENTS.md
-- **THEN** they can identify how to run tasks and where to record decisions
+- **THEN** they can identify verification steps and change-recording location
