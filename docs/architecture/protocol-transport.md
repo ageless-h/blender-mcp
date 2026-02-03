@@ -1,7 +1,9 @@
 # Protocol and Transport Choices
 
 ## Protocol
-- Use the official MCP protocol and official SDK for core server implementation.
+- The current implementation uses a minimal JSON-line loop over stdio for the runnable example.
+- Messages are JSON-RPC 2.0 objects serialized as one JSON document per line.
+- Official MCP SDK integration is planned for a future change.
 
 ## Transport
 - MVP default: stdio transport.

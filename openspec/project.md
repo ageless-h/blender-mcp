@@ -21,6 +21,9 @@ Provide a minimal, secure MCP server surface for Blender automation.
 - Unittest-based unit and integration tests under `tests/`.
 - Integration tests must align to the documented plan.
 
+### CI Expectations
+- Lint, unit, and integration placeholder run on pull requests.
+
 ### Git Workflow
 - Small, focused commits with English messages.
 
