@@ -1,0 +1,17 @@
+"filename", "language", "Markdown", "comment", "blank", "total"
+"z:\8_code\blender-mcp\docs\architecture\core-lifecycle.md", "Markdown", 9, 0, 3, 12
+"z:\8_code\blender-mcp\docs\architecture\plugin-boundary.md", "Markdown", 8, 0, 4, 12
+"z:\8_code\blender-mcp\docs\architecture\transport.md", "Markdown", 7, 0, 4, 11
+"z:\8_code\blender-mcp\docs\capabilities\catalog.md", "Markdown", 15, 0, 3, 18
+"z:\8_code\blender-mcp\docs\research\blender-api.md", "Markdown", 11, 0, 4, 15
+"z:\8_code\blender-mcp\docs\research\mcp.md", "Markdown", 13, 0, 4, 17
+"z:\8_code\blender-mcp\docs\research\reference-projects.md", "Markdown", 13, 0, 4, 17
+"z:\8_code\blender-mcp\docs\security\allowlist.md", "Markdown", 9, 0, 4, 13
+"z:\8_code\blender-mcp\docs\security\audit-logging.md", "Markdown", 7, 0, 4, 11
+"z:\8_code\blender-mcp\docs\security\permission-scopes.md", "Markdown", 7, 0, 3, 10
+"z:\8_code\blender-mcp\docs\security\rate-limits.md", "Markdown", 8, 0, 4, 12
+"z:\8_code\blender-mcp\docs\testing\ci-matrix.md", "Markdown", 8, 0, 4, 12
+"z:\8_code\blender-mcp\docs\testing\integration-test-plan.md", "Markdown", 10, 0, 3, 13
+"z:\8_code\blender-mcp\docs\validation\evaluation-gate.md", "Markdown", 9, 0, 3, 12
+"z:\8_code\blender-mcp\docs\versioning\support-matrix.md", "Markdown", 10, 0, 4, 14
+"Total", "-", 144, 0, 55, 199

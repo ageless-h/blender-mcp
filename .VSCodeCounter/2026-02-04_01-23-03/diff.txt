@@ -1,0 +1,79 @@
+Date : 2026-02-04 01:23:03
+Directory : z:\8_code\blender-mcp\docs
+Total : 37 files,  -110 codes, -22 comments, -55 blanks, all -187 lines
+
+Languages
++----------+------------+------------+------------+------------+------------+
+| language | files      | code       | comment    | blank      | total      |
++----------+------------+------------+------------+------------+------------+
+| Markdown |         15 |        144 |          0 |         55 |        199 |
+| Python   |         22 |       -254 |        -22 |       -110 |       -386 |
++----------+------------+------------+------------+------------+------------+
+
+Directories
++----------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                           | files      | code       | comment    | blank      | total      |
++----------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                              |         37 |       -110 |        -22 |        -55 |       -187 |
+| ..                                                             |         22 |       -254 |        -22 |       -110 |       -386 |
+| ..\blender_mcp                                                 |         22 |       -254 |        -22 |       -110 |       -386 |
+| ..\blender_mcp (Files)                                         |          1 |         -5 |         -1 |         -3 |         -9 |
+| ..\blender_mcp\adapters                                        |          3 |        -18 |         -3 |        -11 |        -32 |
+| ..\blender_mcp\catalog                                         |          2 |        -20 |         -2 |        -10 |        -32 |
+| ..\blender_mcp\core                                            |          4 |        -96 |         -4 |        -29 |       -129 |
+| ..\blender_mcp\security                                        |          5 |        -55 |         -5 |        -26 |        -86 |
+| ..\blender_mcp\transport                                       |          3 |        -32 |         -3 |        -17 |        -52 |
+| ..\blender_mcp\validation                                      |          2 |        -15 |         -2 |         -8 |        -25 |
+| ..\blender_mcp\versioning                                      |          2 |        -13 |         -2 |         -6 |        -21 |
+| architecture                                                   |          3 |         24 |          0 |         11 |         35 |
+| capabilities                                                   |          1 |         15 |          0 |          3 |         18 |
+| research                                                       |          3 |         37 |          0 |         12 |         49 |
+| security                                                       |          4 |         31 |          0 |         15 |         46 |
+| testing                                                        |          2 |         18 |          0 |          7 |         25 |
+| validation                                                     |          1 |          9 |          0 |          3 |         12 |
+| versioning                                                     |          1 |         10 |          0 |          4 |         14 |
++----------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++----------------------------------------------------------------+----------+------------+------------+------------+------------+
+| filename                                                       | language | code       | comment    | blank      | total      |
++----------------------------------------------------------------+----------+------------+------------+------------+------------+
+| z:\8_code\blender-mcp\blender_mcp\__init__.py                  | Python   |         -5 |         -1 |         -3 |         -9 |
+| z:\8_code\blender-mcp\blender_mcp\adapters\__init__.py         | Python   |         -1 |         -1 |         -1 |         -3 |
+| z:\8_code\blender-mcp\blender_mcp\adapters\base.py             | Python   |        -11 |         -1 |         -6 |        -18 |
+| z:\8_code\blender-mcp\blender_mcp\adapters\plugin_contract.py  | Python   |         -6 |         -1 |         -4 |        -11 |
+| z:\8_code\blender-mcp\blender_mcp\catalog\__init__.py          | Python   |         -1 |         -1 |         -1 |         -3 |
+| z:\8_code\blender-mcp\blender_mcp\catalog\catalog.py           | Python   |        -19 |         -1 |         -9 |        -29 |
+| z:\8_code\blender-mcp\blender_mcp\core\__init__.py             | Python   |         -1 |         -1 |         -1 |         -3 |
+| z:\8_code\blender-mcp\blender_mcp\core\lifecycle.py            | Python   |        -22 |         -1 |         -9 |        -32 |
+| z:\8_code\blender-mcp\blender_mcp\core\server.py               | Python   |        -53 |         -1 |        -11 |        -65 |
+| z:\8_code\blender-mcp\blender_mcp\core\types.py                | Python   |        -20 |         -1 |         -8 |        -29 |
+| z:\8_code\blender-mcp\blender_mcp\security\__init__.py         | Python   |         -1 |         -1 |         -1 |         -3 |
+| z:\8_code\blender-mcp\blender_mcp\security\allowlist.py        | Python   |        -10 |         -1 |         -6 |        -17 |
+| z:\8_code\blender-mcp\blender_mcp\security\audit.py            | Python   |        -18 |         -1 |         -9 |        -28 |
+| z:\8_code\blender-mcp\blender_mcp\security\permissions.py      | Python   |        -10 |         -1 |         -5 |        -16 |
+| z:\8_code\blender-mcp\blender_mcp\security\rate_limit.py       | Python   |        -16 |         -1 |         -5 |        -22 |
+| z:\8_code\blender-mcp\blender_mcp\transport\__init__.py        | Python   |         -1 |         -1 |         -1 |         -3 |
+| z:\8_code\blender-mcp\blender_mcp\transport\base.py            | Python   |        -16 |         -1 |         -7 |        -24 |
+| z:\8_code\blender-mcp\blender_mcp\transport\stdio.py           | Python   |        -15 |         -1 |         -9 |        -25 |
+| z:\8_code\blender-mcp\blender_mcp\validation\__init__.py       | Python   |         -1 |         -1 |         -1 |         -3 |
+| z:\8_code\blender-mcp\blender_mcp\validation\gate.py           | Python   |        -14 |         -1 |         -7 |        -22 |
+| z:\8_code\blender-mcp\blender_mcp\versioning\__init__.py       | Python   |         -1 |         -1 |         -1 |         -3 |
+| z:\8_code\blender-mcp\blender_mcp\versioning\support_matrix.py | Python   |        -12 |         -1 |         -5 |        -18 |
+| z:\8_code\blender-mcp\docs\architecture\core-lifecycle.md      | Markdown |          9 |          0 |          3 |         12 |
+| z:\8_code\blender-mcp\docs\architecture\plugin-boundary.md     | Markdown |          8 |          0 |          4 |         12 |
+| z:\8_code\blender-mcp\docs\architecture\transport.md           | Markdown |          7 |          0 |          4 |         11 |
+| z:\8_code\blender-mcp\docs\capabilities\catalog.md             | Markdown |         15 |          0 |          3 |         18 |
+| z:\8_code\blender-mcp\docs\research\blender-api.md             | Markdown |         11 |          0 |          4 |         15 |
+| z:\8_code\blender-mcp\docs\research\mcp.md                     | Markdown |         13 |          0 |          4 |         17 |
+| z:\8_code\blender-mcp\docs\research\reference-projects.md      | Markdown |         13 |          0 |          4 |         17 |
+| z:\8_code\blender-mcp\docs\security\allowlist.md               | Markdown |          9 |          0 |          4 |         13 |
+| z:\8_code\blender-mcp\docs\security\audit-logging.md           | Markdown |          7 |          0 |          4 |         11 |
+| z:\8_code\blender-mcp\docs\security\permission-scopes.md       | Markdown |          7 |          0 |          3 |         10 |
+| z:\8_code\blender-mcp\docs\security\rate-limits.md             | Markdown |          8 |          0 |          4 |         12 |
+| z:\8_code\blender-mcp\docs\testing\ci-matrix.md                | Markdown |          8 |          0 |          4 |         12 |
+| z:\8_code\blender-mcp\docs\testing\integration-test-plan.md    | Markdown |         10 |          0 |          3 |         13 |
+| z:\8_code\blender-mcp\docs\validation\evaluation-gate.md       | Markdown |          9 |          0 |          3 |         12 |
+| z:\8_code\blender-mcp\docs\versioning\support-matrix.md        | Markdown |         10 |          0 |          4 |         14 |
+| Total                                                          |          |       -110 |        -22 |        -55 |       -187 |
++----------------------------------------------------------------+----------+------------+------------+------------+------------+
