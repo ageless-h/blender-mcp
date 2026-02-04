@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 from blender_mcp.core.lifecycle import ServiceLifecycle
 from blender_mcp.core.server import MCPServer
+from blender_mcp.catalog.catalog import CapabilityCatalog, minimal_capability_set
 from blender_mcp.security.allowlist import Allowlist
 from blender_mcp.security.audit import MemoryAuditLogger
 from blender_mcp.security.permissions import PermissionPolicy
@@ -21,6 +22,9 @@ class ServerBundle:
 def build_server() -> ServerBundle:
     audit_logger = MemoryAuditLogger()
     allowlist = Allowlist({"scene.read"}, audit_logger=audit_logger)
+    catalog = CapabilityCatalog()
+    for capability in minimal_capability_set():
+        catalog.register(capability)
     server = MCPServer(
         lifecycle=ServiceLifecycle(),
         allowlist=allowlist,
