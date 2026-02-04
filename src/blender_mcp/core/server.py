@@ -96,7 +96,29 @@ class MCPServer:
         for raw in transport.receive():
             if not raw:
                 continue
-            payload = json.loads(raw.decode("utf-8"))
+            try:
+                payload = json.loads(raw.decode("utf-8"))
+            except json.JSONDecodeError:
+                self.audit_logger.record(
+                    AuditEvent(
+                        capability="jsonrpc.parse",
+                        ok=False,
+                        error="parse_error",
+                    )
+                )
+                transport.send(
+                    json.dumps(
+                        {
+                            "jsonrpc": "2.0",
+                            "id": None,
+                            "error": {
+                                "code": -32700,
+                                "message": "Parse error",
+                            },
+                        }
+                    ).encode("utf-8")
+                )
+                continue
             if payload.get("jsonrpc") != "2.0" or "method" not in payload:
                 transport.send(
                     json.dumps(
