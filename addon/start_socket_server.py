@@ -28,7 +28,6 @@ def addon_entrypoint() -> dict[str, str]:
 
 
 def execute_capability(request: dict[str, Any]) -> dict[str, Any]:
-    import bpy
     started = time.perf_counter()
     try:
         if not isinstance(request, dict):
@@ -284,7 +283,7 @@ def _handle_client(client_socket: socket.socket) -> None:
                 "error": {"code": "parse_error", "message": "Invalid JSON"},
             }
             client_socket.sendall((json.dumps(response) + "\n").encode("utf-8"))
-            print(f"[Socket Server] Sent parse error response")
+            print("[Socket Server] Sent parse error response")
             return
 
         # Call execute_capability
@@ -292,7 +291,7 @@ def _handle_client(client_socket: socket.socket) -> None:
         print(f"[Socket Server] Response: ok={response.get('ok')}, timing: {response.get('timing_ms', 0):.2f}ms")
 
         client_socket.sendall((json.dumps(response) + "\n").encode("utf-8"))
-        print(f"[Socket Server] Sent response to client")
+        print("[Socket Server] Sent response to client")
 
     except Exception as e:
         print(f"[Socket Server] Error handling client: {type(e).__name__}: {e}")
