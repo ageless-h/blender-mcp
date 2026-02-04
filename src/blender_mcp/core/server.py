@@ -97,10 +97,54 @@ class MCPServer:
             if not raw:
                 continue
             payload = json.loads(raw.decode("utf-8"))
+            if payload.get("jsonrpc") != "2.0" or "method" not in payload:
+                transport.send(
+                    json.dumps(
+                        {
+                            "jsonrpc": "2.0",
+                            "id": payload.get("id"),
+                            "error": {
+                                "code": -32600,
+                                "message": "Invalid Request",
+                            },
+                        }
+                    ).encode("utf-8")
+                )
+                continue
+            if "params" in payload and not isinstance(payload["params"], dict):
+                transport.send(
+                    json.dumps(
+                        {
+                            "jsonrpc": "2.0",
+                            "id": payload.get("id"),
+                            "error": {
+                                "code": -32602,
+                                "message": "Invalid params",
+                            },
+                        }
+                    ).encode("utf-8")
+                )
+                continue
+            params = payload.get("params") or {}
             request = Request(
-                capability=payload.get("capability", ""),
-                payload=payload.get("payload", {}),
-                scopes=payload.get("scopes", []),
+                capability=payload.get("method", ""),
+                payload=params.get("payload", {}),
+                scopes=params.get("scopes", []),
             )
             response = self.handle_request(request)
-            transport.send(json.dumps(response.__dict__).encode("utf-8"))
+            if response.ok:
+                reply = {
+                    "jsonrpc": "2.0",
+                    "id": payload.get("id"),
+                    "result": response.result,
+                }
+            else:
+                reply = {
+                    "jsonrpc": "2.0",
+                    "id": payload.get("id"),
+                    "error": {
+                        "code": -32000,
+                        "message": response.error or "Server error",
+                    },
+                }
+            transport.send(json.dumps(reply).encode("utf-8"))
