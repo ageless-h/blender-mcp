@@ -6,8 +6,8 @@ TBD.
 ## Requirements
 
 ### Requirement: Protocol semantics are frozen
-The protocol SHALL be defined as JSON-RPC 2.0 messages, newline-delimited, UTF-8 encoded.
+The protocol SHALL be JSON-RPC 2.0 newline-delimited messages and MUST support minimal JSON-RPC fields.
 
 #### Scenario: Protocol conformance
 - **WHEN** a message is emitted
-- **THEN** it is a JSON-RPC 2.0 object encoded as a single JSON line
+- **THEN** it is a JSON-RPC 2.0 object encoded as a single JSON line with required fields

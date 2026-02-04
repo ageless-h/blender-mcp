@@ -6,8 +6,8 @@ TBD.
 ## Requirements
 
 ### Requirement: Resource guardrails strategy is defined
-The project SHALL define a resource guardrails strategy covering memory and long-running tasks.
+Guardrails SHALL be enforced in the request entry path before capability execution.
 
-#### Scenario: Guardrails review
-- **WHEN** a contributor reviews guardrails
-- **THEN** the strategy and minimal hooks are documented
+#### Scenario: Guardrails enforcement
+- **WHEN** a request exceeds guardrail thresholds
+- **THEN** it is rejected before allowlist or permission checks
