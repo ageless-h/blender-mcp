@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import unittest
 
+from blender_mcp.adapters.types import AdapterResult
 from blender_mcp.catalog.catalog import minimal_capability_set
 from blender_mcp.core.types import Request
 
@@ -56,6 +57,70 @@ class TestWorkflowScenarios(unittest.TestCase):
         )
         self.assertTrue(self.server.handle_request(request).ok)
         self.assertTrue(self.server.handle_request(request).ok)
+
+
+class TestAdapterDispatch(unittest.TestCase):
+    def setUp(self) -> None:
+        self.harness = build_integration_harness()
+        self.server = self.harness.server
+        self.adapter = self.harness.adapter
+
+    def test_adapter_result_returned_in_response(self) -> None:
+        expected_result = {"scene_name": "TestScene", "object_count": 5}
+        self.adapter.set_response(
+            "scene.read",
+            AdapterResult(ok=True, result=expected_result),
+        )
+        request = Request(
+            capability="scene.read", payload={}, scopes=["scene:read"]
+        )
+        response = self.server.handle_request(request)
+        self.assertTrue(response.ok)
+        self.assertEqual(response.result, expected_result)
+
+    def test_adapter_error_returned_in_response(self) -> None:
+        self.adapter.set_response(
+            "scene.read",
+            AdapterResult(ok=False, error="bpy_unavailable"),
+        )
+        request = Request(
+            capability="scene.read", payload={}, scopes=["scene:read"]
+        )
+        response = self.server.handle_request(request)
+        self.assertFalse(response.ok)
+        self.assertEqual(response.error, "bpy_unavailable")
+
+    def test_security_checks_before_adapter_dispatch(self) -> None:
+        self.adapter.set_response(
+            "scene.read",
+            AdapterResult(ok=True, result={"should_not_reach": True}),
+        )
+        request = Request(
+            capability="scene.read", payload={}, scopes=[]
+        )
+        response = self.server.handle_request(request)
+        self.assertFalse(response.ok)
+        self.assertEqual(response.error, "missing_scope")
+
+    def test_end_to_end_scene_read_with_simulated_data(self) -> None:
+        simulated_scene = {
+            "scene_name": "Scene",
+            "object_count": 3,
+            "selected_objects": ["Cube", "Camera"],
+            "active_object": "Cube",
+        }
+        self.adapter.set_response(
+            "scene.read",
+            AdapterResult(ok=True, result=simulated_scene),
+        )
+        request = Request(
+            capability="scene.read", payload={}, scopes=["scene:read"]
+        )
+        response = self.server.handle_request(request)
+        self.assertTrue(response.ok)
+        self.assertEqual(response.result["scene_name"], "Scene")
+        self.assertEqual(response.result["object_count"], 3)
+        self.assertIn("Cube", response.result["selected_objects"])
 
 
 if __name__ == "__main__":
