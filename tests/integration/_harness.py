@@ -4,6 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable, Mapping
 
+from blender_mcp.adapters.mock import MockAdapter
 from blender_mcp.catalog.catalog import (
     CapabilityCatalog,
     capability_scope_map,
@@ -22,6 +23,7 @@ class IntegrationHarness:
     server: MCPServer
     audit: MemoryAuditLogger
     rate_limiter: RateLimiter
+    adapter: MockAdapter
 
 
 def build_integration_harness(
@@ -48,6 +50,8 @@ def build_integration_harness(
         window_seconds=window_seconds,
     )
 
+    adapter = MockAdapter()
+
     server = MCPServer(
         catalog=catalog,
         lifecycle=ServiceLifecycle(),
@@ -55,6 +59,7 @@ def build_integration_harness(
         permissions=PermissionPolicy(capability_scope_map(capabilities)),
         rate_limiter=rate_limiter,
         audit_logger=audit,
+        adapter=adapter,
     )
 
-    return IntegrationHarness(server=server, audit=audit, rate_limiter=rate_limiter)
+    return IntegrationHarness(server=server, audit=audit, rate_limiter=rate_limiter, adapter=adapter)
