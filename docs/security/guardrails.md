@@ -1,7 +1,7 @@
 # Resource Guardrails
 
 ## Scope
-Guardrails cover memory usage and long-running tasks.
+Guardrails cover payload-only limits (size and key count).
 
 ## Strategy
 - Start with minimal enforcement hooks in the core request path.
