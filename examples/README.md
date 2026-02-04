@@ -5,14 +5,14 @@ Each new capability, and each capability change that adds new behavior, MUST inc
 ## Example 1: Minimal Stdio Loop
 Run:
 
-```
+```python
 python -m examples.stdio_loop
 ```
 
 Send:
 
-```
-{ "jsonrpc": "2.0", "id": 1, "method": "scene.read", "params": {"payload": {}, "scopes": []} }
+```json
+{ "jsonrpc": "2.0", "id": 1, "method": "scene.read", "params": {"payload": {}, "scopes": ["scene:read"]} }
 ```
 
 ## Example 2: Safe Scene Update

@@ -17,5 +17,6 @@
 - limitations
 
 ## Minimum Capability Set
-- scene.read (scopes: none)
+- scene.read (scopes: scene:read)
+- object.read (scopes: object:read)
 - scene.write (scopes: scene:write)
