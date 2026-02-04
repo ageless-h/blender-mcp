@@ -1,5 +1,7 @@
 # Blender MCP Example Workflows
 
+Each new capability, and each capability change that adds new behavior, MUST include at least one runnable example under `examples/`.
+
 ## Example 1: Minimal Stdio Loop
 Run:
 

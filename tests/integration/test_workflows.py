@@ -1,42 +1,31 @@
 # -*- coding: utf-8 -*-
 import unittest
 
-from blender_mcp.catalog.catalog import CapabilityCatalog, CapabilityMeta
-from blender_mcp.core.lifecycle import ServiceLifecycle
-from blender_mcp.core.server import MCPServer
+from blender_mcp.catalog.catalog import minimal_capability_set
 from blender_mcp.core.types import Request
-from blender_mcp.security.allowlist import Allowlist
-from blender_mcp.security.audit import MemoryAuditLogger
-from blender_mcp.security.permissions import PermissionPolicy
-from blender_mcp.security.rate_limit import RateLimiter
+
+from ._harness import build_integration_harness
 
 
 class TestWorkflowScenarios(unittest.TestCase):
     def setUp(self) -> None:
-        self.lifecycle = ServiceLifecycle()
-        self.allowlist = Allowlist({"scene.read", "scene.write"})
-        self.permissions = PermissionPolicy({"scene.write": {"scene:write"}})
-        self.rate_limiter = RateLimiter({"scene.write": 2})
-        self.audit = MemoryAuditLogger()
-        self.server = MCPServer(
-            lifecycle=self.lifecycle,
-            allowlist=self.allowlist,
-            permissions=self.permissions,
-            rate_limiter=self.rate_limiter,
-            audit_logger=self.audit,
-        )
+        self.harness = build_integration_harness()
+        self.server = self.harness.server
 
     def test_allowed_capability_executes(self) -> None:
-        request = Request(capability="scene.read", payload={}, scopes=[])
+        request = Request(
+            capability="scene.read", payload={}, scopes=["scene:read"]
+        )
         response = self.server.handle_request(request)
         self.assertTrue(response.ok)
 
     def test_capability_discovery_returns_catalog(self) -> None:
-        catalog = CapabilityCatalog()
-        catalog.register(CapabilityMeta(name="scene.read", description="Read scene"))
-        capabilities = list(catalog.list())
-        self.assertEqual(len(capabilities), 1)
-        self.assertEqual(capabilities[0].name, "scene.read")
+        request = Request(capability="capabilities.list", payload={}, scopes=[])
+        response = self.server.handle_request(request)
+        self.assertTrue(response.ok)
+        names = {cap["name"] for cap in response.result["capabilities"]}
+        expected = {cap.name for cap in minimal_capability_set()}
+        self.assertEqual(names, expected)
 
     def test_disallowed_capability_rejected(self) -> None:
         request = Request(capability="scene.delete", payload={}, scopes=[])
@@ -45,13 +34,15 @@ class TestWorkflowScenarios(unittest.TestCase):
         self.assertEqual(response.error, "capability_not_allowed")
 
     def test_missing_scope_rejected(self) -> None:
-        request = Request(capability="scene.write", payload={}, scopes=[])
+        request = Request(capability="object.read", payload={}, scopes=[])
         response = self.server.handle_request(request)
         self.assertFalse(response.ok)
         self.assertEqual(response.error, "missing_scope")
 
     def test_rate_limit_rejected(self) -> None:
-        request = Request(capability="scene.write", payload={}, scopes=["scene:write"])
+        request = Request(
+            capability="object.read", payload={}, scopes=["object:read"]
+        )
         self.assertTrue(self.server.handle_request(request).ok)
         self.assertTrue(self.server.handle_request(request).ok)
         response = self.server.handle_request(request)
@@ -59,8 +50,10 @@ class TestWorkflowScenarios(unittest.TestCase):
         self.assertEqual(response.error, "rate_limited")
 
     def test_rate_limit_window_reset(self) -> None:
-        self.rate_limiter.window_seconds = 0.0
-        request = Request(capability="scene.write", payload={}, scopes=["scene:write"])
+        self.harness.rate_limiter.window_seconds = 0.0
+        request = Request(
+            capability="object.read", payload={}, scopes=["object:read"]
+        )
         self.assertTrue(self.server.handle_request(request).ok)
         self.assertTrue(self.server.handle_request(request).ok)
 
