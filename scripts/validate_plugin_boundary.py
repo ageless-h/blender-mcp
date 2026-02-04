@@ -1,9 +1,16 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
-from blender_mcp.adapters.plugin_contract import PluginContract, validate_contract
+try:
+    from blender_mcp.adapters.plugin_contract import PluginContract, validate_contract
+except ModuleNotFoundError:
+    repo_root = Path(__file__).resolve().parents[1]
+    sys.path.insert(0, str(repo_root))
+    sys.path.insert(0, str(repo_root / "src"))
+    from blender_mcp.adapters.plugin_contract import PluginContract, validate_contract
 
 
 def main() -> int:
@@ -18,7 +25,7 @@ def main() -> int:
             entry = line.split("`", 2)[1]
             entrypoints.append(entry)
     contract = PluginContract(version=version, entrypoints=tuple(entrypoints))
-    if not validate_contract(contract, ["addon_entrypoint"]):
+    if not validate_contract(contract, ["addon_entrypoint", "execute_capability"]):
         return 1
     return 0
 

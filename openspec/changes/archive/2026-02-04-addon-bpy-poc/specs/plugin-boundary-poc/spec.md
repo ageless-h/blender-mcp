@@ -1,9 +1,4 @@
-# Plugin Boundary PoC
-
-## Purpose
-TBD.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Plugin boundary PoC is validated
 The project SHALL provide a plugin boundary proof-of-concept that validates the addon entrypoint contract and exercises real Blender execution via `bpy` for the MVP capability surface.
@@ -27,6 +22,8 @@ The project SHALL provide a plugin boundary proof-of-concept that validates the 
 #### Scenario: Performance timing
 - **WHEN** the PoC executes `scene.read` or `scene.write`
 - **THEN** it reports basic operation timing in milliseconds in the PoC output
+
+## ADDED Requirements
 
 ### Requirement: Plugin boundary PoC provides a runnable harness
 The project SHALL provide a runnable PoC harness that can be executed in Blender to exercise the plugin-side capability execution.
