@@ -35,7 +35,12 @@ class TestCompatibility(unittest.TestCase):
                 encoding="utf-8",
             )
             results_path.write_text(
-                json.dumps({"3.6": {}, "4.0": {}}),
+                json.dumps(
+                    {
+                        "3.6": {"status": "unknown", "checked_at": "n/a"},
+                        "4.0": {"status": "unknown", "checked_at": "n/a"},
+                    }
+                ),
                 encoding="utf-8",
             )
 

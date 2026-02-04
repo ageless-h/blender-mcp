@@ -28,6 +28,10 @@ def check_compatibility(
     recorded = set(results.keys())
     if not supported.issubset(recorded):
         return False
+    for version in supported:
+        entry = results.get(version, {})
+        if "status" not in entry or "checked_at" not in entry:
+            return False
 
     if target_version and target_version not in supported:
         return False
