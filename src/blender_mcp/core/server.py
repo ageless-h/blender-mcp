@@ -4,6 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, Iterable
 
+from blender_mcp.catalog.catalog import CapabilityCatalog, capability_to_dict
 from blender_mcp.core.lifecycle import ServiceLifecycle
 from blender_mcp.core.types import Request, Response
 from blender_mcp.security.allowlist import Allowlist
@@ -16,6 +17,7 @@ from blender_mcp.transport.base import TransportAdapter
 
 @dataclass
 class MCPServer:
+    catalog: CapabilityCatalog
     lifecycle: ServiceLifecycle
     allowlist: Allowlist
     permissions: PermissionPolicy
@@ -66,6 +68,18 @@ class MCPServer:
             return Response(ok=False, error="rate_limited")
 
         self.audit_logger.record(AuditEvent(capability=request.capability, ok=True))
+        if request.capability == "capabilities.list":
+            blender_version = request.payload.get("blender_version")
+            version = blender_version if isinstance(blender_version, str) else None
+            return Response(
+                ok=True,
+                result={
+                    "capabilities": [
+                        capability_to_dict(cap, version)
+                        for cap in self.catalog.list()
+                    ]
+                },
+            )
         return Response(ok=True, result={"status": "accepted"})
 
     def health(self) -> Dict[str, str | int | None]:
