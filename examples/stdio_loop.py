@@ -1,7 +1,15 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass
+from pathlib import Path
+
+
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+_SRC_ROOT = _REPO_ROOT / "src"
+if _SRC_ROOT.exists():
+    sys.path.insert(0, str(_SRC_ROOT))
 
 from blender_mcp.core.lifecycle import ServiceLifecycle
 from blender_mcp.core.server import MCPServer

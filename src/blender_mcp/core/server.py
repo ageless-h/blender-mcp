@@ -70,9 +70,7 @@ class MCPServer:
         self.audit_logger.record(AuditEvent(capability=request.capability, ok=True))
         if request.capability == "capabilities.list":
             blender_version = request.payload.get("blender_version")
-            version = (
-                blender_version if isinstance(blender_version, str) else None
-            )
+            version = blender_version if isinstance(blender_version, str) else None
             return Response(
                 ok=True,
                 result={

@@ -9,5 +9,5 @@ wheels/
 # Virtual environments
 .venv
 
-# Tooling outputs
+# VSCodeCounter
 .VSCodeCounter/

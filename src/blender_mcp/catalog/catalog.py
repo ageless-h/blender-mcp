@@ -76,9 +76,7 @@ def capability_availability(
     return True, None
 
 
-def capability_to_dict(
-    capability: CapabilityMeta, version: str | None = None
-) -> dict[str, object]:
+def capability_to_dict(capability: CapabilityMeta, version: str | None = None) -> dict[str, object]:
     available, reason = capability_availability(capability, version)
     data: dict[str, object] = {
         "name": capability.name,
@@ -100,42 +98,15 @@ def minimal_capability_set() -> list[CapabilityMeta]:
             name="scene.read",
             description="Read scene",
             scopes=["scene:read"],
-            min_version="3.6",
         ),
         CapabilityMeta(
             name="object.read",
             description="Read object",
             scopes=["object:read"],
-            min_version="3.6",
         ),
         CapabilityMeta(
-            name="object.transform.write",
-            description="Write object transform",
-            scopes=["object:write"],
-            min_version="3.6",
-        ),
-        CapabilityMeta(
-            name="object.selection.write",
-            description="Write object selection",
-            scopes=["object:write"],
-            min_version="3.6",
-        ),
-        CapabilityMeta(
-            name="render.settings.read",
-            description="Read render settings",
-            scopes=["render:read"],
-            min_version="3.6",
-        ),
-        CapabilityMeta(
-            name="render.still",
-            description="Render still image",
-            scopes=["render:execute"],
-            min_version="3.6",
-        ),
-        CapabilityMeta(
-            name="render.animation",
-            description="Render animation",
-            scopes=["render:execute"],
-            min_version="3.6",
+            name="scene.write",
+            description="Write scene",
+            scopes=["scene:write"],
         ),
     ]
