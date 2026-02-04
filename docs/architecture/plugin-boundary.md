@@ -3,6 +3,9 @@
 ## Contract Surface
 The Blender adapter exposes a versioned contract with explicit entrypoints. The core validates contract version compatibility at startup.
 
+## Minimal Validation
+Use `scripts/validate_plugin_boundary.py` to validate the entrypoint contract.
+
 ## Ownership Rules
 - The core owns protocol handling, security, and capability dispatch.
 - The plugin owns Blender-specific execution and access to bpy.
