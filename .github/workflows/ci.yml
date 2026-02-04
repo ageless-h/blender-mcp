@@ -59,3 +59,5 @@ jobs:
           python-version: "3.12"
       - name: Compatibility placeholder
         run: BLENDER_VERSION=4.0 python "scripts/check_compatibility.py"
+      - name: Plugin boundary validation
+        run: python "scripts/validate_plugin_boundary.py"
