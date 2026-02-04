@@ -10,7 +10,7 @@ python -m examples.stdio_loop
 Send:
 
 ```
-{ "capability": "scene.read", "payload": {}, "scopes": [] }
+{ "jsonrpc": "2.0", "id": 1, "method": "scene.read", "params": {"payload": {}, "scopes": []} }
 ```
 
 ## Example 2: Safe Scene Update

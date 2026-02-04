@@ -6,8 +6,8 @@
    - `pip install .`
 2. Run the stdio example:
    - `python -m examples.stdio_loop`
-3. Send a JSON line on stdin:
-    - `{ "capability": "scene.read", "payload": {}, "scopes": [] }`
+3. Send a JSON-RPC 2.0 line on stdin:
+   - `{ "jsonrpc": "2.0", "id": 1, "method": "scene.read", "params": {"payload": {}, "scopes": []} }`
 4. Observe a JSON response on stdout.
 
 Notes: Messages are JSON-RPC 2.0 objects serialized as one JSON document per line.
