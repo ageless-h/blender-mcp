@@ -49,3 +49,13 @@ jobs:
         run: python -m unittest tests.integration.test_workflows
       - name: Integration example
         run: python -m examples.stdio_loop < /dev/null
+
+  compatibility:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compatibility placeholder
+        run: BLENDER_VERSION=4.0 python "scripts/check_compatibility.py"
