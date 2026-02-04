@@ -4,6 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, Iterable
 
+from blender_mcp.adapters.base import BlenderAdapter
 from blender_mcp.catalog.catalog import CapabilityCatalog, capability_to_dict
 from blender_mcp.core.lifecycle import ServiceLifecycle
 from blender_mcp.core.types import Request, Response
@@ -24,6 +25,7 @@ class MCPServer:
     rate_limiter: RateLimiter
     audit_logger: AuditLogger
     guardrails: Guardrails | None = None
+    adapter: BlenderAdapter | None = None
 
     def handle_request(self, request: Request) -> Response:
         if self.guardrails is not None and not self.guardrails.allow(
@@ -80,6 +82,23 @@ class MCPServer:
                     ]
                 },
             )
+
+        if self.adapter is not None:
+            adapter_result = self.adapter.execute(request.capability, request.payload)
+            if not adapter_result.ok:
+                self.audit_logger.record(
+                    AuditEvent(
+                        capability=request.capability,
+                        ok=False,
+                        error=adapter_result.error or "adapter_error",
+                    )
+                )
+            return Response(
+                ok=adapter_result.ok,
+                result=adapter_result.result or {},
+                error=adapter_result.error,
+            )
+
         return Response(ok=True, result={"status": "accepted"})
 
     def health(self) -> Dict[str, str | int | None]:
