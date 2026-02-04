@@ -1,0 +1,24 @@
+# -*- coding: utf-8 -*-
+from __future__ import annotations
+
+import unittest
+
+from blender_mcp.security.guardrails import Guardrails
+
+
+class TestGuardrails(unittest.TestCase):
+    def test_blocks_payload_size(self) -> None:
+        guardrails = Guardrails.from_limits(max_payload_bytes=1)
+        self.assertFalse(guardrails.allow("scene.read", {"data": "xx"}))
+
+    def test_blocks_payload_keys(self) -> None:
+        guardrails = Guardrails.from_limits(max_payload_keys=0)
+        self.assertFalse(guardrails.allow("scene.read", {"a": 1}))
+
+    def test_blocks_capability(self) -> None:
+        guardrails = Guardrails.from_limits(blocked_capabilities=["scene.write"])
+        self.assertFalse(guardrails.allow("scene.write", {}))
+
+
+if __name__ == "__main__":
+    unittest.main()
