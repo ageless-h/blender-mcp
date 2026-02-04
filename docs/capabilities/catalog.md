@@ -12,10 +12,15 @@
 ## Catalog Fields
 - name
 - description
-- required_scopes
+- scopes
 - min_version / max_version
 - limitations
 
 ## Minimum Capability Set
-- scene.read (scopes: none)
-- scene.write (scopes: scene:write)
+- scene.read (scopes: scene:read)
+- object.read (scopes: object:read)
+- object.transform.write (scopes: object:write)
+- object.selection.write (scopes: object:write)
+- render.settings.read (scopes: render:read)
+- render.still (scopes: render:execute)
+- render.animation (scopes: render:execute)
