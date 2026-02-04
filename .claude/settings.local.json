@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: add socket and mock adapters for Blender communication\n\n- Add SocketAdapter for TCP-based communication with Blender addon\n- Add MockAdapter for testing purposes\n- Add AdapterResult type definition\n- Add Blender socket server addon script\n- Add adapter tests\n- Update base adapter and server integration\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push:*)",
+      "Bash(git commit:*)",
+      "Bash(git reset:*)",
+      "Bash(uv run python:*)",
+      "Bash(\"F:\\\\Program Files\\\\blender\\\\blender-4.5.2-windows-x64\\\\blender.exe\" --background --factory-startup --python addon/start_socket_server.py)",
+      "Bash(timeout 3:*)",
+      "Bash(ping:*)",
+      "Bash(python test_socket_connection.py:*)",
+      "Bash(ruff check:*)",
+      "Bash(find:*)",
+      "Bash(wc:*)"
+    ]
+  }
+}
