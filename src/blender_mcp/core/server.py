@@ -10,6 +10,7 @@ from blender_mcp.security.allowlist import Allowlist
 from blender_mcp.security.audit import AuditEvent, AuditLogger
 from blender_mcp.security.permissions import PermissionPolicy
 from blender_mcp.security.rate_limit import RateLimiter
+from blender_mcp.security.guardrails import Guardrails
 from blender_mcp.transport.base import TransportAdapter
 
 
@@ -20,8 +21,20 @@ class MCPServer:
     permissions: PermissionPolicy
     rate_limiter: RateLimiter
     audit_logger: AuditLogger
+    guardrails: Guardrails | None = None
 
     def handle_request(self, request: Request) -> Response:
+        if self.guardrails is not None and not self.guardrails.allow(
+            request.capability, request.payload
+        ):
+            self.audit_logger.record(
+                AuditEvent(
+                    capability=request.capability,
+                    ok=False,
+                    error="guardrails_blocked",
+                )
+            )
+            return Response(ok=False, error="guardrails_blocked")
         if not self.allowlist.is_allowed(request.capability):
             self.audit_logger.record(
                 AuditEvent(

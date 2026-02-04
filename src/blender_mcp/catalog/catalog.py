@@ -26,3 +26,14 @@ class CapabilityCatalog:
 
     def get(self, name: str) -> CapabilityMeta | None:
         return self._capabilities.get(name)
+
+
+def minimal_capability_set() -> list[CapabilityMeta]:
+    return [
+        CapabilityMeta(name="scene.read", description="Read scene"),
+        CapabilityMeta(
+            name="scene.write",
+            description="Write scene",
+            scopes=["scene:write"],
+        ),
+    ]
