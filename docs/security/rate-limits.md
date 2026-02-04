@@ -12,3 +12,5 @@ Requests beyond limits are rejected with rate_limited.
 
 ## Notes
 Global resource guardrails (memory/long tasks) are not implemented yet.
+
+See `docs/security/guardrails.md` for the current strategy.
