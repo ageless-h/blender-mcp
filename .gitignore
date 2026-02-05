@@ -1,13 +1,65 @@
-# Python-generated files
+# Byte-compiled / optimized / DLL files
 __pycache__/
-*.py[oc]
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
 build/
 dist/
 wheels/
-*.egg-info
+*.egg-info/
+*.egg
 
 # Virtual environments
-.venv
+.venv/
+venv/
+ENV/
+env/
 
-# VSCodeCounter
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 .VSCodeCounter/
+
+# Testing
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.hypothesis/
+
+# Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+.ruff_cache/
+
+# Claude Code local settings
+.claude/settings.local.json
+.claude/settings.json
+
+# OS specific
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Project specific
+*.log
+*.sqlite
+*.db
+.blend/
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+.cache/
