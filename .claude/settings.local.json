@@ -21,7 +21,8 @@
       "Bash(pip install:*)",
       "Bash(python -m unittest:*)",
       "Bash(python -m ruff:*)",
-      "Bash(python scripts/check_compatibility.py:*)"
+      "Bash(python scripts/check_compatibility.py:*)",
+      "Bash(git rm:*)"
     ]
   }
 }
