@@ -93,47 +93,146 @@ def capability_to_dict(capability: CapabilityMeta, version: str | None = None) -
 
 
 def minimal_capability_set() -> list[CapabilityMeta]:
+    """Return the minimal capability set using the new unified tool architecture.
+    
+    The 8 core tools cover 99.9% of Blender functionality:
+    - data.create/read/write/delete/list/link: Unified data CRUD
+    - operator.execute: Universal operator execution
+    - info.query: Status and metadata queries
+    
+    Optional (disabled by default):
+    - script.execute: Arbitrary Python execution
+    """
     return [
+        # Data layer tools (CRUD for all Blender data types)
+        CapabilityMeta(
+            name="data.create",
+            description="Create new Blender data blocks (objects, meshes, materials, etc.)",
+            scopes=["data:create"],
+            min_version="3.6",
+        ),
+        CapabilityMeta(
+            name="data.read",
+            description="Read properties from any Blender data block",
+            scopes=["data:read"],
+            min_version="3.6",
+        ),
+        CapabilityMeta(
+            name="data.write",
+            description="Write properties to any Blender data block",
+            scopes=["data:write"],
+            min_version="3.6",
+        ),
+        CapabilityMeta(
+            name="data.delete",
+            description="Delete Blender data blocks",
+            scopes=["data:delete"],
+            min_version="3.6",
+        ),
+        CapabilityMeta(
+            name="data.list",
+            description="List all data blocks of a specified type",
+            scopes=["data:read"],
+            min_version="3.6",
+        ),
+        CapabilityMeta(
+            name="data.link",
+            description="Link or unlink data blocks (e.g., object to collection, material to object)",
+            scopes=["data:write"],
+            min_version="3.6",
+        ),
+        # Operator layer tool
+        CapabilityMeta(
+            name="operator.execute",
+            description="Execute any Blender operator (bpy.ops.*) with context override support",
+            scopes=["operator:execute"],
+            min_version="3.6",
+        ),
+        # Info layer tool
+        CapabilityMeta(
+            name="info.query",
+            description="Query Blender status, history, statistics, and capture viewport",
+            scopes=["info:read"],
+            min_version="3.6",
+        ),
+        # Optional dangerous tool (disabled by default)
+        CapabilityMeta(
+            name="script.execute",
+            description="Execute arbitrary Python code (disabled by default, requires explicit enablement)",
+            scopes=["script:execute"],
+            min_version="3.6",
+        ),
+        # Legacy capabilities (deprecated, for backward compatibility)
         CapabilityMeta(
             name="scene.read",
-            description="Read scene",
+            description="[DEPRECATED] Read scene - use data.read with type='context' instead",
             scopes=["scene:read"],
             min_version="3.6",
         ),
         CapabilityMeta(
-            name="object.read",
-            description="Read object",
-            scopes=["object:read"],
-            min_version="3.6",
-        ),
-        CapabilityMeta(
-            name="object.transform.write",
-            description="Write object transforms",
-            scopes=["object:write"],
-            min_version="3.6",
-        ),
-        CapabilityMeta(
-            name="object.selection.write",
-            description="Write object selection",
-            scopes=["object:write"],
-            min_version="3.6",
-        ),
-        CapabilityMeta(
-            name="render.settings.read",
-            description="Read render settings",
-            scopes=["render:read"],
-            min_version="3.6",
-        ),
-        CapabilityMeta(
-            name="render.still",
-            description="Render still",
-            scopes=["render:execute"],
-            min_version="3.6",
-        ),
-        CapabilityMeta(
-            name="render.animation",
-            description="Render animation",
-            scopes=["render:execute"],
+            name="scene.write",
+            description="[DEPRECATED] Write to scene - use data.create/write instead",
+            scopes=["scene:write"],
             min_version="3.6",
         ),
     ]
+
+
+def new_tool_scope_map() -> dict[str, set[str]]:
+    """Return scope mappings for new unified tools.
+    
+    Maps capability names to required scopes. For data.* tools,
+    the actual required scope depends on the 'type' parameter at runtime.
+    """
+    return {
+        "data.create": {"data:create"},
+        "data.read": {"data:read"},
+        "data.write": {"data:write"},
+        "data.delete": {"data:delete"},
+        "data.list": {"data:read"},
+        "data.link": {"data:write"},
+        "operator.execute": {"operator:execute"},
+        "info.query": {"info:read"},
+        "script.execute": {"script:execute"},
+    }
+
+
+def get_dynamic_scopes(capability: str, payload: dict) -> set[str]:
+    """Get dynamic scopes based on capability and payload.
+    
+    For data.* tools, the required scope depends on the data type.
+    For operator.execute, the scope depends on the operator category.
+    
+    Args:
+        capability: The capability name
+        payload: The request payload
+        
+    Returns:
+        Set of required scope strings
+    """
+    if capability.startswith("data."):
+        data_type = payload.get("type", "")
+        action = capability.split(".")[-1]
+        if action in ("read", "list"):
+            return {f"{data_type}:read"} if data_type else {"data:read"}
+        elif action == "create":
+            return {f"{data_type}:create"} if data_type else {"data:create"}
+        elif action in ("write", "link"):
+            return {f"{data_type}:write"} if data_type else {"data:write"}
+        elif action == "delete":
+            return {f"{data_type}:delete"} if data_type else {"data:delete"}
+    
+    elif capability == "operator.execute":
+        operator_id = payload.get("operator", "")
+        if "." in operator_id:
+            category = operator_id.split(".")[0]
+            return {f"{category}:execute"}
+        return {"operator:execute"}
+    
+    elif capability == "info.query":
+        return {"info:read"}
+    
+    elif capability == "script.execute":
+        return {"script:execute"}
+    
+    return set()
