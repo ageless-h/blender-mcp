@@ -109,71 +109,71 @@ def minimal_capability_set() -> list[CapabilityMeta]:
             name="data.create",
             description="Create new Blender data blocks (objects, meshes, materials, etc.)",
             scopes=["data:create"],
-            min_version="3.6",
+            min_version="4.2",
         ),
         CapabilityMeta(
             name="data.read",
             description="Read properties from any Blender data block",
             scopes=["data:read"],
-            min_version="3.6",
+            min_version="4.2",
         ),
         CapabilityMeta(
             name="data.write",
             description="Write properties to any Blender data block",
             scopes=["data:write"],
-            min_version="3.6",
+            min_version="4.2",
         ),
         CapabilityMeta(
             name="data.delete",
             description="Delete Blender data blocks",
             scopes=["data:delete"],
-            min_version="3.6",
+            min_version="4.2",
         ),
         CapabilityMeta(
             name="data.list",
             description="List all data blocks of a specified type",
             scopes=["data:read"],
-            min_version="3.6",
+            min_version="4.2",
         ),
         CapabilityMeta(
             name="data.link",
             description="Link or unlink data blocks (e.g., object to collection, material to object)",
             scopes=["data:write"],
-            min_version="3.6",
+            min_version="4.2",
         ),
         # Operator layer tool
         CapabilityMeta(
             name="operator.execute",
             description="Execute any Blender operator (bpy.ops.*) with context override support",
             scopes=["operator:execute"],
-            min_version="3.6",
+            min_version="4.2",
         ),
         # Info layer tool
         CapabilityMeta(
             name="info.query",
             description="Query Blender status, history, statistics, and capture viewport",
             scopes=["info:read"],
-            min_version="3.6",
+            min_version="4.2",
         ),
         # Optional dangerous tool (disabled by default)
         CapabilityMeta(
             name="script.execute",
             description="Execute arbitrary Python code (disabled by default, requires explicit enablement)",
             scopes=["script:execute"],
-            min_version="3.6",
+            min_version="4.2",
         ),
         # Legacy capabilities (deprecated, for backward compatibility)
         CapabilityMeta(
             name="scene.read",
             description="[DEPRECATED] Read scene - use data.read with type='context' instead",
             scopes=["scene:read"],
-            min_version="3.6",
+            min_version="4.2",
         ),
         CapabilityMeta(
             name="scene.write",
             description="[DEPRECATED] Write to scene - use data.create/write instead",
             scopes=["scene:write"],
-            min_version="3.6",
+            min_version="4.2",
         ),
     ]
 

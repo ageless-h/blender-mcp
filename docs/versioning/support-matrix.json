@@ -1,4 +1,64 @@
 {
-  "lts_versions": ["3.6"],
-  "latest_version": "4.0"
+  "policy": {
+    "lts_count": 2,
+    "include_latest": true,
+    "min_version": "4.2",
+    "test_frequency": "on_release",
+    "deprecation_notice": "3_months"
+  },
+  "supported_versions": [
+    {
+      "version": "4.2",
+      "status": "lts",
+      "support_until": "2026-07",
+      "python": "3.11",
+      "tested": true,
+      "ci_coverage": "full",
+      "notes": "LTS baseline, all capabilities supported"
+    },
+    {
+      "version": "4.5",
+      "status": "lts",
+      "support_until": "2027-07",
+      "python": "3.11",
+      "tested": false,
+      "ci_coverage": "pending",
+      "notes": "Latest LTS, requires testing"
+    },
+    {
+      "version": "5.0",
+      "status": "latest",
+      "support_until": "until_next_release",
+      "python": "3.12",
+      "tested": false,
+      "ci_coverage": "basic",
+      "notes": "Latest stable series, basic compatibility testing"
+    }
+  ],
+  "unsupported_versions": [
+    {
+      "version": "3.6",
+      "status": "lts_expired",
+      "support_ended": "2025-11",
+      "reason": "LTS expired, focusing on 4.2+"
+    },
+    {
+      "version": "4.0",
+      "status": "eol",
+      "support_ended": "2024",
+      "reason": "Superseded by 4.2 LTS"
+    }
+  ],
+  "capability_requirements": {
+    "data.create": {"min": "4.2", "max": null, "notes": "Requires stable bmesh API from 4.2+"},
+    "data.read": {"min": "4.2", "max": null, "notes": "Requires bpy.data access patterns"},
+    "data.write": {"min": "4.2", "max": null, "notes": "Requires context override API"},
+    "data.delete": {"min": "4.2", "max": null, "notes": "Standard API"},
+    "data.list": {"min": "4.2", "max": null, "notes": "Standard API"},
+    "data.link": {"min": "4.2", "max": null, "notes": "Requires collection link API"},
+    "operator.execute": {"min": "4.2", "max": null, "notes": "Requires bpy.ops context override"},
+    "info.query": {"min": "4.2", "max": null, "notes": "Requires depsgraph API"},
+    "script.execute": {"min": "4.2", "max": null, "notes": "Requires threading support"}
+  },
+  "last_updated": "2025-02-05"
 }

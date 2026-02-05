@@ -20,7 +20,8 @@
       "Bash(python -m unittest discover:*)",
       "Bash(pip install:*)",
       "Bash(python -m unittest:*)",
-      "Bash(python -m ruff:*)"
+      "Bash(python -m ruff:*)",
+      "Bash(python scripts/check_compatibility.py:*)"
     ]
   }
 }

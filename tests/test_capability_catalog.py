@@ -43,7 +43,7 @@ class TestCapabilityCatalog(unittest.TestCase):
             },
         )
         for cap in capabilities:
-            self.assertEqual(cap.min_version, "3.6")
+            self.assertEqual(cap.min_version, "4.2")
             self.assertTrue(cap.scopes)
 
 
@@ -74,7 +74,7 @@ class TestCapabilityDiscovery(unittest.TestCase):
     def test_capabilities_list_availability_by_version(self) -> None:
         request = Request(
             capability="capabilities.list",
-            payload={"blender_version": "3.5"},
+            payload={"blender_version": "4.0"},
             scopes=[],
         )
         response = self.server.handle_request(request)
@@ -87,7 +87,7 @@ class TestCapabilityDiscovery(unittest.TestCase):
 
         request_ok = Request(
             capability="capabilities.list",
-            payload={"blender_version": "3.6"},
+            payload={"blender_version": "4.2"},
             scopes=[],
         )
         response_ok = self.server.handle_request(request_ok)

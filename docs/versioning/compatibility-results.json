@@ -1,4 +1,42 @@
 {
-  "3.6": {"status": "unknown", "checked_at": "n/a"},
-  "4.0": {"status": "unknown", "checked_at": "n/a"}
+  "test_results": [
+    {
+      "version": "4.2",
+      "status": "pass",
+      "checked_at": "2025-02-05",
+      "tests": {
+        "unit": "pass",
+        "integration": "pass",
+        "handlers": "pass",
+        "socket": "pass"
+      },
+      "notes": "All tests passing, LTS baseline version"
+    },
+    {
+      "version": "4.5",
+      "status": "pending",
+      "checked_at": "pending",
+      "tests": {
+        "unit": "pending",
+        "integration": "pending",
+        "handlers": "pending",
+        "socket": "pending"
+      },
+      "notes": "Testing required - latest LTS"
+    },
+    {
+      "version": "5.0",
+      "status": "pending",
+      "checked_at": "pending",
+      "tests": {
+        "unit": "pending",
+        "integration": "pending",
+        "handlers": "pending",
+        "socket": "pending"
+      },
+      "notes": "Testing required - latest stable"
+    }
+  ],
+  "known_issues": [],
+  "last_updated": "2025-02-05"
 }
