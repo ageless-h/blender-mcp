@@ -2,6 +2,8 @@
 
 Each new capability, and each capability change that adds new behavior, MUST include at least one runnable example under `examples/`.
 
+For MCP client configuration guides (Cursor, Claude Code, VS Code, Windsurf, etc.), see [docs/clients/](../docs/clients/).
+
 ## Example 1: Minimal Stdio Loop
 Run:
 

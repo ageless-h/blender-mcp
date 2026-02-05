@@ -77,6 +77,32 @@ Create `.mcp.json` in your project root to configure MCP clients:
 }
 ```
 
+#### Supported MCP Clients
+
+| Client | Documentation |
+|--------|---------------|
+| Amp | [docs/clients/amp.md](docs/clients/amp.md) |
+| Antigravity | [docs/clients/antigravity.md](docs/clients/antigravity.md) |
+| Claude Code | [docs/clients/claude-code.md](docs/clients/claude-code.md) |
+| Cline | [docs/clients/cline.md](docs/clients/cline.md) |
+| Codex | [docs/clients/codex.md](docs/clients/codex.md) |
+| Copilot CLI | [docs/clients/copilot-cli.md](docs/clients/copilot-cli.md) |
+| Copilot / VS Code | [docs/clients/vs-code-copilot.md](docs/clients/vs-code-copilot.md) |
+| Cursor | [docs/clients/cursor.md](docs/clients/cursor.md) |
+| Factory CLI | [docs/clients/factory-cli.md](docs/clients/factory-cli.md) |
+| Gemini CLI | [docs/clients/gemini-cli.md](docs/clients/gemini-cli.md) |
+| Gemini Code Assist | [docs/clients/gemini-code-assist.md](docs/clients/gemini-code-assist.md) |
+| JetBrains AI Assistant & Junie | [docs/clients/jetbrains.md](docs/clients/jetbrains.md) |
+| Kiro | [docs/clients/kiro.md](docs/clients/kiro.md) |
+| OpenCode | [docs/clients/opencode.md](docs/clients/opencode.md) |
+| Qoder | [docs/clients/qoder.md](docs/clients/qoder.md) |
+| Qoder CLI | [docs/clients/qoder-cli.md](docs/clients/qoder-cli.md) |
+| Visual Studio | [docs/clients/visual-studio.md](docs/clients/visual-studio.md) |
+| Warp | [docs/clients/warp.md](docs/clients/warp.md) |
+| Windsurf | [docs/clients/windsurf.md](docs/clients/windsurf.md) |
+
+Each documentation file includes platform-specific config file locations, copy-paste ready configuration, verification steps, and troubleshooting tips.
+
 ## MCP Server (Stdio Loop)
 
 1. Install the package:
