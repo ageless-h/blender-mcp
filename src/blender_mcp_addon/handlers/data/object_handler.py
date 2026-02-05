@@ -70,6 +70,36 @@ class ObjectHandler(BaseHandler):
                 obj_data = bpy.data.curves[data_name]
             else:
                 obj_data = bpy.data.curves.new(name=data_name or f"{name}_curve", type=curve_type)
+        elif object_type == "FONT":
+            if data_name and data_name in bpy.data.curves:
+                obj_data = bpy.data.curves[data_name]
+            else:
+                obj_data = bpy.data.curves.new(name=data_name or f"{name}_text", type="FONT")
+            body = params.get("body")
+            if body is not None:
+                obj_data.body = body
+            if "extrude" in params:
+                obj_data.extrude = params["extrude"]
+            if "bevel_depth" in params:
+                obj_data.bevel_depth = params["bevel_depth"]
+            if "size" in params:
+                obj_data.size = params["size"]
+        elif object_type == "META":
+            if data_name and data_name in bpy.data.metaballs:
+                obj_data = bpy.data.metaballs[data_name]
+            else:
+                obj_data = bpy.data.metaballs.new(name=data_name or f"{name}_meta")
+        elif object_type in {"GPENCIL", "GREASE_PENCIL"}:
+            if data_name and data_name in bpy.data.grease_pencils:
+                obj_data = bpy.data.grease_pencils[data_name]
+            else:
+                obj_data = bpy.data.grease_pencils.new(name=data_name or f"{name}_gpencil")
+        else:
+            # default fallback to mesh
+            if data_name and data_name in bpy.data.meshes:
+                obj_data = bpy.data.meshes[data_name]
+            else:
+                obj_data = bpy.data.meshes.new(name=f"{name}_mesh")
         
         obj = bpy.data.objects.new(name=name, object_data=obj_data)
         

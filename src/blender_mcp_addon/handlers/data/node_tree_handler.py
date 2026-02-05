@@ -179,3 +179,46 @@ class NodeTreeHandler(BaseHandler):
             })
         
         return {"items": items, "count": len(items)}
+
+    def link(
+        self,
+        source_name: str,
+        target_type: DataType,
+        target_name: str,
+        unlink: bool = False,
+        params: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Link/unlink node tree to a modifier (e.g., GeometryNodes).
+        
+        Expected target: modifier on an object. Params must include object name.
+        """
+        import bpy  # type: ignore
+        
+        if target_type != DataType.MODIFIER:
+            return {"error": f"NodeTree can only be linked to modifiers, not {target_type.value}"}
+        
+        params = params or {}
+        object_name = params.get("object") or params.get("target_object")
+        if not object_name:
+            return {"error": "'object' parameter is required to link node_tree to modifier"}
+        
+        obj = bpy.data.objects.get(object_name)
+        if obj is None:
+            raise KeyError(f"Object '{object_name}' not found")
+        
+        modifier = obj.modifiers.get(target_name)
+        if modifier is None:
+            raise KeyError(f"Modifier '{target_name}' not found on object '{object_name}'")
+        
+        node_tree = bpy.data.node_groups.get(source_name)
+        if node_tree is None:
+            raise KeyError(f"NodeTree '{source_name}' not found")
+        
+        if unlink:
+            if getattr(modifier, "node_group", None) == node_tree:
+                modifier.node_group = None
+                return {"action": "unlink", "node_tree": source_name, "modifier": target_name, "object": object_name}
+            return {"action": "unlink", "skipped": True, "reason": "Modifier not linked to node tree"}
+        
+        modifier.node_group = node_tree
+        return {"action": "link", "node_tree": source_name, "modifier": target_name, "object": object_name}

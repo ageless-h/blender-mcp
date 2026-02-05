@@ -218,6 +218,7 @@ class MaterialHandler(BaseHandler):
                 return {"action": "unlink", "material": source_name, "object": target_name, "slot": slot}
             return {"action": "unlink", "skipped": True, "reason": "Slot index out of range"}
         else:
+            # ensure slots
             while len(obj.material_slots) <= slot:
                 obj.data.materials.append(None)
             obj.material_slots[slot].material = mat

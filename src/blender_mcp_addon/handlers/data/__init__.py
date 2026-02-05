@@ -17,6 +17,10 @@ from .core_handlers import (
     ArmatureHandler,
     CurveHandler,
     WorldHandler,
+    FontHandler,
+    TextHandler,
+    MetaBallHandler,
+    GreasePencilHandler,
 )
 
 __all__ = [
@@ -34,4 +38,8 @@ __all__ = [
     "ArmatureHandler",
     "CurveHandler",
     "WorldHandler",
+    "FontHandler",
+    "TextHandler",
+    "MetaBallHandler",
+    "GreasePencilHandler",
 ]

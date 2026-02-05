@@ -149,7 +149,13 @@ class HandlerRegistry:
         Returns:
             The DataType enum value, or None if invalid
         """
+        normalized = type_str.lower()
+        alias_map = {
+            "gpencil": "grease_pencil",
+            "meta": "metaball",
+        }
+        normalized = alias_map.get(normalized, normalized)
         try:
-            return DataType(type_str.lower())
+            return DataType(normalized)
         except ValueError:
             return None

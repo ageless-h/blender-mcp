@@ -21,8 +21,9 @@ class MeshHandler(BaseHandler):
         Args:
             name: Name for the new mesh
             params: Creation parameters:
-                - primitive: Type of primitive (cube, sphere, plane, etc.)
+                - primitive/type: Type of primitive (cube, sphere, plane, cylinder, etc.)
                 - size: Size for primitives
+                - radius/depth/segments: Cylinder/cone parameters
                 - vertices: List of vertex coordinates
                 - edges: List of edge indices
                 - faces: List of face vertex indices
@@ -34,7 +35,7 @@ class MeshHandler(BaseHandler):
         
         mesh = bpy.data.meshes.new(name=name)
         
-        primitive = params.get("primitive")
+        primitive = params.get("primitive") or params.get("type")
         if primitive:
             import bmesh  # type: ignore
             bm = bmesh.new()
@@ -50,7 +51,14 @@ class MeshHandler(BaseHandler):
             elif primitive.lower() == "cylinder":
                 segments = params.get("segments", 32)
                 depth = params.get("depth", 2.0)
-                bmesh.ops.create_cone(bm, segments=segments, radius1=size/2, radius2=size/2, depth=depth)
+                radius = params.get("radius", size / 2)
+                bmesh.ops.create_cone(
+                    bm,
+                    segments=segments,
+                    radius1=radius,
+                    radius2=radius,
+                    depth=depth,
+                )
             elif primitive.lower() == "cone":
                 segments = params.get("segments", 32)
                 depth = params.get("depth", 2.0)
@@ -86,6 +94,7 @@ class MeshHandler(BaseHandler):
                 edges if edges else [],
                 faces if faces else []
             )
+            mesh.validate()
             mesh.update()
         
         return {

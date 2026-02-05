@@ -34,7 +34,8 @@ def data_create(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
     if not name:
         return invalid_params_error("'name' parameter is required", started)
     
-    params = payload.get("params", {})
+    # Backward compatibility: earlier drafts used "data" to pass creation params.
+    params = payload.get("params", {}) or payload.get("data", {}) or {}
     
     try:
         result = handler.create(name, params)

@@ -148,3 +148,52 @@ class CollectionHandler(BaseHandler):
             })
         
         return {"items": items, "count": len(items)}
+
+    def link(
+        self,
+        source_name: str,
+        target_type: DataType,
+        target_name: str,
+        unlink: bool = False,
+        params: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Link/unlink collection to a parent collection or scene."""
+        import bpy  # type: ignore
+        
+        collection = bpy.data.collections.get(source_name)
+        if collection is None:
+            raise KeyError(f"Collection '{source_name}' not found")
+        
+        params = params or {}
+        
+        if target_type == DataType.COLLECTION:
+            parent = bpy.data.collections.get(target_name)
+            if parent is None:
+                raise KeyError(f"Collection '{target_name}' not found")
+            if unlink:
+                if collection.name in parent.children:
+                    parent.children.unlink(collection)
+                    return {"action": "unlink", "collection": source_name, "parent": target_name}
+                return {"action": "unlink", "skipped": True, "reason": "Not linked"}
+            if collection.name not in parent.children:
+                parent.children.link(collection)
+                return {"action": "link", "collection": source_name, "parent": target_name}
+            return {"action": "link", "skipped": True, "reason": "Already linked"}
+        
+        if target_type == DataType.SCENE:
+            scene_name = target_name or params.get("scene")
+            scene = bpy.data.scenes.get(scene_name) if scene_name else bpy.context.scene
+            if scene is None:
+                raise KeyError(f"Scene '{scene_name}' not found")
+            root = scene.collection
+            if unlink:
+                if collection.name in root.children:
+                    root.children.unlink(collection)
+                    return {"action": "unlink", "collection": source_name, "scene": scene.name}
+                return {"action": "unlink", "skipped": True, "reason": "Not linked to scene"}
+            if collection.name not in root.children:
+                root.children.link(collection)
+                return {"action": "link", "collection": source_name, "scene": scene.name}
+            return {"action": "link", "skipped": True, "reason": "Already linked to scene"}
+        
+        return {"error": f"Collections can only be linked to collections or scenes, not {target_type.value}"}
