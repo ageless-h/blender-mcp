@@ -65,7 +65,13 @@ class MeshHandler(BaseHandler):
                 minor_radius = params.get("minor_radius", 0.25)
                 major_segments = params.get("major_segments", 48)
                 minor_segments = params.get("minor_segments", 12)
-                bmesh.ops.create_circle(bm, segments=minor_segments, radius=minor_radius)
+                bmesh.ops.create_torus(
+                    bm,
+                    major_segments=major_segments,
+                    minor_segments=minor_segments,
+                    major_radius=major_radius,
+                    minor_radius=minor_radius,
+                )
             
             bm.to_mesh(mesh)
             bm.free()

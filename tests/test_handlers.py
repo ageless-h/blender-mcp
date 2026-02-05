@@ -3,17 +3,16 @@
 from __future__ import annotations
 
 import unittest
-from unittest.mock import MagicMock, patch
 
 from blender_mcp_addon.handlers.types import (
-    DataType, DATA_TYPE_TO_COLLECTION, PSEUDO_TYPES, ATTACHED_TYPES,
+    DataType, PSEUDO_TYPES, ATTACHED_TYPES,
     get_collection_name, is_pseudo_type, is_attached_type,
 )
 from blender_mcp_addon.handlers.registry import HandlerRegistry
 from blender_mcp_addon.handlers.base import BaseHandler
 from blender_mcp_addon.handlers.response import (
     _ok, _error, not_found_error, invalid_params_error,
-    operation_failed_error, unsupported_type_error,
+    unsupported_type_error,
 )
 
 
@@ -270,7 +269,7 @@ class TestAllowlist(unittest.TestCase):
     
     def test_default_allowed_tools(self):
         """Test default allowlist includes core tools."""
-        from blender_mcp.security.allowlist import Allowlist, DEFAULT_ALLOWED_TOOLS
+        from blender_mcp.security.allowlist import Allowlist
         
         allowlist = Allowlist()
         

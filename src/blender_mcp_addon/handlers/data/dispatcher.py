@@ -2,10 +2,8 @@
 """Dispatcher for data.* tool operations."""
 from __future__ import annotations
 
-import time
 from typing import Any
 
-from ..types import DataType
 from ..registry import HandlerRegistry
 from ..response import (
     _ok, _error, check_bpy_available, bpy_unavailable_error,
@@ -70,7 +68,7 @@ def data_read(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
     try:
         result = handler.read(name, path, params)
         return _ok(result=result, started=started)
-    except KeyError as exc:
+    except KeyError:
         return not_found_error(type_str, name, started)
     except Exception as exc:
         return operation_failed_error("data.read", exc, started)
@@ -105,7 +103,7 @@ def data_write(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
         result = handler.write(name, properties, params)
         result["success"] = True
         return _ok(result=result, started=started)
-    except KeyError as exc:
+    except KeyError:
         return not_found_error(type_str, name, started)
     except Exception as exc:
         return operation_failed_error("data.write", exc, started)
@@ -139,7 +137,7 @@ def data_delete(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
         result = handler.delete(name, params)
         result["success"] = True
         return _ok(result=result, started=started)
-    except KeyError as exc:
+    except KeyError:
         return not_found_error(type_str, name, started)
     except Exception as exc:
         return operation_failed_error("data.delete", exc, started)

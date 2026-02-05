@@ -11,7 +11,7 @@ from typing import Any
 
 from ..response import (
     _ok, _error, check_bpy_available, bpy_unavailable_error,
-    invalid_params_error, operation_failed_error,
+    invalid_params_error,
 )
 
 
@@ -152,7 +152,7 @@ def script_execute(payload: dict[str, Any], *, started: float) -> dict[str, Any]
             },
             started=started,
         )
-    except TimeoutError as exc:
+    except TimeoutError:
         exec_duration = (time.perf_counter() - exec_start) * 1000.0
         error_msg = f"Execution timeout after {timeout} seconds"
         _log_execution(code, False, None, error_msg, exec_duration)

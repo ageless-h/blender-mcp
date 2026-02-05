@@ -24,13 +24,22 @@ class TestCapabilityCatalog(unittest.TestCase):
         self.assertEqual(
             names,
             {
+                # Data layer tools (CRUD for all Blender data types)
+                "data.create",
+                "data.read",
+                "data.write",
+                "data.delete",
+                "data.list",
+                "data.link",
+                # Operator layer tool
+                "operator.execute",
+                # Info layer tool
+                "info.query",
+                # Optional dangerous tool (disabled by default)
+                "script.execute",
+                # Legacy capabilities (deprecated, for backward compatibility)
                 "scene.read",
-                "object.read",
-                "object.transform.write",
-                "object.selection.write",
-                "render.settings.read",
-                "render.still",
-                "render.animation",
+                "scene.write",
             },
         )
         for cap in capabilities:

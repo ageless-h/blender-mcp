@@ -10,7 +10,7 @@ from enum import Enum
 from typing import Any
 
 from ..response import (
-    _ok, _error, check_bpy_available, bpy_unavailable_error,
+    _ok, check_bpy_available, bpy_unavailable_error,
     invalid_params_error, operation_failed_error,
 )
 
@@ -374,7 +374,7 @@ def _query_viewport_capture(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
                 "format": "filepath",
                 "filepath": tmp_path,
             }
-    except Exception as exc:
+    except Exception:
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
         raise
