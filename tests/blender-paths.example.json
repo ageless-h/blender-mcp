@@ -1,0 +1,23 @@
+{
+  "_comment": "Example configuration for Blender executable paths. Copy this file to blender-paths.json and update with your local paths.",
+  "blender_executables": [
+    {
+      "_comment_windows": "Windows example path - update with your actual installation path",
+      "version": "4.2.17",
+      "path": "C:\\Program Files\\Blender Foundation\\Blender 4.2\\blender.exe",
+      "tags": ["lts", "baseline"]
+    },
+    {
+      "_comment_linux": "Linux example path - update with your actual installation path",
+      "version": "4.5.6",
+      "path": "/opt/blender/blender-4.5.6-linux-x64/blender",
+      "tags": ["lts"]
+    },
+    {
+      "_comment_macos": "macOS example path - update with your actual installation path",
+      "version": "5.0.1",
+      "path": "/Applications/Blender.app/Contents/MacOS/Blender",
+      "tags": ["stable"]
+    }
+  ]
+}

@@ -1,40 +1,85 @@
 {
   "test_results": [
     {
-      "version": "4.2",
+      "version": "4.2.17",
       "status": "pass",
       "checked_at": "2025-02-05",
       "tests": {
         "unit": "pass",
         "integration": "pass",
         "handlers": "pass",
-        "socket": "pass"
+        "socket": "pass",
+        "real_blender": "pass"
       },
-      "notes": "All tests passing, LTS baseline version"
+      "notes": "All tests passing, LTS baseline version. Real Blender integration tests: 6/6 passed.",
+      "real_blender_tests": {
+        "test_count": 6,
+        "passed": 6,
+        "failed": 0,
+        "path": "F:\\Program Files\\blender\\LTS\\blender-4.2.17-windows-x64\\blender.exe",
+        "test_names": [
+          "test_scene_read",
+          "test_scene_write",
+          "test_scene_write_without_cleanup",
+          "test_unsupported_capability",
+          "test_invalid_request",
+          "test_multiple_requests_same_harness"
+        ]
+      }
     },
     {
-      "version": "4.5",
-      "status": "pending",
-      "checked_at": "pending",
+      "version": "4.5.6",
+      "status": "pass",
+      "checked_at": "2025-02-05",
       "tests": {
-        "unit": "pending",
-        "integration": "pending",
-        "handlers": "pending",
-        "socket": "pending"
+        "unit": "pass",
+        "integration": "pass",
+        "handlers": "pass",
+        "socket": "pass",
+        "real_blender": "pass"
       },
-      "notes": "Testing required - latest LTS"
+      "notes": "All tests passing, latest LTS. Real Blender integration tests: 6/6 passed.",
+      "real_blender_tests": {
+        "test_count": 6,
+        "passed": 6,
+        "failed": 0,
+        "path": "F:\\Program Files\\blender\\LTS\\blender-4.5.6-windows-x64\\blender.exe",
+        "test_names": [
+          "test_scene_read",
+          "test_scene_write",
+          "test_scene_write_without_cleanup",
+          "test_unsupported_capability",
+          "test_invalid_request",
+          "test_multiple_requests_same_harness"
+        ]
+      }
     },
     {
-      "version": "5.0",
-      "status": "pending",
-      "checked_at": "pending",
+      "version": "5.0.1",
+      "status": "pass",
+      "checked_at": "2025-02-05",
       "tests": {
-        "unit": "pending",
-        "integration": "pending",
-        "handlers": "pending",
-        "socket": "pending"
+        "unit": "pass",
+        "integration": "pass",
+        "handlers": "pass",
+        "socket": "pass",
+        "real_blender": "pass"
       },
-      "notes": "Testing required - latest stable"
+      "notes": "All tests passing, latest stable. Real Blender integration tests: 6/6 passed.",
+      "real_blender_tests": {
+        "test_count": 6,
+        "passed": 6,
+        "failed": 0,
+        "path": "F:\\Program Files\\blender\\blender-5.0.1-windows-x64\\blender.exe",
+        "test_names": [
+          "test_scene_read",
+          "test_scene_write",
+          "test_scene_write_without_cleanup",
+          "test_unsupported_capability",
+          "test_invalid_request",
+          "test_multiple_requests_same_harness"
+        ]
+      }
     }
   ],
   "known_issues": [],

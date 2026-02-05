@@ -40,6 +40,9 @@ htmlcov/
 .tox/
 .hypothesis/
 
+# Blender test configuration (user-specific paths)
+tests/blender-paths.json
+
 # Type checking
 .mypy_cache/
 .dmypy.json

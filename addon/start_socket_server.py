@@ -12,6 +12,7 @@ Or from command line:
 """
 
 import json
+import os
 import socket
 import sys
 import threading
@@ -203,12 +204,24 @@ _server_thread: threading.Thread | None = None
 _shutdown_flag = threading.Event()
 
 
-def start_socket_server(host: str = "127.0.0.1", port: int = 9876) -> dict[str, Any]:
+def start_socket_server(host: str = "127.0.0.1", port: int | None = None) -> dict[str, Any]:
     """Start the socket server for receiving capability requests."""
     global _server_socket, _server_thread
 
     if _server_socket is not None:
         return {"ok": False, "error": "server_already_running"}
+
+    # Allow port override via environment variable
+    if port is None:
+        port_str = os.getenv("MCP_SOCKET_PORT", "")
+        if port_str:
+            try:
+                port = int(port_str)
+            except ValueError:
+                print(f"[Socket Server] Invalid MCP_SOCKET_PORT value: {port_str}, using default")
+                port = 9876
+        else:
+            port = 9876
 
     _shutdown_flag.clear()
 
@@ -315,12 +328,26 @@ def main():
     print(f"Blender version: {bpy.app.version_string}")
     print(f"Python: {sys.version}")
 
+    # Check for MCP_SOCKET_PORT environment variable
+    port_str = os.getenv("MCP_SOCKET_PORT", "")
+    if port_str:
+        try:
+            port = int(port_str)
+            print(f"Using port from MCP_SOCKET_PORT: {port}")
+        except ValueError:
+            print(f"Invalid MCP_SOCKET_PORT value: {port_str}, using default")
+            port = None
+    else:
+        port = None
+
     # Start the socket server
-    result = start_socket_server(host="127.0.0.1", port=9876)
+    result = start_socket_server(host="127.0.0.1", port=port)
 
     if result.get("ok"):
         print(f"\n✓ Socket server started on {result['host']}:{result['port']}")
         print("\nServer is ready to accept capability execution requests.")
+        # Ready signal for test harness detection
+        print("[MCP_SERVER_READY]")
         print("\nTo test, run in another terminal:")
         print('  set MCP_ADAPTER=socket')
         print('  python -m examples.stdio_loop')
