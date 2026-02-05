@@ -56,6 +56,27 @@ See [docs/migration/tools-migration.md](docs/migration/tools-migration.md) for d
 
 5. Click "Start Server" to begin accepting MCP requests
 
+### MCP Client Configuration
+
+Create `.mcp.json` in your project root to configure MCP clients:
+
+```json
+{
+  "mcpServers": {
+    "blender": {
+      "command": "python",
+      "args": ["-m", "blender_mcp.mcp_protocol"],
+      "env": {
+        "MCP_ADAPTER": "socket",
+        "MCP_SOCKET_HOST": "127.0.0.1",
+        "MCP_SOCKET_PORT": "9876",
+        "PYTHONPATH": "<path-to-blender-mcp>/src"
+      }
+    }
+  }
+}
+```
+
 ## MCP Server (Stdio Loop)
 
 1. Install the package:
@@ -65,9 +86,23 @@ See [docs/migration/tools-migration.md](docs/migration/tools-migration.md) for d
    - `MCP_ADAPTER=socket python -m examples.stdio_loop`
 
 3. Send a JSON-RPC 2.0 line on stdin:
-   - `{ "jsonrpc": "2.0", "id": 1, "method": "data.read", "params": {"payload": {"type": "context"}, "scopes": ["data:read"]} }`
+   - `{ "jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {} }`
+   - `{ "jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "data.read", "arguments": {"payload": {"type": "context"}}} }`
 
 4. Observe a JSON response on stdout with actual Blender scene data.
+
+### Using the MCP Protocol Adapter
+
+The `mcp_protocol.py` module provides a standard MCP protocol layer:
+
+```bash
+python -m blender_mcp.mcp_protocol
+```
+
+This implements the MCP `2024-11-05` protocol and exposes Blender capabilities as MCP tools:
+- `tools/list` - List available tools
+- `tools/call` - Execute a Blender operation
+- `initialize` - Protocol handshake
 
 ## Testing Without Blender
 
