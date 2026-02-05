@@ -159,6 +159,23 @@ class MCPRegistrationTest(unittest.TestCase):
             tools_response.get("id"), 2, "Response id should match request id"
         )
 
+    def test_tools_call_uses_mock_adapter(self):
+        """Test that tools/call works with mock adapter (no Blender required)."""
+        request = {
+            "jsonrpc": "2.0",
+            "id": 3,
+            "method": "tools/call",
+            "params": {"name": "data.read", "arguments": {"payload": {}}},
+        }
+
+        response = self._send_request(request)
+
+        self.assertIn("result", response, "Response should have result field")
+        result = response["result"]
+        self.assertIn("content", result, "tools/call result should include content")
+        self.assertIsInstance(result["content"], list)
+        self.assertFalse(response.get("error"), "tools/call should not return error")
+
 
 if __name__ == "__main__":
     unittest.main()

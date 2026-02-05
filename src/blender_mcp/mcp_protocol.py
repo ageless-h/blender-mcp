@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from dataclasses import dataclass
 from typing import Any
 
+from blender_mcp.adapters.mock import MockAdapter
+from blender_mcp.adapters.socket import SocketAdapter
+from blender_mcp import __version__ as pkg_version
 from blender_mcp.catalog.catalog import minimal_capability_set
 
 
@@ -55,15 +59,15 @@ class MCPServer:
         """Call a tool."""
         # Convert MCP tool call to internal capability call
         payload = arguments.get("payload", {})
+        adapter_mode = os.environ.get("MCP_ADAPTER", "socket").lower()
 
-        # Import here to avoid circular dependency
-        from blender_mcp.adapters.socket import SocketAdapter
-        import os
-
-        adapter = SocketAdapter(
-            host=os.environ.get("MCP_SOCKET_HOST", "127.0.0.1"),
-            port=int(os.environ.get("MCP_SOCKET_PORT", "9876"))
-        )
+        if adapter_mode == "mock":
+            adapter = MockAdapter()
+        else:
+            adapter = SocketAdapter(
+                host=os.environ.get("MCP_SOCKET_HOST", "127.0.0.1"),
+                port=int(os.environ.get("MCP_SOCKET_PORT", "9876")),
+            )
 
         result = adapter.execute(name, payload)
 
@@ -113,7 +117,7 @@ class MCPServer:
                     "protocolVersion": "2024-11-05",
                     "serverInfo": {
                         "name": "blender-mcp",
-                        "version": "0.1.0"
+                        "version": pkg_version
                     },
                     "capabilities": {
                         "tools": {}
@@ -136,6 +140,7 @@ def run_mcp_server() -> int:
     server = MCPServer()
 
     for line in sys.stdin:
+        request: dict[str, Any] = {}
         line = line.strip()
         if not line:
             continue
@@ -159,7 +164,7 @@ def run_mcp_server() -> int:
         except Exception:
             error_response = {
                 "jsonrpc": "2.0",
-                "id": request.get("id") if 'request' in locals() else None,
+                "id": request.get("id") if request else None,
                 "error": {
                     "code": -32603,
                     "message": "Internal error"
