@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import json
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
-from blender_mcp.catalog.catalog import CapabilityMeta, capability_to_dict, minimal_capability_set
+from blender_mcp.catalog.catalog import minimal_capability_set
 
 
 @dataclass
