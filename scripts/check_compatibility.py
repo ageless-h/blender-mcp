@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import json
 import os
-import sys
 from pathlib import Path
 
 
@@ -60,9 +59,6 @@ def check_compatibility(
     if not supported_versions:
         print("Error: No supported versions in matrix")
         return False
-
-    # Build supported version set
-    supported_set = {v["version"] for v in supported_versions if v.get("tested") or v.get("status") != "pending"}
 
     # Build results map
     test_results = results.get("test_results", [])
