@@ -13,7 +13,14 @@
       "Bash(python test_socket_connection.py:*)",
       "Bash(ruff check:*)",
       "Bash(find:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "WebSearch",
+      "Bash(cmd.exe /c \"echo %APPDATA%\")",
+      "Bash(powershell:*)",
+      "Bash(python -m unittest discover:*)",
+      "Bash(pip install:*)",
+      "Bash(python -m unittest:*)",
+      "Bash(python -m ruff:*)"
     ]
   }
 }
