@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.11"
       - name: Install lint dependencies
         run: |
           python -m pip install --upgrade pip
@@ -26,7 +26,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.11"
       - name: Install test dependencies
         run: |
           python -m pip install --upgrade pip
@@ -40,7 +40,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.11"
       - name: Install test dependencies
         run: |
           python -m pip install --upgrade pip
@@ -95,12 +95,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.11"
       - name: Install test dependencies
         run: |
           python -m pip install --upgrade pip
           pip install .
-      - name: Compatibility placeholder
+      - name: Compatibility check
         run: BLENDER_VERSION=4.2 python "scripts/check_compatibility.py"
       - name: Plugin boundary validation
         run: python "scripts/validate_plugin_boundary.py"
