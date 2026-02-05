@@ -2,6 +2,42 @@
 
 MCP server integration for AI-assisted Blender automation.
 
+## Unified Tool Architecture
+
+Blender MCP uses a highly compressed tool architecture with **8 core tools** that cover 99.9% of Blender functionality:
+
+| Tool | Description |
+|------|-------------|
+| `data.create` | Create any Blender data block (objects, meshes, materials, etc.) |
+| `data.read` | Read properties from any data block |
+| `data.write` | Write properties to any data block |
+| `data.delete` | Delete data blocks |
+| `data.list` | List all data blocks of a type |
+| `data.link` | Link/unlink data blocks (e.g., object to collection) |
+| `operator.execute` | Execute any Blender operator (bpy.ops.*) |
+| `info.query` | Query status, history, statistics, and viewport capture |
+
+**Optional (disabled by default):**
+- `script.execute` - Execute arbitrary Python code (requires explicit enablement)
+
+### Example: Create and Transform an Object
+
+```json
+// Create a cube
+{"capability": "data.create", "payload": {"type": "object", "name": "MyCube", "params": {"object_type": "MESH"}}}
+
+// Move it
+{"capability": "data.write", "payload": {"type": "object", "name": "MyCube", "properties": {"location": [1, 2, 3]}}}
+
+// Add a subdivision modifier
+{"capability": "operator.execute", "payload": {"operator": "object.modifier_add", "params": {"type": "SUBSURF"}}}
+
+// Capture the viewport
+{"capability": "info.query", "payload": {"type": "viewport_capture", "params": {"format": "base64"}}}
+```
+
+See [docs/migration/tools-migration.md](docs/migration/tools-migration.md) for detailed documentation.
+
 ## Blender Addon Installation
 
 1. Copy or symlink `src/blender_mcp_addon/` to your Blender addons folder:
@@ -29,7 +65,7 @@ MCP server integration for AI-assisted Blender automation.
    - `MCP_ADAPTER=socket python -m examples.stdio_loop`
 
 3. Send a JSON-RPC 2.0 line on stdin:
-   - `{ "jsonrpc": "2.0", "id": 1, "method": "scene.read", "params": {"payload": {}, "scopes": ["scene:read"]} }`
+   - `{ "jsonrpc": "2.0", "id": 1, "method": "data.read", "params": {"payload": {"type": "context"}, "scopes": ["data:read"]} }`
 
 4. Observe a JSON response on stdout with actual Blender scene data.
 
