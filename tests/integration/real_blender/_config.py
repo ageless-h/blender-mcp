@@ -48,6 +48,9 @@ def load_blender_configs(config_path: Path | str | None = None) -> list[dict[str
     else:
         config_path = Path(config_path)
 
+    # Only warn on invalid entries when the user explicitly provided a config path.
+    warn_on_invalid_path = config_path != DEFAULT_CONFIG_PATH
+
     # Load from file if exists
     if config_path.exists():
         try:
@@ -55,7 +58,7 @@ def load_blender_configs(config_path: Path | str | None = None) -> list[dict[str
                 data = json.load(f)
                 file_configs = data.get("blender_executables", [])
                 for config in file_configs:
-                    if _validate_and_normalize_config(config):
+                    if _validate_and_normalize_config(config, warn_on_missing=warn_on_invalid_path):
                         configs.append(config)
         except (json.JSONDecodeError, OSError) as e:
             logger.warning("Failed to load Blender config from %s: %s", config_path, e)
@@ -72,7 +75,7 @@ def load_blender_configs(config_path: Path | str | None = None) -> list[dict[str
     return configs
 
 
-def _validate_and_normalize_config(config: dict[str, Any]) -> bool:
+def _validate_and_normalize_config(config: dict[str, Any], *, warn_on_missing: bool = True) -> bool:
     """Validate and normalize a Blender configuration.
 
     Args:
@@ -92,7 +95,8 @@ def _validate_and_normalize_config(config: dict[str, Any]) -> bool:
 
     # Check existence
     if not path.exists():
-        logger.warning("Blender executable not found: %s", config["path"])
+        log = logger.warning if warn_on_missing else logger.debug
+        log("Blender executable not found: %s", config["path"])
         return False
 
     # Check if executable
