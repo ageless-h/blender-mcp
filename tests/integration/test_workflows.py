@@ -35,14 +35,14 @@ class TestWorkflowScenarios(unittest.TestCase):
         self.assertEqual(response.error, "capability_not_allowed")
 
     def test_missing_scope_rejected(self) -> None:
-        request = Request(capability="object.read", payload={}, scopes=[])
+        request = Request(capability="data.read", payload={}, scopes=[])
         response = self.server.handle_request(request)
         self.assertFalse(response.ok)
         self.assertEqual(response.error, "missing_scope")
 
     def test_rate_limit_rejected(self) -> None:
         request = Request(
-            capability="object.read", payload={}, scopes=["object:read"]
+            capability="data.read", payload={}, scopes=["data:read"]
         )
         self.assertTrue(self.server.handle_request(request).ok)
         self.assertTrue(self.server.handle_request(request).ok)
@@ -53,7 +53,7 @@ class TestWorkflowScenarios(unittest.TestCase):
     def test_rate_limit_window_reset(self) -> None:
         self.harness.rate_limiter.window_seconds = 0.0
         request = Request(
-            capability="object.read", payload={}, scopes=["object:read"]
+            capability="data.read", payload={}, scopes=["data:read"]
         )
         self.assertTrue(self.server.handle_request(request).ok)
         self.assertTrue(self.server.handle_request(request).ok)

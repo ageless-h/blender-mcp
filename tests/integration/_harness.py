@@ -46,7 +46,7 @@ def build_integration_harness(
     audit = MemoryAuditLogger()
 
     rate_limiter = RateLimiter(
-        dict({"object.read": 2} if rate_limits is None else rate_limits),
+        dict({"data.read": 2} if rate_limits is None else rate_limits),
         window_seconds=window_seconds,
     )
 
