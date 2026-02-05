@@ -27,6 +27,11 @@ env/
 *~
 .VSCodeCounter/
 
+# AI Editor configurations (local user settings)
+.cursor/
+.opencode/
+.windsurf/
+
 # Testing
 .pytest_cache/
 .coverage
