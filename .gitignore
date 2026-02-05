@@ -51,9 +51,8 @@ dmypy.json
 .pytype/
 .ruff_cache/
 
-# Claude Code local settings
-.claude/settings.local.json
-.claude/settings.json
+# Claude Code (local user settings)
+.claude/
 
 # OS specific
 .DS_Store
