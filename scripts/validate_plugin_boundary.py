@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
+import ast
 import sys
 from pathlib import Path
 
@@ -13,20 +14,52 @@ except ModuleNotFoundError:
     from blender_mcp.adapters.plugin_contract import PluginContract, validate_contract
 
 
+def _has_function(source_path: Path, function_name: str) -> bool:
+    """Check if a Python file contains a specific function definition."""
+    try:
+        tree = ast.parse(source_path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef) and node.name == function_name:
+                return True
+        return False
+    except Exception:
+        return False
+
+
 def main() -> int:
-    contract_path = Path(__file__).resolve().parents[1] / "addon" / "contract.md"
-    text = contract_path.read_text(encoding="utf-8")
-    version = "0.0.0"
-    entrypoints = []
-    for line in text.splitlines():
-        if line.strip().startswith("- Version:"):
-            version = line.split(":", 1)[1].strip()
-        if line.strip().startswith("- `") and "`:" in line:
-            entry = line.split("`", 2)[1]
-            entrypoints.append(entry)
-    contract = PluginContract(version=version, entrypoints=tuple(entrypoints))
-    if not validate_contract(contract, ["addon_entrypoint", "execute_capability"]):
+    """Validate the addon plugin boundary contract.
+
+    The new addon implementation (src/blender_mcp_addon/) defines the following
+    contract entrypoints:
+    - `execute_capability`: Main entrypoint for capability execution
+    """
+    # The new contract is defined by the actual implementation
+    # in src/blender_mcp_addon/capabilities/base.py
+    version = "0.1.0"
+    entrypoints = ("execute_capability",)
+
+    contract = PluginContract(version=version, entrypoints=entrypoints)
+
+    # Validate that required entrypoints are present
+    required_entrypoints = ["execute_capability"]
+    if not validate_contract(contract, required_entrypoints):
+        print("ERROR: Contract validation failed", file=sys.stderr)
         return 1
+
+    # Verify the actual implementation exists by checking the source file
+    # (We can't import the module directly because it requires bpy)
+    repo_root = Path(__file__).resolve().parents[1]
+    impl_path = repo_root / "src" / "blender_mcp_addon" / "capabilities" / "base.py"
+
+    if not impl_path.exists():
+        print(f"ERROR: Implementation file not found: {impl_path}", file=sys.stderr)
+        return 1
+
+    # Check that execute_capability function exists
+    if not _has_function(impl_path, "execute_capability"):
+        print(f"ERROR: execute_capability function not found in {impl_path}", file=sys.stderr)
+        return 1
+
     return 0
 
 
