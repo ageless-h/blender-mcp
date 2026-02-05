@@ -7,9 +7,22 @@ from typing import Any
 
 from .scene import scene_read, scene_write
 
+from ..handlers.data.dispatcher import (
+    data_create, data_read, data_write, data_delete, data_list, data_link
+)
+from ..handlers.operator import operator_execute
+from ..handlers.info import info_query
+from ..handlers.script import script_execute
+
+from ..handlers import data as _data_handlers  # noqa: F401 - Import to register handlers
+
 
 def execute_capability(request: dict[str, Any]) -> dict[str, Any]:
-    """Execute a capability request and return the result."""
+    """Execute a capability request and return the result.
+    
+    Supports both legacy capabilities (scene.read, scene.write) and
+    new unified tools (data.*, operator.execute, info.query, script.execute).
+    """
     started = time.perf_counter()
     try:
         if not isinstance(request, dict):
@@ -40,6 +53,27 @@ def execute_capability(request: dict[str, Any]) -> dict[str, Any]:
                 started=started,
             )
 
+        # New unified tools
+        if capability == "data.create":
+            return data_create(payload, started=started)
+        if capability == "data.read":
+            return data_read(payload, started=started)
+        if capability == "data.write":
+            return data_write(payload, started=started)
+        if capability == "data.delete":
+            return data_delete(payload, started=started)
+        if capability == "data.list":
+            return data_list(payload, started=started)
+        if capability == "data.link":
+            return data_link(payload, started=started)
+        if capability == "operator.execute":
+            return operator_execute(payload, started=started)
+        if capability == "info.query":
+            return info_query(payload, started=started)
+        if capability == "script.execute":
+            return script_execute(payload, started=started)
+
+        # Legacy capabilities (deprecated, will be removed in future)
         if capability == "scene.read":
             return scene_read(payload, started=started)
         if capability == "scene.write":
@@ -55,7 +89,7 @@ def execute_capability(request: dict[str, Any]) -> dict[str, Any]:
         return _error(
             code="addon_exception",
             message="unhandled addon exception",
-            data={"type": type(exc).__name__},
+            data={"type": type(exc).__name__, "message": str(exc)},
             started=started,
         )
 
