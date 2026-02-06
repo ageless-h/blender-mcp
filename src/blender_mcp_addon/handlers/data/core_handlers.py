@@ -19,6 +19,7 @@ class CameraHandler(BaseHandler):
         import bpy  # type: ignore
         camera = bpy.data.cameras.new(name=name)
         
+        # Parameters
         if "lens" in params:
             camera.lens = params["lens"]
         if "type" in params:
@@ -52,7 +53,13 @@ class CameraHandler(BaseHandler):
             if "rotation" in params:
                 cam_obj.rotation_euler = tuple(params["rotation"])
         
-        return {"name": camera.name, "type": "camera"}
+        return {
+            "name": camera.name,
+            "type": "camera",
+            "lens": camera.lens,
+            "clip_start": camera.clip_start,
+            "clip_end": camera.clip_end,
+        }
     
     def read(self, name: str, path: str | None, params: dict[str, Any]) -> dict[str, Any]:
         import bpy  # type: ignore
@@ -127,6 +134,7 @@ class LightHandler(BaseHandler):
         light_type = params.get("light_type", "POINT")
         light = bpy.data.lights.new(name=name, type=light_type)
         
+        # Parameters
         if "energy" in params:
             light.energy = params["energy"]
         if "color" in params:
@@ -145,7 +153,13 @@ class LightHandler(BaseHandler):
             if "rotation" in params:
                 light_obj.rotation_euler = tuple(params["rotation"])
         
-        return {"name": light.name, "type": "light", "light_type": light.type}
+        return {
+            "name": light.name,
+            "type": "light",
+            "light_type": light.type,
+            "energy": light.energy,
+            "color": list(light.color),
+        }
     
     def read(self, name: str, path: str | None, params: dict[str, Any]) -> dict[str, Any]:
         import bpy  # type: ignore
@@ -277,7 +291,8 @@ class CurveHandler(BaseHandler):
         import bpy  # type: ignore
         from mathutils import Vector  # type: ignore
         
-        curve_type = params.get("curve_type", "CURVE")
+        curve_type = params.get("curve_type") or "CURVE"
+        spline_type_default = params.get("spline_type") or params.get("type") or "BEZIER"
         curve = bpy.data.curves.new(name=name, type=curve_type)
         
         if "dimensions" in params:
@@ -287,7 +302,7 @@ class CurveHandler(BaseHandler):
         
         splines_data = params.get("splines", [])
         for spline_data in splines_data:
-            spline_type = spline_data.get("type", "BEZIER")
+            spline_type = spline_data.get("type", spline_type_default)
             spline = curve.splines.new(type=spline_type)
             spline.use_cyclic_u = spline_data.get("use_cyclic_u", False)
             spline.resolution_u = spline_data.get("resolution_u", curve.resolution_u)
@@ -659,7 +674,21 @@ class GreasePencilHandler(BaseHandler):
     def create(self, name: str, params: dict[str, Any]) -> dict[str, Any]:
         import bpy  # type: ignore
         gp = bpy.data.grease_pencils.new(name=name)
-        return {"name": gp.name, "type": "grease_pencil"}
+        
+        if "layers" in params:
+            self._create_layers(gp, params["layers"])
+        
+        layers_count = len(gp.layers)
+        frames_total = sum(len(layer.frames) for layer in gp.layers)
+        strokes_total = sum(len(frame.strokes) for layer in gp.layers for frame in layer.frames)
+        
+        return {
+            "name": gp.name,
+            "type": "grease_pencil",
+            "layers_count": layers_count,
+            "frames_total": frames_total,
+            "strokes_total": strokes_total,
+        }
     
     def read(self, name: str, path: str | None, params: dict[str, Any]) -> dict[str, Any]:
         import bpy  # type: ignore
@@ -672,7 +701,13 @@ class GreasePencilHandler(BaseHandler):
             return {"name": name, "path": path, "value": value}
         
         layers = [{"name": l.name, "frames": len(l.frames)} for l in gp.layers]
-        return {"name": gp.name, "layers": layers, "layers_count": len(gp.layers)}
+        return {
+            "name": gp.name,
+            "layers": layers,
+            "layers_count": len(gp.layers),
+            "frames_total": sum(len(layer.frames) for layer in gp.layers),
+            "strokes_total": sum(len(frame.strokes) for layer in gp.layers for frame in layer.frames),
+        }
     
     def write(self, name: str, properties: dict[str, Any], params: dict[str, Any]) -> dict[str, Any]:
         import bpy  # type: ignore
@@ -698,3 +733,23 @@ class GreasePencilHandler(BaseHandler):
         import bpy  # type: ignore
         items = [{"name": g.name, "layers": len(g.layers)} for g in bpy.data.grease_pencils]
         return {"items": items, "count": len(items)}
+
+    def _create_layers(self, gpencil, layers_data):
+        import bpy  # type: ignore
+
+        for layer_data in layers_data:
+            layer = gpencil.layers.new(layer_data.get("name", "Layer"))
+
+            for frame_data in layer_data.get("frames", []):
+                frame_number = frame_data.get("frame_number", 1)
+                frame = layer.frames.new(frame_number)
+
+                for stroke_data in frame_data.get("strokes", []):
+                    stroke = frame.strokes.new()
+                    stroke.line_width = stroke_data.get("line_width", 1.0)
+
+                    for point_data in stroke_data.get("points", []):
+                        point = stroke.points.new()
+                        point.co = point_data["co"]
+                        point.strength = point_data.get("strength", 1.0)
+                        point.pressure = point_data.get("pressure", 0.5)

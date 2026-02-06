@@ -42,13 +42,16 @@ class MeshHandler(BaseHandler):
             
             size = params.get("size", 2.0)
             
-            if primitive.lower() == "cube":
+            kind = primitive.lower()
+            
+            if kind == "cube":
                 bmesh.ops.create_cube(bm, size=size)
-            elif primitive.lower() == "sphere":
+            elif kind == "sphere":
                 segments = params.get("segments", 32)
                 ring_count = params.get("ring_count", 16)
-                bmesh.ops.create_uvsphere(bm, u_segments=segments, v_segments=ring_count, radius=size/2)
-            elif primitive.lower() == "cylinder":
+                radius = params.get("radius", size / 2)
+                bmesh.ops.create_uvsphere(bm, u_segments=segments, v_segments=ring_count, radius=radius)
+            elif kind == "cylinder":
                 segments = params.get("segments", 32)
                 depth = params.get("depth", 2.0)
                 radius = params.get("radius", size / 2)
@@ -59,16 +62,17 @@ class MeshHandler(BaseHandler):
                     radius2=radius,
                     depth=depth,
                 )
-            elif primitive.lower() == "cone":
+            elif kind == "cone":
                 segments = params.get("segments", 32)
                 depth = params.get("depth", 2.0)
-                bmesh.ops.create_cone(bm, segments=segments, radius1=size/2, radius2=0, depth=depth)
-            elif primitive.lower() == "plane":
+                radius = params.get("radius", size / 2)
+                bmesh.ops.create_cone(bm, segments=segments, radius1=radius, radius2=0, depth=depth)
+            elif kind == "plane":
                 bmesh.ops.create_grid(bm, x_segments=1, y_segments=1, size=size)
-            elif primitive.lower() == "icosphere":
+            elif kind == "icosphere":
                 subdivisions = params.get("subdivisions", 2)
                 bmesh.ops.create_icosphere(bm, subdivisions=subdivisions, radius=size/2)
-            elif primitive.lower() == "torus":
+            elif kind == "torus":
                 major_radius = params.get("major_radius", 1.0)
                 minor_radius = params.get("minor_radius", 0.25)
                 major_segments = params.get("major_segments", 48)
@@ -80,9 +84,13 @@ class MeshHandler(BaseHandler):
                     major_radius=major_radius,
                     minor_radius=minor_radius,
                 )
+            else:
+                bm.free()
+                raise ValueError(f"Unknown geometry type: {primitive}")
             
             bm.to_mesh(mesh)
             bm.free()
+            mesh.update()
         
         vertices = params.get("vertices")
         edges = params.get("edges")
@@ -100,9 +108,11 @@ class MeshHandler(BaseHandler):
         return {
             "name": mesh.name,
             "type": "mesh",
+            "geometry_type": primitive.lower() if isinstance(primitive, str) else None,
             "vertices": len(mesh.vertices),
             "edges": len(mesh.edges),
             "polygons": len(mesh.polygons),
+            "params": params,
         }
     
     def read(self, name: str, path: str | None, params: dict[str, Any]) -> dict[str, Any]:
