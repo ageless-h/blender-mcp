@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """DataType enumeration for unified handler system."""
+
 from __future__ import annotations
 
 from enum import Enum
@@ -7,7 +8,7 @@ from enum import Enum
 
 class DataType(str, Enum):
     """Enumeration of all supported Blender data block types.
-    
+
     Includes:
     - Core object types (object, mesh, curve, etc.)
     - Appearance types (material, texture, image, etc.)
@@ -22,7 +23,7 @@ class DataType(str, Enum):
     - Pseudo-types (context, preferences)
     - Attached types (modifier, constraint, driver, nla_track)
     """
-    
+
     # Core object types
     OBJECT = "object"
     MESH = "mesh"
@@ -31,62 +32,65 @@ class DataType(str, Enum):
     METABALL = "metaball"
     ARMATURE = "armature"
     LATTICE = "lattice"
-    
+
     # Appearance types
     MATERIAL = "material"
     TEXTURE = "texture"
     IMAGE = "image"
     WORLD = "world"
     LINESTYLE = "linestyle"
-    
+
     # Light and camera types
     CAMERA = "camera"
     LIGHT = "light"
     PROBE = "probe"
-    
+
     # Node system types
     NODE_TREE = "node_tree"
-    
+
     # Organization types
     COLLECTION = "collection"
     SCENE = "scene"
     WORKSPACE = "workspace"
-    
+
     # Animation types
     ACTION = "action"
-    
+    KEY = "key"
+
     # 2D animation types
     GREASE_PENCIL = "grease_pencil"
-    
+    ANNOTATION = "annotation"
+
     # Audio/video types
     SOUND = "sound"
     SPEAKER = "speaker"
     MOVIECLIP = "movieclip"
     MASK = "mask"
-    
+
     # Physics types
     PARTICLE = "particle"
-    
+
     # Special geometry types
     VOLUME = "volume"
     POINTCLOUD = "pointcloud"
     HAIR_CURVES = "hair_curves"
-    
+    CURVES_NEW = "curves_new"
+
     # Tool types
     BRUSH = "brush"
     PALETTE = "palette"
     PAINTCURVE = "paintcurve"
     TEXT = "text"
     FONT = "font"
-    
+
     # External data types
     LIBRARY = "library"
     CACHE_FILE = "cache_file"
-    
+
     # Pseudo-types (non-data-block entities)
     CONTEXT = "context"
     PREFERENCES = "preferences"
-    
+
     # Attached types (require parent reference)
     MODIFIER = "modifier"
     CONSTRAINT = "constraint"
@@ -116,7 +120,9 @@ DATA_TYPE_TO_COLLECTION: dict[DataType, str] = {
     DataType.SCENE: "scenes",
     DataType.WORKSPACE: "workspaces",
     DataType.ACTION: "actions",
+    DataType.KEY: "shape_keys",
     DataType.GREASE_PENCIL: "grease_pencils",
+    DataType.ANNOTATION: "annotations",
     DataType.SOUND: "sounds",
     DataType.SPEAKER: "speakers",
     DataType.MOVIECLIP: "movieclips",
@@ -125,6 +131,7 @@ DATA_TYPE_TO_COLLECTION: dict[DataType, str] = {
     DataType.VOLUME: "volumes",
     DataType.POINTCLOUD: "pointclouds",
     DataType.HAIR_CURVES: "hair_curves",
+    DataType.CURVES_NEW: "curves",
     DataType.BRUSH: "brushes",
     DataType.PALETTE: "palettes",
     DataType.PAINTCURVE: "paint_curves",
@@ -146,6 +153,9 @@ ATTACHED_TYPES: set[DataType] = {
     DataType.CONSTRAINT,
     DataType.DRIVER,
     DataType.NLA_TRACK,
+    DataType.KEY,
+    DataType.ANNOTATION,
+    DataType.CURVES_NEW,
 }
 
 
