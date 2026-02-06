@@ -54,6 +54,9 @@ dmypy.json
 # Claude Code (local user settings)
 .claude/
 
+# antigravity settings (local user settings)
+.agent/
+
 # OS specific
 .DS_Store
 Thumbs.db
