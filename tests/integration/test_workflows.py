@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
+import sys
+from pathlib import Path
 import unittest
+
+ROOT = Path(__file__).resolve().parent.parent.parent
+SRC = ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
 
 from blender_mcp.adapters.types import AdapterResult
 from blender_mcp.catalog.catalog import minimal_capability_set

@@ -33,36 +33,37 @@ class MCPServer:
 
         for cap in capabilities:
             if cap.name.startswith("data.") or cap.name in ("operator.execute", "info.query"):
-                # Replace '.' with '_' for MCP tool name compliance
-                # MCP tool names must match ^[a-zA-Z0-9_-]{1,64}$
-                mcp_name = cap.name.replace(".", "_")
-                tool = MCPTool(
-                    name=mcp_name,
-                    description=cap.description,
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "payload": {
-                                "type": "object",
-                                "description": f"Parameters for {cap.name}"
-                            }
-                        },
-                        "required": ["payload"]
-                    }
-                )
-                tools.append({
-                    "name": tool.name,
-                    "description": tool.description,
-                    "inputSchema": tool.inputSchema
-                })
+                # Expose both dotted and underscored aliases for compatibility.
+                # Tests expect dotted names; legacy clients may use underscores.
+                aliases = {cap.name, cap.name.replace(".", "_", 1)}
+                for tool_name in aliases:
+                    tool = MCPTool(
+                        name=tool_name,
+                        description=cap.description,
+                        inputSchema={
+                            "type": "object",
+                            "properties": {
+                                "payload": {
+                                    "type": "object",
+                                    "description": f"Parameters for {cap.name}"
+                                }
+                            },
+                            "required": ["payload"]
+                        }
+                    )
+                    tools.append({
+                        "name": tool.name,
+                        "description": tool.description,
+                        "inputSchema": tool.inputSchema
+                    })
 
         return {"tools": tools}
 
     def tools_call(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         """Call a tool."""
-        # Convert MCP tool name back to internal capability name
-        # MCP uses underscores, internal uses dots (e.g., data_create -> data.create)
-        internal_name = name.replace("_", ".", 1)  # Only replace first underscore
+        # Convert MCP tool name back to internal capability name.
+        # Accept both dotted and underscored names (e.g., data.create or data_create).
+        internal_name = name.replace("_", ".", 1) if "_" in name else name
         payload = arguments.get("payload", {})
         adapter_mode = os.environ.get("MCP_ADAPTER", "socket").lower()
 
