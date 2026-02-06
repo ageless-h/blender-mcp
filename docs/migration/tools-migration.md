@@ -11,6 +11,8 @@ The legacy capabilities (`scene.read`, `scene.write`) are **deprecated** and wil
 - **Universal operator execution** instead of per-operator capabilities
 - **Comprehensive info queries** for LLM feedback
 
+> **Naming Convention**: MCP exposes tools with underscores (e.g., `data_create`) per MCP specification. Internal capability names shown in payload examples use dots (e.g., `data.create`). The MCP server automatically converts between these formats.
+
 ## Migration Table
 
 | Legacy Capability | New Tool | Example |

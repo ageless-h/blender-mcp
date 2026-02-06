@@ -27,14 +27,16 @@ Blender MCP uses a highly compressed tool architecture with **8 core tools** tha
 
 | Tool | Description |
 |------|-------------|
-| `data.create` | Create any Blender data block (objects, meshes, materials, etc.) |
-| `data.read` | Read properties from any data block |
-| `data.write` | Write properties to any data block |
-| `data.delete` | Delete data blocks |
-| `data.list` | List all data blocks of a type |
-| `data.link` | Link/unlink data blocks (e.g., object to collection) |
-| `operator.execute` | Execute any Blender operator (bpy.ops.*) |
-| `info.query` | Query status, history, statistics, and viewport capture |
+| `data_create` | Create any Blender data block (objects, meshes, materials, etc.) |
+| `data_read` | Read properties from any data block |
+| `data_write` | Write properties to any data block |
+| `data_delete` | Delete data blocks |
+| `data_list` | List all data blocks of a type |
+| `data_link` | Link/unlink data blocks (e.g., object to collection) |
+| `operator_execute` | Execute any Blender operator (bpy.ops.*) |
+| `info_query` | Query status, history, statistics, and viewport capture |
+
+> **Note**: MCP tool names use underscores (e.g., `data_create`) per MCP specification. Internal capability names use dots (e.g., `data.create`).
 
 **Optional (disabled by default):**
 - `script.execute` - Execute arbitrary Python code (requires explicit enablement)
@@ -135,14 +137,16 @@ Blender MCP 采用高度压缩的工具架构，**8 个核心工具** 覆盖 99.
 
 | 工具 | 描述 |
 |------|------|
-| `data.create` | 创建任何 Blender 数据块（对象、网格、材质等） |
-| `data.read` | 读取任何数据块的属性 |
-| `data.write` | 写入任何数据块的属性 |
-| `data.delete` | 删除数据块 |
-| `data.list` | 列出某类型的所有数据块 |
-| `data.link` | 链接/取消链接数据块（如将对象链接到集合） |
-| `operator.execute` | 执行任何 Blender 操作符 (bpy.ops.*) |
-| `info.query` | 查询状态、历史、统计信息和视口截图 |
+| `data_create` | 创建任何 Blender 数据块（对象、网格、材质等） |
+| `data_read` | 读取任何数据块的属性 |
+| `data_write` | 写入任何数据块的属性 |
+| `data_delete` | 删除数据块 |
+| `data_list` | 列出某类型的所有数据块 |
+| `data_link` | 链接/取消链接数据块（如将对象链接到集合） |
+| `operator_execute` | 执行任何 Blender 操作符 (bpy.ops.*) |
+| `info_query` | 查询状态、历史、统计信息和视口截图 |
+
+> **注意**: MCP 工具名称使用下划线（如 `data_create`），符合 MCP 规范。内部能力名称使用点号（如 `data.create`）。
 
 **可选（默认禁用）：**
 - `script.execute` - 执行任意 Python 代码（需要明确启用）

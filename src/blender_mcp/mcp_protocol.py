@@ -33,8 +33,11 @@ class MCPServer:
 
         for cap in capabilities:
             if cap.name.startswith("data.") or cap.name in ("operator.execute", "info.query"):
+                # Replace '.' with '_' for MCP tool name compliance
+                # MCP tool names must match ^[a-zA-Z0-9_-]{1,64}$
+                mcp_name = cap.name.replace(".", "_")
                 tool = MCPTool(
-                    name=cap.name,
+                    name=mcp_name,
                     description=cap.description,
                     inputSchema={
                         "type": "object",
@@ -57,7 +60,9 @@ class MCPServer:
 
     def tools_call(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         """Call a tool."""
-        # Convert MCP tool call to internal capability call
+        # Convert MCP tool name back to internal capability name
+        # MCP uses underscores, internal uses dots (e.g., data_create -> data.create)
+        internal_name = name.replace("_", ".", 1)  # Only replace first underscore
         payload = arguments.get("payload", {})
         adapter_mode = os.environ.get("MCP_ADAPTER", "socket").lower()
 
@@ -69,7 +74,7 @@ class MCPServer:
                 port=int(os.environ.get("MCP_SOCKET_PORT", "9876")),
             )
 
-        result = adapter.execute(name, payload)
+        result = adapter.execute(internal_name, payload)
 
         if result.ok:
             return {
@@ -87,11 +92,16 @@ class MCPServer:
                 "isError": True
             }
 
-    def handle_request(self, request: dict[str, Any]) -> dict[str, Any]:
+    def handle_request(self, request: dict[str, Any]) -> dict[str, Any] | None:
         """Handle an MCP request."""
         method = request.get("method")
         params = request.get("params", {})
         req_id = request.get("id")
+
+        # Handle notifications (no response expected)
+        if method and method.startswith("notifications/"):
+            # Notifications should not return a response
+            return None
 
         if method == "tools/list":
             result = self.tools_list()
@@ -148,8 +158,10 @@ def run_mcp_server() -> int:
         try:
             request = json.loads(line)
             response = server.handle_request(request)
-            print(json.dumps(response, ensure_ascii=False))
-            sys.stdout.flush()
+            # Only send response for requests, not for notifications
+            if response is not None:
+                print(json.dumps(response, ensure_ascii=False))
+                sys.stdout.flush()
         except json.JSONDecodeError:
             error_response = {
                 "jsonrpc": "2.0",
