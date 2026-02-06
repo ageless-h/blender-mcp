@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Core handlers for camera, light, armature, curve, and world types."""
+
 from __future__ import annotations
 
 from typing import Any, Iterable
@@ -12,13 +13,14 @@ from ..registry import HandlerRegistry
 @HandlerRegistry.register
 class CameraHandler(BaseHandler):
     """Handler for Blender camera data type (bpy.data.cameras)."""
-    
+
     data_type = DataType.CAMERA
-    
+
     def create(self, name: str, params: dict[str, Any]) -> dict[str, Any]:
         import bpy  # type: ignore
+
         camera = bpy.data.cameras.new(name=name)
-        
+
         # Parameters
         if "lens" in params:
             camera.lens = params["lens"]
@@ -38,7 +40,7 @@ class CameraHandler(BaseHandler):
             camera.shift_x = params["shift_x"]
         if "shift_y" in params:
             camera.shift_y = params["shift_y"]
-        
+
         # Optional convenience: create and link an object using this camera data
         if params.get("link_object", True):
             obj_name = params.get("object_name", name)
@@ -52,7 +54,7 @@ class CameraHandler(BaseHandler):
                 cam_obj.location = tuple(params["location"])
             if "rotation" in params:
                 cam_obj.rotation_euler = tuple(params["rotation"])
-        
+
         return {
             "name": camera.name,
             "type": "camera",
@@ -60,19 +62,23 @@ class CameraHandler(BaseHandler):
             "clip_start": camera.clip_start,
             "clip_end": camera.clip_end,
         }
-    
-    def read(self, name: str, path: str | None, params: dict[str, Any]) -> dict[str, Any]:
+
+    def read(
+        self, name: str, path: str | None, params: dict[str, Any]
+    ) -> dict[str, Any]:
         import bpy  # type: ignore
+
         camera = bpy.data.cameras.get(name)
         if camera is None:
             raise KeyError(f"Camera '{name}' not found")
-        
+
         if path:
             value = self._get_nested_attr(camera, path)
             return {"name": name, "path": path, "value": value}
-        
+
         objects = [
-            obj.name for obj in bpy.data.objects
+            obj.name
+            for obj in bpy.data.objects
             if obj.type == "CAMERA" and obj.data == camera
         ]
         collections = []
@@ -80,7 +86,7 @@ class CameraHandler(BaseHandler):
             for coll in bpy.data.collections:
                 if any(obj_name in coll.objects for obj_name in objects):
                     collections.append(coll.name)
-        
+
         return {
             "name": camera.name,
             "type": camera.type,
@@ -96,50 +102,58 @@ class CameraHandler(BaseHandler):
             "objects": objects,
             "collections": collections,
         }
-    
-    def write(self, name: str, properties: dict[str, Any], params: dict[str, Any]) -> dict[str, Any]:
+
+    def write(
+        self, name: str, properties: dict[str, Any], params: dict[str, Any]
+    ) -> dict[str, Any]:
         import bpy  # type: ignore
+
         camera = bpy.data.cameras.get(name)
         if camera is None:
             raise KeyError(f"Camera '{name}' not found")
-        
+
         modified = []
         for prop_path, value in properties.items():
             self._set_nested_attr(camera, prop_path, value)
             modified.append(prop_path)
         return {"name": name, "modified": modified}
-    
+
     def delete(self, name: str, params: dict[str, Any]) -> dict[str, Any]:
         import bpy  # type: ignore
+
         camera = bpy.data.cameras.get(name)
         if camera is None:
             raise KeyError(f"Camera '{name}' not found")
         bpy.data.cameras.remove(camera)
         return {"deleted": name}
-    
+
     def list_items(self, filter_params: dict[str, Any] | None) -> dict[str, Any]:
         import bpy  # type: ignore
-        items = [{"name": c.name, "type": c.type, "lens": c.lens} for c in bpy.data.cameras]
+
+        items = [
+            {"name": c.name, "type": c.type, "lens": c.lens} for c in bpy.data.cameras
+        ]
         return {"items": items, "count": len(items)}
 
 
 @HandlerRegistry.register
 class LightHandler(BaseHandler):
     """Handler for Blender light data type (bpy.data.lights)."""
-    
+
     data_type = DataType.LIGHT
-    
+
     def create(self, name: str, params: dict[str, Any]) -> dict[str, Any]:
         import bpy  # type: ignore
+
         light_type = params.get("light_type", "POINT")
         light = bpy.data.lights.new(name=name, type=light_type)
-        
+
         # Parameters
         if "energy" in params:
             light.energy = params["energy"]
         if "color" in params:
             light.color = tuple(params["color"][:3])
-        
+
         if params.get("link_object", True):
             obj_name = params.get("object_name", name)
             light_obj = bpy.data.objects.new(obj_name, light)
@@ -152,7 +166,7 @@ class LightHandler(BaseHandler):
                 light_obj.location = tuple(params["location"])
             if "rotation" in params:
                 light_obj.rotation_euler = tuple(params["rotation"])
-        
+
         return {
             "name": light.name,
             "type": "light",
@@ -160,19 +174,23 @@ class LightHandler(BaseHandler):
             "energy": light.energy,
             "color": list(light.color),
         }
-    
-    def read(self, name: str, path: str | None, params: dict[str, Any]) -> dict[str, Any]:
+
+    def read(
+        self, name: str, path: str | None, params: dict[str, Any]
+    ) -> dict[str, Any]:
         import bpy  # type: ignore
+
         light = bpy.data.lights.get(name)
         if light is None:
             raise KeyError(f"Light '{name}' not found")
-        
+
         if path:
             value = self._get_nested_attr(light, path)
             return {"name": name, "path": path, "value": value}
-        
+
         objects = [
-            obj.name for obj in bpy.data.objects
+            obj.name
+            for obj in bpy.data.objects
             if obj.type == "LIGHT" and obj.data == light
         ]
         collections = []
@@ -180,7 +198,7 @@ class LightHandler(BaseHandler):
             for coll in bpy.data.collections:
                 if any(obj_name in coll.objects for obj_name in objects):
                     collections.append(coll.name)
-        
+
         return {
             "name": light.name,
             "type": light.type,
@@ -190,13 +208,16 @@ class LightHandler(BaseHandler):
             "objects": objects,
             "collections": collections,
         }
-    
-    def write(self, name: str, properties: dict[str, Any], params: dict[str, Any]) -> dict[str, Any]:
+
+    def write(
+        self, name: str, properties: dict[str, Any], params: dict[str, Any]
+    ) -> dict[str, Any]:
         import bpy  # type: ignore
+
         light = bpy.data.lights.get(name)
         if light is None:
             raise KeyError(f"Light '{name}' not found")
-        
+
         modified = []
         for prop_path, value in properties.items():
             if prop_path == "color":
@@ -205,108 +226,128 @@ class LightHandler(BaseHandler):
                 self._set_nested_attr(light, prop_path, value)
             modified.append(prop_path)
         return {"name": name, "modified": modified}
-    
+
     def delete(self, name: str, params: dict[str, Any]) -> dict[str, Any]:
         import bpy  # type: ignore
+
         light = bpy.data.lights.get(name)
         if light is None:
             raise KeyError(f"Light '{name}' not found")
         bpy.data.lights.remove(light)
         return {"deleted": name}
-    
+
     def list_items(self, filter_params: dict[str, Any] | None) -> dict[str, Any]:
         import bpy  # type: ignore
+
         filter_params = filter_params or {}
         light_type = filter_params.get("light_type")
-        
+
         items = []
         for light in bpy.data.lights:
             if light_type and light.type != light_type.upper():
                 continue
-            items.append({"name": light.name, "type": light.type, "energy": light.energy})
+            items.append(
+                {"name": light.name, "type": light.type, "energy": light.energy}
+            )
         return {"items": items, "count": len(items)}
 
 
 @HandlerRegistry.register
 class ArmatureHandler(BaseHandler):
     """Handler for Blender armature data type (bpy.data.armatures)."""
-    
+
     data_type = DataType.ARMATURE
-    
+
     def create(self, name: str, params: dict[str, Any]) -> dict[str, Any]:
         import bpy  # type: ignore
+
         armature = bpy.data.armatures.new(name=name)
         return {"name": armature.name, "type": "armature"}
-    
-    def read(self, name: str, path: str | None, params: dict[str, Any]) -> dict[str, Any]:
+
+    def read(
+        self, name: str, path: str | None, params: dict[str, Any]
+    ) -> dict[str, Any]:
         import bpy  # type: ignore
+
         armature = bpy.data.armatures.get(name)
         if armature is None:
             raise KeyError(f"Armature '{name}' not found")
-        
+
         if path:
             value = self._get_nested_attr(armature, path)
             return {"name": name, "path": path, "value": value}
-        
-        bones_info = [{"name": b.name, "head": list(b.head), "tail": list(b.tail)} for b in armature.bones]
+
+        bones_info = [
+            {"name": b.name, "head": list(b.head), "tail": list(b.tail)}
+            for b in armature.bones
+        ]
         return {
             "name": armature.name,
             "bones": bones_info,
             "bones_count": len(armature.bones),
         }
-    
-    def write(self, name: str, properties: dict[str, Any], params: dict[str, Any]) -> dict[str, Any]:
+
+    def write(
+        self, name: str, properties: dict[str, Any], params: dict[str, Any]
+    ) -> dict[str, Any]:
         import bpy  # type: ignore
+
         armature = bpy.data.armatures.get(name)
         if armature is None:
             raise KeyError(f"Armature '{name}' not found")
-        
+
         modified = []
         for prop_path, value in properties.items():
             self._set_nested_attr(armature, prop_path, value)
             modified.append(prop_path)
         return {"name": name, "modified": modified}
-    
+
     def delete(self, name: str, params: dict[str, Any]) -> dict[str, Any]:
         import bpy  # type: ignore
+
         armature = bpy.data.armatures.get(name)
         if armature is None:
             raise KeyError(f"Armature '{name}' not found")
         bpy.data.armatures.remove(armature)
         return {"deleted": name}
-    
+
     def list_items(self, filter_params: dict[str, Any] | None) -> dict[str, Any]:
         import bpy  # type: ignore
-        items = [{"name": a.name, "bones_count": len(a.bones)} for a in bpy.data.armatures]
+
+        items = [
+            {"name": a.name, "bones_count": len(a.bones)} for a in bpy.data.armatures
+        ]
         return {"items": items, "count": len(items)}
 
 
 @HandlerRegistry.register
 class CurveHandler(BaseHandler):
     """Handler for Blender curve data type (bpy.data.curves)."""
-    
+
     data_type = DataType.CURVE
-    
+
     def create(self, name: str, params: dict[str, Any]) -> dict[str, Any]:
         import bpy  # type: ignore
         from mathutils import Vector  # type: ignore
-        
+
         curve_type = params.get("curve_type") or "CURVE"
-        spline_type_default = params.get("spline_type") or params.get("type") or "BEZIER"
+        spline_type_default = (
+            params.get("spline_type") or params.get("type") or "BEZIER"
+        )
         curve = bpy.data.curves.new(name=name, type=curve_type)
-        
+
         if "dimensions" in params:
             curve.dimensions = params["dimensions"]
         if "resolution_u" in params:
             curve.resolution_u = params["resolution_u"]
-        
+
         splines_data = params.get("splines", [])
         for spline_data in splines_data:
             spline_type = spline_data.get("type", spline_type_default)
             spline = curve.splines.new(type=spline_type)
             spline.use_cyclic_u = spline_data.get("use_cyclic_u", False)
             spline.resolution_u = spline_data.get("resolution_u", curve.resolution_u)
-            
+
             if spline_type == "BEZIER":
                 points = spline_data.get("bezier_points", [])
                 spline.bezier_points.add(max(len(points) - 1, 0))
@@ -320,8 +361,12 @@ class CurveHandler(BaseHandler):
                         point.handle_left = Vector(point_data["handle_left"])
                     if "handle_right" in point_data:
                         point.handle_right = Vector(point_data["handle_right"])
-                    point.handle_left_type = point_data.get("handle_left_type", point.handle_left_type)
-                    point.handle_right_type = point_data.get("handle_right_type", point.handle_right_type)
+                    point.handle_left_type = point_data.get(
+                        "handle_left_type", point.handle_left_type
+                    )
+                    point.handle_right_type = point_data.get(
+                        "handle_right_type", point.handle_right_type
+                    )
             else:
                 points = spline_data.get("points", [])
                 spline.points.add(max(len(points) - 1, 0))
@@ -339,61 +384,71 @@ class CurveHandler(BaseHandler):
                         if len(co) == 3:
                             co.append(point_data.get("w", 1.0))
                         point.co = co
-        
+
         return {"name": curve.name, "type": "curve"}
-    
-    def read(self, name: str, path: str | None, params: dict[str, Any]) -> dict[str, Any]:
+
+    def read(
+        self, name: str, path: str | None, params: dict[str, Any]
+    ) -> dict[str, Any]:
         import bpy  # type: ignore
+
         curve = bpy.data.curves.get(name)
         if curve is None:
             raise KeyError(f"Curve '{name}' not found")
-        
+
         if path:
             value = self._get_nested_attr(curve, path)
             return {"name": name, "path": path, "value": value}
-        
+
         return {
             "name": curve.name,
             "dimensions": curve.dimensions,
             "splines_count": len(curve.splines),
             "resolution_u": curve.resolution_u,
         }
-    
-    def write(self, name: str, properties: dict[str, Any], params: dict[str, Any]) -> dict[str, Any]:
+
+    def write(
+        self, name: str, properties: dict[str, Any], params: dict[str, Any]
+    ) -> dict[str, Any]:
         import bpy  # type: ignore
+
         curve = bpy.data.curves.get(name)
         if curve is None:
             raise KeyError(f"Curve '{name}' not found")
-        
+
         modified = []
         for prop_path, value in properties.items():
             self._set_nested_attr(curve, prop_path, value)
             modified.append(prop_path)
         return {"name": name, "modified": modified}
-    
+
     def delete(self, name: str, params: dict[str, Any]) -> dict[str, Any]:
         import bpy  # type: ignore
+
         curve = bpy.data.curves.get(name)
         if curve is None:
             raise KeyError(f"Curve '{name}' not found")
         bpy.data.curves.remove(curve)
         return {"deleted": name}
-    
+
     def list_items(self, filter_params: dict[str, Any] | None) -> dict[str, Any]:
         import bpy  # type: ignore
-        items = [{"name": c.name, "splines_count": len(c.splines)} for c in bpy.data.curves]
+
+        items = [
+            {"name": c.name, "splines_count": len(c.splines)} for c in bpy.data.curves
+        ]
         return {"items": items, "count": len(items)}
 
 
 @HandlerRegistry.register
 class FontHandler(BaseHandler):
     """Handler for text/font curve data blocks (bpy.data.curves type FONT)."""
-    
+
     data_type = DataType.FONT
-    
+
     def create(self, name: str, params: dict[str, Any]) -> dict[str, Any]:
         import bpy  # type: ignore
-        
+
         font_curve = bpy.data.curves.new(name=name, type="FONT")
         if "body" in params:
             font_curve.body = params["body"]
@@ -403,19 +458,22 @@ class FontHandler(BaseHandler):
             font_curve.bevel_depth = params["bevel_depth"]
         if "size" in params:
             font_curve.size = params["size"]
-        
+
         return {"name": font_curve.name, "type": "font"}
-    
-    def read(self, name: str, path: str | None, params: dict[str, Any]) -> dict[str, Any]:
+
+    def read(
+        self, name: str, path: str | None, params: dict[str, Any]
+    ) -> dict[str, Any]:
         import bpy  # type: ignore
+
         font_curve = bpy.data.curves.get(name)
         if font_curve is None or font_curve.type != "FONT":
             raise KeyError(f"Font '{name}' not found")
-        
+
         if path:
             value = self._get_nested_attr(font_curve, path)
             return {"name": name, "path": path, "value": value}
-        
+
         return {
             "name": font_curve.name,
             "body": font_curve.body,
@@ -423,29 +481,34 @@ class FontHandler(BaseHandler):
             "bevel_depth": font_curve.bevel_depth,
             "size": font_curve.size,
         }
-    
-    def write(self, name: str, properties: dict[str, Any], params: dict[str, Any]) -> dict[str, Any]:
+
+    def write(
+        self, name: str, properties: dict[str, Any], params: dict[str, Any]
+    ) -> dict[str, Any]:
         import bpy  # type: ignore
+
         font_curve = bpy.data.curves.get(name)
         if font_curve is None or font_curve.type != "FONT":
             raise KeyError(f"Font '{name}' not found")
-        
+
         modified = []
         for prop_path, value in properties.items():
             self._set_nested_attr(font_curve, prop_path, value)
             modified.append(prop_path)
         return {"name": name, "modified": modified}
-    
+
     def delete(self, name: str, params: dict[str, Any]) -> dict[str, Any]:
         import bpy  # type: ignore
+
         font_curve = bpy.data.curves.get(name)
         if font_curve is None or font_curve.type != "FONT":
             raise KeyError(f"Font '{name}' not found")
         bpy.data.curves.remove(font_curve)
         return {"deleted": name}
-    
+
     def list_items(self, filter_params: dict[str, Any] | None) -> dict[str, Any]:
         import bpy  # type: ignore
+
         items = [
             {"name": c.name, "body": c.body}
             for c in bpy.data.curves
@@ -457,12 +520,12 @@ class FontHandler(BaseHandler):
 @HandlerRegistry.register
 class TextHandler(BaseHandler):
     """Handler for legacy text data type mapping to Blender FONT curves."""
-    
+
     data_type = DataType.TEXT
-    
+
     def create(self, name: str, params: dict[str, Any]) -> dict[str, Any]:
         import bpy  # type: ignore
-        
+
         font_curve = bpy.data.curves.new(name=name, type="FONT")
         if "body" in params:
             font_curve.body = params["body"]
@@ -472,19 +535,22 @@ class TextHandler(BaseHandler):
             font_curve.bevel_depth = params["bevel_depth"]
         if "size" in params:
             font_curve.size = params["size"]
-        
+
         return {"name": font_curve.name, "type": "text"}
-    
-    def read(self, name: str, path: str | None, params: dict[str, Any]) -> dict[str, Any]:
+
+    def read(
+        self, name: str, path: str | None, params: dict[str, Any]
+    ) -> dict[str, Any]:
         import bpy  # type: ignore
+
         font_curve = bpy.data.curves.get(name)
         if font_curve is None or font_curve.type != "FONT":
             raise KeyError(f"Text '{name}' not found")
-        
+
         if path:
             value = self._get_nested_attr(font_curve, path)
             return {"name": name, "path": path, "value": value}
-        
+
         return {
             "name": font_curve.name,
             "body": font_curve.body,
@@ -492,29 +558,34 @@ class TextHandler(BaseHandler):
             "bevel_depth": font_curve.bevel_depth,
             "size": font_curve.size,
         }
-    
-    def write(self, name: str, properties: dict[str, Any], params: dict[str, Any]) -> dict[str, Any]:
+
+    def write(
+        self, name: str, properties: dict[str, Any], params: dict[str, Any]
+    ) -> dict[str, Any]:
         import bpy  # type: ignore
+
         font_curve = bpy.data.curves.get(name)
         if font_curve is None or font_curve.type != "FONT":
             raise KeyError(f"Text '{name}' not found")
-        
+
         modified = []
         for prop_path, value in properties.items():
             self._set_nested_attr(font_curve, prop_path, value)
             modified.append(prop_path)
         return {"name": name, "modified": modified}
-    
+
     def delete(self, name: str, params: dict[str, Any]) -> dict[str, Any]:
         import bpy  # type: ignore
+
         font_curve = bpy.data.curves.get(name)
         if font_curve is None or font_curve.type != "FONT":
             raise KeyError(f"Text '{name}' not found")
         bpy.data.curves.remove(font_curve)
         return {"deleted": name}
-    
+
     def list_items(self, filter_params: dict[str, Any] | None) -> dict[str, Any]:
         import bpy  # type: ignore
+
         items = [
             {"name": c.name, "body": c.body}
             for c in bpy.data.curves
@@ -526,47 +597,54 @@ class TextHandler(BaseHandler):
 @HandlerRegistry.register
 class WorldHandler(BaseHandler):
     """Handler for Blender world data type (bpy.data.worlds)."""
-    
+
     data_type = DataType.WORLD
-    
+
     def create(self, name: str, params: dict[str, Any]) -> dict[str, Any]:
         import bpy  # type: ignore
+
         world = bpy.data.worlds.new(name=name)
-        
+
         if params.get("use_nodes", True):
             world.use_nodes = True
-        
+
         return {"name": world.name, "type": "world"}
-    
-    def read(self, name: str, path: str | None, params: dict[str, Any]) -> dict[str, Any]:
+
+    def read(
+        self, name: str, path: str | None, params: dict[str, Any]
+    ) -> dict[str, Any]:
         import bpy  # type: ignore
+
         world = bpy.data.worlds.get(name)
         if world is None:
             raise KeyError(f"World '{name}' not found")
-        
+
         if path:
             value = self._get_nested_attr(world, path)
             return {"name": name, "path": path, "value": value}
-        
+
         result = {
             "name": world.name,
             "use_nodes": world.use_nodes,
         }
-        
+
         if world.use_nodes and world.node_tree:
             bg_node = world.node_tree.nodes.get("Background")
             if bg_node:
                 result["background_color"] = list(bg_node.inputs["Color"].default_value)
                 result["background_strength"] = bg_node.inputs["Strength"].default_value
-        
+
         return result
-    
-    def write(self, name: str, properties: dict[str, Any], params: dict[str, Any]) -> dict[str, Any]:
+
+    def write(
+        self, name: str, properties: dict[str, Any], params: dict[str, Any]
+    ) -> dict[str, Any]:
         import bpy  # type: ignore
+
         world = bpy.data.worlds.get(name)
         if world is None:
             raise KeyError(f"World '{name}' not found")
-        
+
         modified = []
         for prop_path, value in properties.items():
             if prop_path == "background_color" and world.use_nodes and world.node_tree:
@@ -574,7 +652,11 @@ class WorldHandler(BaseHandler):
                 if bg_node:
                     bg_node.inputs["Color"].default_value = tuple(value)
                     modified.append("background_color")
-            elif prop_path == "background_strength" and world.use_nodes and world.node_tree:
+            elif (
+                prop_path == "background_strength"
+                and world.use_nodes
+                and world.node_tree
+            ):
                 bg_node = world.node_tree.nodes.get("Background")
                 if bg_node:
                     bg_node.inputs["Strength"].default_value = value
@@ -583,17 +665,19 @@ class WorldHandler(BaseHandler):
                 self._set_nested_attr(world, prop_path, value)
                 modified.append(prop_path)
         return {"name": name, "modified": modified}
-    
+
     def delete(self, name: str, params: dict[str, Any]) -> dict[str, Any]:
         import bpy  # type: ignore
+
         world = bpy.data.worlds.get(name)
         if world is None:
             raise KeyError(f"World '{name}' not found")
         bpy.data.worlds.remove(world)
         return {"deleted": name}
-    
+
     def list_items(self, filter_params: dict[str, Any] | None) -> dict[str, Any]:
         import bpy  # type: ignore
+
         items = [{"name": w.name, "use_nodes": w.use_nodes} for w in bpy.data.worlds]
         return {"items": items, "count": len(items)}
 
@@ -601,11 +685,12 @@ class WorldHandler(BaseHandler):
 @HandlerRegistry.register
 class MetaBallHandler(BaseHandler):
     """Handler for Blender metaball data type (bpy.data.metaballs)."""
-    
+
     data_type = DataType.METABALL
-    
+
     def create(self, name: str, params: dict[str, Any]) -> dict[str, Any]:
         import bpy  # type: ignore
+
         meta = bpy.data.metaballs.new(name=name)
         elements = params.get("elements", [])
         for element in elements:
@@ -621,67 +706,80 @@ class MetaBallHandler(BaseHandler):
             if "size_z" in element:
                 el.size_z = element["size_z"]
         return {"name": meta.name, "type": "metaball", "elements": len(meta.elements)}
-    
-    def read(self, name: str, path: str | None, params: dict[str, Any]) -> dict[str, Any]:
+
+    def read(
+        self, name: str, path: str | None, params: dict[str, Any]
+    ) -> dict[str, Any]:
         import bpy  # type: ignore
+
         meta = bpy.data.metaballs.get(name)
         if meta is None:
             raise KeyError(f"Metaball '{name}' not found")
-        
+
         if path:
             value = self._get_nested_attr(meta, path)
             return {"name": name, "path": path, "value": value}
-        
+
         return {
             "name": meta.name,
             "elements": len(meta.elements),
             "resolution": meta.resolution,
             "render_resolution": meta.render_resolution,
         }
-    
-    def write(self, name: str, properties: dict[str, Any], params: dict[str, Any]) -> dict[str, Any]:
+
+    def write(
+        self, name: str, properties: dict[str, Any], params: dict[str, Any]
+    ) -> dict[str, Any]:
         import bpy  # type: ignore
+
         meta = bpy.data.metaballs.get(name)
         if meta is None:
             raise KeyError(f"Metaball '{name}' not found")
-        
+
         modified = []
         for prop_path, value in properties.items():
             self._set_nested_attr(meta, prop_path, value)
             modified.append(prop_path)
         return {"name": name, "modified": modified}
-    
+
     def delete(self, name: str, params: dict[str, Any]) -> dict[str, Any]:
         import bpy  # type: ignore
+
         meta = bpy.data.metaballs.get(name)
         if meta is None:
             raise KeyError(f"Metaball '{name}' not found")
         bpy.data.metaballs.remove(meta)
         return {"deleted": name}
-    
+
     def list_items(self, filter_params: dict[str, Any] | None) -> dict[str, Any]:
         import bpy  # type: ignore
-        items = [{"name": m.name, "elements": len(m.elements)} for m in bpy.data.metaballs]
+
+        items = [
+            {"name": m.name, "elements": len(m.elements)} for m in bpy.data.metaballs
+        ]
         return {"items": items, "count": len(items)}
 
 
 @HandlerRegistry.register
 class GreasePencilHandler(BaseHandler):
     """Handler for grease pencil data type (bpy.data.grease_pencils)."""
-    
+
     data_type = DataType.GREASE_PENCIL
-    
+
     def create(self, name: str, params: dict[str, Any]) -> dict[str, Any]:
         import bpy  # type: ignore
+
         gp = bpy.data.grease_pencils.new(name=name)
-        
+
         if "layers" in params:
             self._create_layers(gp, params["layers"])
-        
+
         layers_count = len(gp.layers)
         frames_total = sum(len(layer.frames) for layer in gp.layers)
-        strokes_total = sum(len(frame.strokes) for layer in gp.layers for frame in layer.frames)
-        
+        strokes_total = sum(
+            len(frame.strokes) for layer in gp.layers for frame in layer.frames
+        )
+
         return {
             "name": gp.name,
             "type": "grease_pencil",
@@ -689,54 +787,64 @@ class GreasePencilHandler(BaseHandler):
             "frames_total": frames_total,
             "strokes_total": strokes_total,
         }
-    
-    def read(self, name: str, path: str | None, params: dict[str, Any]) -> dict[str, Any]:
+
+    def read(
+        self, name: str, path: str | None, params: dict[str, Any]
+    ) -> dict[str, Any]:
         import bpy  # type: ignore
+
         gp = bpy.data.grease_pencils.get(name)
         if gp is None:
             raise KeyError(f"Grease Pencil '{name}' not found")
-        
+
         if path:
             value = self._get_nested_attr(gp, path)
             return {"name": name, "path": path, "value": value}
-        
+
         layers = [{"name": l.name, "frames": len(l.frames)} for l in gp.layers]
         return {
             "name": gp.name,
             "layers": layers,
             "layers_count": len(gp.layers),
             "frames_total": sum(len(layer.frames) for layer in gp.layers),
-            "strokes_total": sum(len(frame.strokes) for layer in gp.layers for frame in layer.frames),
+            "strokes_total": sum(
+                len(frame.strokes) for layer in gp.layers for frame in layer.frames
+            ),
         }
-    
-    def write(self, name: str, properties: dict[str, Any], params: dict[str, Any]) -> dict[str, Any]:
+
+    def write(
+        self, name: str, properties: dict[str, Any], params: dict[str, Any]
+    ) -> dict[str, Any]:
         import bpy  # type: ignore
+
         gp = bpy.data.grease_pencils.get(name)
         if gp is None:
             raise KeyError(f"Grease Pencil '{name}' not found")
-        
+
         modified = []
         for prop_path, value in properties.items():
             self._set_nested_attr(gp, prop_path, value)
             modified.append(prop_path)
         return {"name": name, "modified": modified}
-    
+
     def delete(self, name: str, params: dict[str, Any]) -> dict[str, Any]:
         import bpy  # type: ignore
+
         gp = bpy.data.grease_pencils.get(name)
         if gp is None:
             raise KeyError(f"Grease Pencil '{name}' not found")
         bpy.data.grease_pencils.remove(gp)
         return {"deleted": name}
-    
+
     def list_items(self, filter_params: dict[str, Any] | None) -> dict[str, Any]:
         import bpy  # type: ignore
-        items = [{"name": g.name, "layers": len(g.layers)} for g in bpy.data.grease_pencils]
+
+        items = [
+            {"name": g.name, "layers": len(g.layers)} for g in bpy.data.grease_pencils
+        ]
         return {"items": items, "count": len(items)}
 
     def _create_layers(self, gpencil, layers_data):
-        import bpy  # type: ignore
-
         for layer_data in layers_data:
             layer = gpencil.layers.new(layer_data.get("name", "Layer"))
 
