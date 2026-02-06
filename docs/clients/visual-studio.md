@@ -2,11 +2,17 @@
 
 ## Config File Location
 
-- **Windows**: `%USERPROFILE%\.vs\mcp.json`
+Visual Studio reads MCP configurations from several locations (in order of precedence):
+
+1. **Global User**: `%USERPROFILE%\.mcp.json`
+2. **Solution-Specific (User)**: `<SOLUTIONDIR>\.vs\mcp.json`
+3. **Solution (Source Controlled)**: `<SOLUTIONDIR>\.mcp.json`
 
 Visual Studio MCP support is Windows-only.
 
 ## Configuration
+
+Create `.mcp.json` in your user profile or solution directory:
 
 ```json
 {

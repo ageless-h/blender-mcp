@@ -1,14 +1,17 @@
 # Cline Configuration
 
-## Config File Location
+## Configuration Method
 
-- **Windows**: `%USERPROFILE%\.cline\mcp_settings.json`
-- **macOS**: `~/.cline/mcp_settings.json`
-- **Linux**: `~/.cline/mcp_settings.json`
+Cline (VS Code extension) manages MCP servers through its built-in settings UI, not via a manually edited configuration file.
 
-Or configure via VS Code settings if using Cline as an extension.
+## Configuration Steps
 
-## Configuration
+1. Open VS Code with Cline extension installed
+2. Open the Cline panel
+3. Click on the settings/gear icon
+4. Navigate to **MCP Servers** section
+5. Click **Add Server** or **Edit MCP Settings**
+6. Add the following configuration:
 
 ```json
 {
@@ -28,6 +31,16 @@ Or configure via VS Code settings if using Cline as an extension.
 ```
 
 Replace `<path-to-blender-mcp>` with the actual path to your Blender MCP installation.
+
+## Config File Location (Reference)
+
+Cline stores its configuration in VS Code's globalStorage:
+
+- **Windows**: `%APPDATA%\Code\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json`
+- **macOS**: `~/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`
+- **Linux**: `~/.config/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`
+
+> **Note**: It's recommended to use the Cline UI to manage MCP servers rather than editing this file directly.
 
 ## Verification
 

@@ -2,20 +2,20 @@
 
 ## Config File Location
 
-- **Windows**: `%APPDATA%\Code\User\settings.json` (VS Code extension)
-- **macOS**: `~/Library/Application Support/Code/User/settings.json`
-- **Linux**: `~/.config/Code/User/settings.json`
+MCP servers for Gemini Code Assist are configured in `.gemini/settings.json`:
 
-For JetBrains IDEs, check the plugin settings panel.
+- **Global**: `~/.gemini/settings.json` (macOS/Linux) or `%USERPROFILE%\.gemini\settings.json` (Windows)
+- **Project**: `.gemini/settings.json` in your project root
 
 ## Configuration
 
-For VS Code, add to `settings.json`:
+Add to your `.gemini/settings.json`:
 
 ```json
 {
-  "gemini.codeAssist.mcp.servers": {
+  "mcpServers": {
     "blender": {
+      "type": "stdio",
       "command": "python",
       "args": ["-m", "blender_mcp.mcp_protocol"],
       "env": {
@@ -30,6 +30,13 @@ For VS Code, add to `settings.json`:
 ```
 
 Replace `<path-to-blender-mcp>` with the actual path to your Blender MCP installation.
+
+## VS Code Extension Settings
+
+For additional Gemini Code Assist extension settings in VS Code:
+1. Open VS Code Settings (Ctrl/Cmd + ,)
+2. Search for "Gemini Code Assist"
+3. Configure extension preferences as needed
 
 ## Verification
 

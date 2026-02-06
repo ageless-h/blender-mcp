@@ -2,9 +2,11 @@
 
 ## Config File Location
 
-- **Windows**: `%USERPROFILE%\.config\github-copilot\mcp.json`
-- **macOS**: `~/.config/github-copilot/mcp.json`
-- **Linux**: `~/.config/github-copilot/mcp.json`
+- **Windows**: `%USERPROFILE%\.copilot\mcp-config.json`
+- **macOS**: `~/.copilot/mcp-config.json`
+- **Linux**: `~/.copilot/mcp-config.json`
+
+For project-specific configuration, create `.copilot/mcp-config.json` in your project root.
 
 ## Configuration
 
@@ -27,10 +29,18 @@
 
 Replace `<path-to-blender-mcp>` with the actual path to your Blender MCP installation.
 
+## Alternative: CLI Command
+
+You can also add MCP servers using the CLI:
+
+```bash
+gh copilot mcp add blender
+```
+
 ## Verification
 
 1. Run `gh copilot` in terminal
-2. Check MCP server status
+2. Use `/mcp` command to check MCP server status
 3. Verify "blender" appears as available
 4. Test by requesting Blender tools
 

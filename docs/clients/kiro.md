@@ -2,9 +2,13 @@
 
 ## Config File Location
 
-- **Windows**: `%USERPROFILE%\.kiro\mcp.json`
-- **macOS**: `~/.kiro/mcp.json`
-- **Linux**: `~/.kiro/mcp.json`
+- **Windows**: `%USERPROFILE%\.kiro\settings\mcp.json`
+- **macOS**: `~/.kiro/settings/mcp.json`
+- **Linux**: `~/.kiro/settings/mcp.json`
+
+For workspace-specific configuration, create `.kiro/settings/mcp.json` in your project root.
+
+> **Note**: Workspace settings take precedence over user settings when both exist.
 
 ## Configuration
 
@@ -26,6 +30,12 @@
 ```
 
 Replace `<path-to-blender-mcp>` with the actual path to your Blender MCP installation.
+
+## Alternative: Command Palette
+
+1. Open Command Palette (Cmd+Shift+P on Mac, Ctrl+Shift+P on Windows/Linux)
+2. Search for "Kiro: Open user MCP config (JSON)" or "Kiro: Open workspace MCP config (JSON)"
+3. Edit the configuration file
 
 ## Verification
 

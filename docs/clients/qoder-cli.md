@@ -1,17 +1,24 @@
 # Qoder CLI Configuration
 
-## Config File Location
+## Configuration Method
 
-- **Windows**: `%USERPROFILE%\.qoder\mcp.json`
-- **macOS**: `~/.qoder/mcp.json`
-- **Linux**: `~/.qoder/mcp.json`
+Qoder CLI shares configuration with the Qoder IDE, primarily managed through the UI.
+
+## Config File Location (Reference)
+
+- **User Level**: `~/.qoder/settings.json`
+- **Project Level**: `${project}/.qoder/settings.json`
+- **Windows**: `%USERPROFILE%\.Qoder\`
 
 ## Configuration
+
+If editing the settings file directly, add to your `settings.json`:
 
 ```json
 {
   "mcpServers": {
     "blender": {
+      "transport": "stdio",
       "command": "python",
       "args": ["-m", "blender_mcp.mcp_protocol"],
       "env": {
@@ -26,6 +33,8 @@
 ```
 
 Replace `<path-to-blender-mcp>` with the actual path to your Blender MCP installation.
+
+> **Note**: It's recommended to configure MCP servers through the Qoder IDE settings UI instead of editing files directly.
 
 ## Verification
 

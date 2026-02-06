@@ -2,11 +2,15 @@
 
 ## Config File Location
 
-- **Windows**: `%USERPROFILE%\.amp\mcp.json`
-- **macOS**: `~/.amp/mcp.json`
-- **Linux**: `~/.amp/mcp.json`
+- **Windows**: `%USERPROFILE%\.config\amp\settings.json`
+- **macOS**: `~/.config/amp/settings.json`
+- **Linux**: `~/.config/amp/settings.json`
+
+For workspace-specific configuration, create `.amp/settings.json` in your project root.
 
 ## Configuration
+
+Add to your `settings.json`:
 
 ```json
 {

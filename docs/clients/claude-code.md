@@ -1,10 +1,14 @@
-# Claude Code Configuration
+# Claude Code CLI Configuration
 
 ## Config File Location
 
-- **Windows**: `%USERPROFILE%\.claude\claude_desktop_config.json`
-- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
-- **Linux**: `~/.config/claude/claude_desktop_config.json`
+- **Windows**: `%USERPROFILE%\.claude\mcp.json`
+- **macOS**: `~/.claude/mcp.json`
+- **Linux**: `~/.claude/mcp.json`
+
+For project-specific configuration, create `.claude/mcp.json` in your project root.
+
+> **Note**: For Claude Desktop app, see [Claude Desktop documentation](https://docs.anthropic.com/en/docs/agents-and-tools/mcp).
 
 ## Configuration
 
@@ -29,8 +33,8 @@ Replace `<path-to-blender-mcp>` with the actual path to your Blender MCP install
 
 ## Verification
 
-1. Open Claude Desktop
-2. Click the MCP icon in the bottom-left corner
+1. Run Claude Code CLI with `claude`
+2. Use `/mcp` command to list servers
 3. Verify "blender" appears in the connected servers list
 4. Start a conversation and ask Claude to list available Blender tools
 
@@ -50,5 +54,5 @@ Replace `<path-to-blender-mcp>` with the actual path to your Blender MCP install
 - Check firewall settings
 
 ### Server not connecting
-- Restart Claude Desktop after configuration changes
-- Check logs at `~/Library/Logs/Claude/` (macOS) or equivalent
+- Restart Claude Code CLI after configuration changes
+- Check that the MCP server process is running

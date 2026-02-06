@@ -1,33 +1,38 @@
-# JetBrains AI Assistant & Junie Configuration
+# JetBrains AI Assistant Configuration
 
-## Config File Location
+## Configuration Method
 
-- **Windows**: `%USERPROFILE%\.config\JetBrains\<product><version>\mcp.json`
-- **macOS**: `~/Library/Application Support/JetBrains/<product><version>/mcp.json`
-- **Linux**: `~/.config/JetBrains/<product><version>/mcp.json`
+JetBrains IDEs (IntelliJ IDEA, PyCharm, WebStorm, etc.) configure MCP servers through the built-in settings UI, not via a configuration file.
 
-Where `<product>` is your JetBrains IDE (IntelliJIdea, PyCharm, WebStorm, etc.) and `<version>` is the version number.
+## Configuration Steps
 
-## Configuration
+1. Open your JetBrains IDE
+2. Go to **Settings** (or **Preferences** on macOS)
+3. Navigate to **Tools > AI Assistant > Model Context Protocol (MCP)**
+4. Click **Add** to add a new MCP server
+5. Add the following JSON configuration:
 
 ```json
 {
-  "mcpServers": {
-    "blender": {
-      "command": "python",
-      "args": ["-m", "blender_mcp.mcp_protocol"],
-      "env": {
-        "MCP_ADAPTER": "socket",
-        "MCP_SOCKET_HOST": "127.0.0.1",
-        "MCP_SOCKET_PORT": "9876",
-        "PYTHONPATH": "<path-to-blender-mcp>/src"
-      }
-    }
+  "command": "python",
+  "args": ["-m", "blender_mcp.mcp_protocol"],
+  "env": {
+    "MCP_ADAPTER": "socket",
+    "MCP_SOCKET_HOST": "127.0.0.1",
+    "MCP_SOCKET_PORT": "9876",
+    "PYTHONPATH": "<path-to-blender-mcp>/src"
   }
 }
 ```
 
 Replace `<path-to-blender-mcp>` with the actual path to your Blender MCP installation.
+
+## Alternative: Command Palette
+
+You can also access MCP settings by:
+1. Opening AI Assistant chat
+2. Typing `/` and selecting **Add Command**
+3. Following the prompts to add an MCP server
 
 ## Verification
 

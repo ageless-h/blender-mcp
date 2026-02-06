@@ -2,11 +2,15 @@
 
 ## Config File Location
 
-- **Windows**: `%USERPROFILE%\.gemini\mcp.json`
-- **macOS**: `~/.gemini/mcp.json`
-- **Linux**: `~/.gemini/mcp.json`
+- **Windows**: `%USERPROFILE%\.gemini\settings.json`
+- **macOS**: `~/.gemini/settings.json`
+- **Linux**: `~/.gemini/settings.json`
+
+For project-specific configuration, create `.gemini/settings.json` in your project root.
 
 ## Configuration
+
+Add to your `settings.json`:
 
 ```json
 {
@@ -30,7 +34,7 @@ Replace `<path-to-blender-mcp>` with the actual path to your Blender MCP install
 ## Verification
 
 1. Run Gemini CLI
-2. Check MCP server status
+2. Use `/mcp` command to check MCP server status
 3. Verify "blender" appears as available
 4. Test by requesting Blender tools
 

@@ -2,13 +2,15 @@
 
 ## Config File Location
 
-- **Windows**: `%USERPROFILE%\.opencode\mcp.json`
-- **macOS**: `~/.opencode/mcp.json`
-- **Linux**: `~/.opencode/mcp.json`
+- **Windows**: `%USERPROFILE%\.config\opencode\opencode.jsonc`
+- **macOS**: `~/.config/opencode/opencode.json`
+- **Linux**: `~/.config/opencode/opencode.json`
 
-Or create `.opencode/mcp.json` in your project root for project-specific configuration.
+For project-specific configuration, create `.opencode/opencode.json` in your project root.
 
 ## Configuration
+
+Add to your `opencode.json`:
 
 ```json
 {

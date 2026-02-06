@@ -2,27 +2,26 @@
 
 ## Config File Location
 
-- **Windows**: `%USERPROFILE%\.codex\mcp.json`
-- **macOS**: `~/.codex/mcp.json`
-- **Linux**: `~/.codex/mcp.json`
+- **Windows**: `%USERPROFILE%\.codex\config.toml`
+- **macOS**: `~/.codex/config.toml`
+- **Linux**: `~/.codex/config.toml`
+
+For project-specific configuration, create `.codex/config.toml` in your project root (requires trusted project).
 
 ## Configuration
 
-```json
-{
-  "mcpServers": {
-    "blender": {
-      "command": "python",
-      "args": ["-m", "blender_mcp.mcp_protocol"],
-      "env": {
-        "MCP_ADAPTER": "socket",
-        "MCP_SOCKET_HOST": "127.0.0.1",
-        "MCP_SOCKET_PORT": "9876",
-        "PYTHONPATH": "<path-to-blender-mcp>/src"
-      }
-    }
-  }
-}
+Add to your `config.toml`:
+
+```toml
+[mcp_servers.blender]
+type = "stdio"
+launcher_command = "python -m blender_mcp.mcp_protocol"
+
+[mcp_servers.blender.env_vars]
+MCP_ADAPTER = "socket"
+MCP_SOCKET_HOST = "127.0.0.1"
+MCP_SOCKET_PORT = "9876"
+PYTHONPATH = "<path-to-blender-mcp>/src"
 ```
 
 Replace `<path-to-blender-mcp>` with the actual path to your Blender MCP installation.
@@ -30,7 +29,7 @@ Replace `<path-to-blender-mcp>` with the actual path to your Blender MCP install
 ## Verification
 
 1. Run Codex CLI
-2. Use the MCP list command to verify servers
+2. Use `/mcp` command to verify servers
 3. Check that "blender" appears as available
 4. Test by calling a Blender tool
 
@@ -38,7 +37,7 @@ Replace `<path-to-blender-mcp>` with the actual path to your Blender MCP install
 
 ### Python not found
 - Ensure Python is in your system PATH
-- Use absolute path to Python executable in the `command` field
+- Use absolute path to Python executable in the `launcher_command` field
 
 ### PYTHONPATH issues
 - Use absolute path for PYTHONPATH

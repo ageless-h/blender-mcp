@@ -1,31 +1,42 @@
 # Warp Configuration
 
-## Config File Location
+## Configuration Method
 
-- **Windows**: `%USERPROFILE%\.warp\mcp.json`
-- **macOS**: `~/.warp/mcp.json`
-- **Linux**: `~/.warp/mcp.json`
+Warp terminal configures MCP servers through its built-in settings UI.
 
-## Configuration
+## Configuration Steps
+
+1. Open Warp terminal
+2. Access MCP settings through one of these methods:
+   - **Settings Page**: Settings > MCP Servers
+   - **Warp Drive**: Personal > MCP Servers
+   - **Command Palette**: Search for "Open MCP Servers"
+   - **AI Settings**: Settings > AI > Manage MCP servers
+3. Click **Add Server** and paste the following configuration:
 
 ```json
 {
-  "mcpServers": {
-    "blender": {
-      "command": "python",
-      "args": ["-m", "blender_mcp.mcp_protocol"],
-      "env": {
-        "MCP_ADAPTER": "socket",
-        "MCP_SOCKET_HOST": "127.0.0.1",
-        "MCP_SOCKET_PORT": "9876",
-        "PYTHONPATH": "<path-to-blender-mcp>/src"
-      }
+  "blender": {
+    "command": "python",
+    "args": ["-m", "blender_mcp.mcp_protocol"],
+    "env": {
+      "MCP_ADAPTER": "socket",
+      "MCP_SOCKET_HOST": "127.0.0.1",
+      "MCP_SOCKET_PORT": "9876",
+      "PYTHONPATH": "<path-to-blender-mcp>/src"
     }
   }
 }
 ```
 
 Replace `<path-to-blender-mcp>` with the actual path to your Blender MCP installation.
+
+## Config File Location (Reference)
+
+Warp may store configurations in:
+- **macOS**: `~/.warp/config.json`
+
+> **Note**: It's recommended to use the Warp UI to manage MCP servers rather than editing config files directly.
 
 ## Verification
 
@@ -52,4 +63,4 @@ Replace `<path-to-blender-mcp>` with the actual path to your Blender MCP install
 
 ### Server not connecting
 - Restart Warp after configuration changes
-- Check Warp's settings panel for error messages
+- Check MCP logs at `~/Library/Application Support/dev.warp.Warp/mcp_logs/` (macOS)
