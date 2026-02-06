@@ -17,7 +17,7 @@ from ..handlers.data.dispatcher import (
 )
 from ..handlers.info import info_query
 from ..handlers.operator import operator_execute
-from ..handlers.response import _error, _ok
+from ..handlers.response import _error
 from ..handlers.script import script_execute
 
 from ..handlers import data as _data_handlers  # noqa: F401 - Import to register handlers
