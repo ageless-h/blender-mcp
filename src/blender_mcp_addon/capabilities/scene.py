@@ -2,20 +2,22 @@
 """Scene capability handlers."""
 from __future__ import annotations
 
-import time
 from typing import Any
+
+from ..handlers.response import (
+    _error,
+    _ok,
+    bpy_unavailable_error,
+    check_bpy_available,
+    invalid_params_error,
+)
 
 
 def scene_read(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
     """Read current scene information."""
-    try:
-        import bpy  # type: ignore
-    except Exception:
-        return _error(
-            code="bpy_unavailable",
-            message="bpy is not available; this entrypoint must run inside Blender",
-            started=started,
-        )
+    available, bpy = check_bpy_available()
+    if not available:
+        return bpy_unavailable_error(started)
 
     try:
         scene = bpy.context.scene
@@ -41,36 +43,21 @@ def scene_read(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
 
 def scene_write(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
     """Write to the scene (create objects)."""
-    try:
-        import bpy  # type: ignore
-    except Exception:
-        return _error(
-            code="bpy_unavailable",
-            message="bpy is not available; this entrypoint must run inside Blender",
-            started=started,
-        )
+    available, bpy = check_bpy_available()
+    if not available:
+        return bpy_unavailable_error(started)
 
     name = payload.get("name")
     if name is None:
         name = "MCP_POC_CUBE"
     if not isinstance(name, str) or not name.strip():
-        return _error(
-            code="invalid_params",
-            message="'name' must be a non-empty string",
-            data={"name": name},
-            started=started,
-        )
+        return invalid_params_error("'name' must be a non-empty string", started, {"name": name})
 
     cleanup = payload.get("cleanup")
     if cleanup is None:
         cleanup = True
     if not isinstance(cleanup, bool):
-        return _error(
-            code="invalid_params",
-            message="'cleanup' must be a bool",
-            data={"cleanup": cleanup},
-            started=started,
-        )
+        return invalid_params_error("'cleanup' must be a bool", started, {"cleanup": cleanup})
 
     try:
         mesh_name = f"{name}_mesh"
@@ -115,29 +102,3 @@ def scene_write(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
             data={"type": type(exc).__name__},
             started=started,
         )
-
-
-def _ok(*, result: dict[str, Any], started: float) -> dict[str, Any]:
-    """Create a successful response."""
-    return {
-        "ok": True,
-        "result": result,
-        "error": None,
-        "timing_ms": (time.perf_counter() - started) * 1000.0,
-    }
-
-
-def _error(
-    *,
-    code: str,
-    message: str,
-    started: float,
-    data: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    """Create an error response."""
-    return {
-        "ok": False,
-        "result": None,
-        "error": {"code": code, "message": message, "data": data},
-        "timing_ms": (time.perf_counter() - started) * 1000.0,
-    }

@@ -8,10 +8,16 @@ from typing import Any
 from .scene import scene_read, scene_write
 
 from ..handlers.data.dispatcher import (
-    data_create, data_read, data_write, data_delete, data_list, data_link
+    data_create,
+    data_delete,
+    data_link,
+    data_list,
+    data_read,
+    data_write,
 )
-from ..handlers.operator import operator_execute
 from ..handlers.info import info_query
+from ..handlers.operator import operator_execute
+from ..handlers.response import _error, _ok
 from ..handlers.script import script_execute
 
 from ..handlers import data as _data_handlers  # noqa: F401 - Import to register handlers
@@ -92,29 +98,3 @@ def execute_capability(request: dict[str, Any]) -> dict[str, Any]:
             data={"type": type(exc).__name__, "message": str(exc)},
             started=started,
         )
-
-
-def _ok(*, result: dict[str, Any], started: float) -> dict[str, Any]:
-    """Create a successful response."""
-    return {
-        "ok": True,
-        "result": result,
-        "error": None,
-        "timing_ms": (time.perf_counter() - started) * 1000.0,
-    }
-
-
-def _error(
-    *,
-    code: str,
-    message: str,
-    started: float,
-    data: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    """Create an error response."""
-    return {
-        "ok": False,
-        "result": None,
-        "error": {"code": code, "message": message, "data": data},
-        "timing_ms": (time.perf_counter() - started) * 1000.0,
-    }
