@@ -102,76 +102,79 @@ def minimal_capability_set() -> list[CapabilityMeta]:
     
     Optional (disabled by default):
     - script.execute: Arbitrary Python execution
+    
+    NOTE: This function is kept for backward compatibility.
+    The new 26-tool architecture is defined in blender_mcp.schemas.tools.
     """
     return [
         # Data layer tools (CRUD for all Blender data types)
         CapabilityMeta(
             name="data.create",
-            description="Create new Blender data blocks (objects, meshes, materials, etc.)",
+            description="[LEGACY] Create new Blender data blocks — use blender_create_object instead",
             scopes=["data:create"],
             min_version="4.2",
         ),
         CapabilityMeta(
             name="data.read",
-            description="Read properties from any Blender data block",
+            description="[LEGACY] Read properties — use blender_get_object_data instead",
             scopes=["data:read"],
             min_version="4.2",
         ),
         CapabilityMeta(
             name="data.write",
-            description="Write properties to any Blender data block",
+            description="[LEGACY] Write properties — use blender_modify_object instead",
             scopes=["data:write"],
             min_version="4.2",
         ),
         CapabilityMeta(
             name="data.delete",
-            description="Delete Blender data blocks",
+            description="[LEGACY] Delete data blocks — use blender_modify_object with delete=true instead",
             scopes=["data:delete"],
             min_version="4.2",
         ),
         CapabilityMeta(
             name="data.list",
-            description="List all data blocks of a specified type",
+            description="[LEGACY] List data blocks — use blender_get_objects instead",
             scopes=["data:read"],
             min_version="4.2",
         ),
         CapabilityMeta(
             name="data.link",
-            description="Link or unlink data blocks (e.g., object to collection, material to object)",
+            description="[LEGACY] Link data blocks — use blender_manage_collection instead",
             scopes=["data:write"],
             min_version="4.2",
         ),
         # Operator layer tool
         CapabilityMeta(
             name="operator.execute",
-            description="Execute any Blender operator (bpy.ops.*) with context override support",
+            description="[LEGACY] Execute operator — use blender_execute_operator instead",
             scopes=["operator:execute"],
             min_version="4.2",
         ),
         # Info layer tool
         CapabilityMeta(
             name="info.query",
-            description="Query Blender status, history, statistics, and capture viewport",
+            description="[LEGACY] Query info — use blender_get_scene instead",
             scopes=["info:read"],
             min_version="4.2",
         ),
         # Optional dangerous tool (disabled by default)
         CapabilityMeta(
             name="script.execute",
-            description="Execute arbitrary Python code (disabled by default, requires explicit enablement)",
+            description="[LEGACY] Execute script — use blender_execute_script instead",
             scopes=["script:execute"],
             min_version="4.2",
         ),
         # Legacy capabilities (deprecated, for backward compatibility)
         CapabilityMeta(
             name="scene.read",
-            description="[DEPRECATED] Read scene - use data.read with type='context' instead",
+            description="[DEPRECATED] Read scene - use blender_get_scene instead",
             scopes=["scene:read"],
             min_version="4.2",
         ),
         CapabilityMeta(
             name="scene.write",
-            description="[DEPRECATED] Write to scene - use data.create/write instead",
+            description="[DEPRECATED] Write to scene - use blender_setup_scene instead",
             scopes=["scene:write"],
             min_version="4.2",
         ),
@@ -179,12 +182,12 @@ def minimal_capability_set() -> list[CapabilityMeta]:
 
 
 def new_tool_scope_map() -> dict[str, set[str]]:
-    """Return scope mappings for new unified tools.
+    """Return scope mappings for new 26-tool architecture.
     
-    Maps capability names to required scopes. For data.* tools,
-    the actual required scope depends on the 'type' parameter at runtime.
+    Maps internal capability names to required scopes.
     """
     return {
+        # Legacy mappings (kept for backward compatibility)
         "data.create": {"data:create"},
         "data.read": {"data:read"},
         "data.write": {"data:write"},
@@ -194,6 +197,33 @@ def new_tool_scope_map() -> dict[str, set[str]]:
         "operator.execute": {"operator:execute"},
         "info.query": {"info:read"},
         "script.execute": {"script:execute"},
+        # New tool internal capabilities
+        "blender.get_objects": {"data:read"},
+        "blender.get_object_data": {"data:read"},
+        "blender.get_node_tree": {"data:read"},
+        "blender.get_animation_data": {"data:read"},
+        "blender.get_materials": {"data:read"},
+        "blender.get_scene": {"info:read"},
+        "blender.get_collections": {"data:read"},
+        "blender.get_armature_data": {"data:read"},
+        "blender.get_images": {"data:read"},
+        "blender.capture_viewport": {"info:read"},
+        "blender.get_selection": {"info:read"},
+        "blender.edit_nodes": {"data:write"},
+        "blender.edit_animation": {"data:write"},
+        "blender.edit_sequencer": {"data:write"},
+        "blender.create_object": {"data:create"},
+        "blender.modify_object": {"data:write"},
+        "blender.manage_material": {"data:write"},
+        "blender.manage_modifier": {"data:write"},
+        "blender.manage_collection": {"data:write"},
+        "blender.manage_uv": {"data:write"},
+        "blender.manage_constraints": {"data:write"},
+        "blender.manage_physics": {"data:write"},
+        "blender.setup_scene": {"data:write"},
+        "blender.execute_operator": {"operator:execute"},
+        "blender.execute_script": {"script:execute"},
+        "blender.import_export": {"data:write", "operator:execute"},
     }
 
 

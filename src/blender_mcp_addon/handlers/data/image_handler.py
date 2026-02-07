@@ -10,6 +10,46 @@ from ..types import DataType
 from ..registry import HandlerRegistry
 
 
+def image_list(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
+    """Standalone image list for blender.get_images capability."""
+    import bpy  # type: ignore
+    from ..response import _ok
+
+    import fnmatch as _fnmatch
+
+    filter_mode = payload.get("filter", "all")
+    name_pattern = payload.get("name_pattern")
+
+    items = []
+    for image in bpy.data.images:
+        # Apply filter
+        if filter_mode == "packed" and not image.packed_file:
+            continue
+        elif filter_mode == "external" and (image.packed_file or image.source == "GENERATED"):
+            continue
+        elif filter_mode == "missing" and (image.packed_file or not image.filepath or image.has_data):
+            continue
+        elif filter_mode == "unused" and image.users > 0:
+            continue
+
+        # Apply name pattern
+        if name_pattern and not _fnmatch.fnmatch(image.name, name_pattern):
+            continue
+
+        items.append({
+            "name": image.name,
+            "width": image.size[0],
+            "height": image.size[1],
+            "filepath": image.filepath,
+            "source": image.source,
+            "packed": image.packed_file is not None,
+            "colorspace": image.colorspace_settings.name if hasattr(image, "colorspace_settings") else "",
+            "users": image.users,
+        })
+
+    return _ok(result={"images": items, "count": len(items)}, started=started)
+
+
 @HandlerRegistry.register
 class ImageHandler(BaseHandler):
     """Handler for Blender image data type (bpy.data.images)."""

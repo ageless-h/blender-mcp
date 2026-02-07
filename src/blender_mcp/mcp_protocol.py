@@ -1,5 +1,11 @@
 # -*- coding: utf-8 -*-
-"""MCP protocol adapter for Blender MCP server."""
+"""MCP protocol adapter for Blender MCP server.
+
+Implements the MCP JSON-RPC protocol with:
+- 26 tools with flat parameters, hand-written schemas, and annotations
+- 7 workflow prompts for LLM guidance
+- Legacy tool name compatibility (data.create → blender_create_object)
+"""
 from __future__ import annotations
 
 import json
@@ -11,62 +17,77 @@ from typing import Any
 from blender_mcp.adapters.mock import MockAdapter
 from blender_mcp.adapters.socket import SocketAdapter
 from blender_mcp import __version__ as pkg_version
-from blender_mcp.catalog.catalog import minimal_capability_set
+from blender_mcp.schemas.tools import TOOL_DEFINITIONS, get_tool
+from blender_mcp.prompts.registry import (
+    BLENDER_PROMPTS,
+    get_prompt_messages,
+)
 
 
-@dataclass
-class MCPTool:
-    """MCP tool definition."""
-    name: str
-    description: str
-    inputSchema: dict[str, Any]
+# Legacy tool name → new tool name mapping for backward compatibility
+_LEGACY_TOOL_MAP: dict[str, str] = {
+    "data.create": "blender_create_object",
+    "data_create": "blender_create_object",
+    "data.read": "blender_get_object_data",
+    "data_read": "blender_get_object_data",
+    "data.write": "blender_modify_object",
+    "data_write": "blender_modify_object",
+    "data.delete": "blender_modify_object",
+    "data_delete": "blender_modify_object",
+    "data.list": "blender_get_objects",
+    "data_list": "blender_get_objects",
+    "data.link": "blender_manage_collection",
+    "data_link": "blender_manage_collection",
+    "operator.execute": "blender_execute_operator",
+    "operator_execute": "blender_execute_operator",
+    "info.query": "blender_get_scene",
+    "info_query": "blender_get_scene",
+    "script.execute": "blender_execute_script",
+    "script_execute": "blender_execute_script",
+}
 
 
 @dataclass
 class MCPServer:
-    """Simple MCP protocol server."""
+    """MCP protocol server with 26 tools and 7 workflow prompts."""
 
     def tools_list(self) -> dict[str, Any]:
-        """List available tools."""
-        capabilities = minimal_capability_set()
+        """List all 26 available tools with full schemas and annotations."""
         tools = []
-
-        for cap in capabilities:
-            if cap.name.startswith("data.") or cap.name in ("operator.execute", "info.query"):
-                # Expose both dotted and underscored aliases for compatibility.
-                # Tests expect dotted names; legacy clients may use underscores.
-                aliases = {cap.name, cap.name.replace(".", "_", 1)}
-                for tool_name in aliases:
-                    tool = MCPTool(
-                        name=tool_name,
-                        description=cap.description,
-                        inputSchema={
-                            "type": "object",
-                            "properties": {
-                                "payload": {
-                                    "type": "object",
-                                    "description": f"Parameters for {cap.name}"
-                                }
-                            },
-                            "required": ["payload"]
-                        }
-                    )
-                    tools.append({
-                        "name": tool.name,
-                        "description": tool.description,
-                        "inputSchema": tool.inputSchema
-                    })
-
+        for tool_def in TOOL_DEFINITIONS:
+            tool_entry: dict[str, Any] = {
+                "name": tool_def["name"],
+                "description": tool_def["description"],
+                "inputSchema": tool_def["inputSchema"],
+            }
+            if "annotations" in tool_def:
+                tool_entry["annotations"] = tool_def["annotations"]
+            tools.append(tool_entry)
         return {"tools": tools}
 
     def tools_call(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
-        """Call a tool."""
-        # Convert MCP tool name back to internal capability name.
-        # Accept both dotted and underscored names (e.g., data.create or data_create).
-        internal_name = name.replace("_", ".", 1) if "_" in name else name
-        payload = arguments.get("payload", {})
-        adapter_mode = os.environ.get("MCP_ADAPTER", "socket").lower()
+        """Call a tool with flat parameters (no payload wrapper)."""
+        # Resolve legacy names to new tool names
+        resolved_name = _LEGACY_TOOL_MAP.get(name, name)
 
+        # Look up tool definition for internal routing
+        tool_def = get_tool(resolved_name)
+        if tool_def is None:
+            return {
+                "content": [{"type": "text", "text": f"Error: Unknown tool '{name}'"}],
+                "isError": True,
+            }
+
+        # Arguments are flat (no payload wrapper) — pass directly as payload
+        # For legacy clients sending {"payload": {...}}, unwrap transparently
+        if "payload" in arguments and len(arguments) == 1 and isinstance(arguments["payload"], dict):
+            payload = arguments["payload"]
+        else:
+            payload = arguments
+
+        internal_capability = tool_def["internal_capability"]
+
+        adapter_mode = os.environ.get("MCP_ADAPTER", "socket").lower()
         if adapter_mode == "mock":
             adapter = MockAdapter()
         else:
@@ -75,51 +96,76 @@ class MCPServer:
                 port=int(os.environ.get("MCP_SOCKET_PORT", "9876")),
             )
 
-        result = adapter.execute(internal_name, payload)
+        result = adapter.execute(internal_capability, payload)
 
         if result.ok:
             return {
                 "content": [{
                     "type": "text",
-                    "text": json.dumps(result.result, indent=2)
+                    "text": json.dumps(result.result, indent=2),
                 }]
             }
         else:
             return {
                 "content": [{
                     "type": "text",
-                    "text": f"Error: {result.error}"
+                    "text": f"Error: {result.error}",
                 }],
-                "isError": True
+                "isError": True,
             }
 
+    def prompts_list(self) -> dict[str, Any]:
+        """List all available workflow prompts."""
+        prompts = []
+        for prompt_def in BLENDER_PROMPTS.values():
+            prompts.append({
+                "name": prompt_def["name"],
+                "description": prompt_def.get("description", ""),
+                "arguments": prompt_def.get("arguments", []),
+            })
+        return {"prompts": prompts}
+
+    def prompts_get(self, name: str, arguments: dict[str, str] | None = None) -> dict[str, Any]:
+        """Get a specific prompt with generated messages."""
+        result = get_prompt_messages(name, arguments)
+        if result is None:
+            return {
+                "error": {"code": -32602, "message": f"Prompt '{name}' not found"},
+            }
+        return result
+
     def handle_request(self, request: dict[str, Any]) -> dict[str, Any] | None:
-        """Handle an MCP request."""
+        """Handle an MCP JSON-RPC request."""
         method = request.get("method")
         params = request.get("params", {})
         req_id = request.get("id")
 
         # Handle notifications (no response expected)
         if method and method.startswith("notifications/"):
-            # Notifications should not return a response
             return None
 
         if method == "tools/list":
             result = self.tools_list()
-            return {
-                "jsonrpc": "2.0",
-                "id": req_id,
-                "result": result
-            }
+            return {"jsonrpc": "2.0", "id": req_id, "result": result}
+
         elif method == "tools/call":
             name = params.get("name")
             arguments = params.get("arguments", {})
             result = self.tools_call(name, arguments)
-            return {
-                "jsonrpc": "2.0",
-                "id": req_id,
-                "result": result
-            }
+            return {"jsonrpc": "2.0", "id": req_id, "result": result}
+
+        elif method == "prompts/list":
+            result = self.prompts_list()
+            return {"jsonrpc": "2.0", "id": req_id, "result": result}
+
+        elif method == "prompts/get":
+            name = params.get("name", "")
+            arguments = params.get("arguments")
+            result = self.prompts_get(name, arguments)
+            if "error" in result:
+                return {"jsonrpc": "2.0", "id": req_id, "error": result["error"]}
+            return {"jsonrpc": "2.0", "id": req_id, "result": result}
+
         elif method == "initialize":
             return {
                 "jsonrpc": "2.0",
@@ -128,21 +174,20 @@ class MCPServer:
                     "protocolVersion": "2024-11-05",
                     "serverInfo": {
                         "name": "blender-mcp",
-                        "version": pkg_version
+                        "version": pkg_version,
                     },
                     "capabilities": {
-                        "tools": {}
-                    }
-                }
+                        "tools": {},
+                        "prompts": {"listChanged": False},
+                    },
+                },
             }
+
         else:
             return {
                 "jsonrpc": "2.0",
                 "id": req_id,
-                "error": {
-                    "code": -32601,
-                    "message": "Method not found"
-                }
+                "error": {"code": -32601, "message": "Method not found"},
             }
 
 
@@ -167,10 +212,7 @@ def run_mcp_server() -> int:
             error_response = {
                 "jsonrpc": "2.0",
                 "id": None,
-                "error": {
-                    "code": -32700,
-                    "message": "Parse error"
-                }
+                "error": {"code": -32700, "message": "Parse error"},
             }
             print(json.dumps(error_response))
             sys.stdout.flush()
@@ -178,10 +220,7 @@ def run_mcp_server() -> int:
             error_response = {
                 "jsonrpc": "2.0",
                 "id": request.get("id") if request else None,
-                "error": {
-                    "code": -32603,
-                    "message": "Internal error"
-                }
+                "error": {"code": -32603, "message": "Internal error"},
             }
             print(json.dumps(error_response))
             sys.stdout.flush()
