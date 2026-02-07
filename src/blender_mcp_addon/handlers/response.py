@@ -140,9 +140,13 @@ def operation_failed_error(
     Returns:
         Error response indicating the operation failed
     """
+    exc_message = str(exc)
+    # Truncate overly long error messages to prevent info leakage
+    if len(exc_message) > 500:
+        exc_message = exc_message[:500] + "..."
     return _error(
         code="operation_failed",
-        message=f"{operation} failed: {str(exc)}",
+        message=f"{operation} failed: {exc_message}",
         data={"exception_type": type(exc).__name__},
         started=started,
     )

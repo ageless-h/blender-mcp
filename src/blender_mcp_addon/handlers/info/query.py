@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import logging
 import tempfile
 import os
 import sys
@@ -13,6 +14,8 @@ from ..response import (
     _ok, check_bpy_available, bpy_unavailable_error,
     invalid_params_error, operation_failed_error,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class InfoType(str, Enum):
@@ -123,8 +126,8 @@ def _query_reports(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
                     "type": report.type,
                     "message": report.message,
                 })
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("Failed to query reports: %s", exc)
     
     return {"reports": reports, "count": len(reports)}
 
@@ -159,8 +162,8 @@ def _query_undo_history(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
                 })
                 if hasattr(step, "is_current") and step.is_current:
                     current_step = i
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("Failed to query undo history: %s", exc)
     
     return {
         "history": history,
@@ -191,8 +194,8 @@ def _query_scene_stats(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
                     total_edges += len(mesh.edges)
                     total_faces += len(mesh.polygons)
                     obj_eval.to_mesh_clear()
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("Failed to evaluate mesh for '%s': %s", obj.name, exc)
     
     memory_stats = {}
     try:
@@ -200,8 +203,8 @@ def _query_scene_stats(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
             import resource
             mem_info = resource.getrusage(resource.RUSAGE_SELF)
             memory_stats["peak_mb"] = mem_info.ru_maxrss / 1024.0
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("Failed to query memory stats: %s", exc)
     
     return {
         "scene_name": scene.name,

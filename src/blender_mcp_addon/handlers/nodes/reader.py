@@ -27,7 +27,7 @@ def _read_node(node: Any, depth: str) -> dict[str, Any]:
                     else:
                         inp_data["value"] = val
                 except Exception:
-                    pass
+                    inp_data["value"] = "<unreadable>"
             inp_data["is_linked"] = inp.is_linked
             inputs.append(inp_data)
         data["inputs"] = inputs

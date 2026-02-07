@@ -2,9 +2,12 @@
 """UV mapping handler — seams, unwrap algorithms, pack, UV layers."""
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from ..response import _ok, _error, check_bpy_available, bpy_unavailable_error
+
+logger = logging.getLogger(__name__)
 
 
 def uv_manage(payload: dict[str, Any], *, started: float) -> dict[str, Any]:

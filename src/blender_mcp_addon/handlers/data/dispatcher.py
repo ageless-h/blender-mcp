@@ -2,6 +2,7 @@
 """Dispatcher for data.* tool operations."""
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from ..registry import HandlerRegistry
@@ -10,6 +11,8 @@ from ..response import (
     not_found_error, invalid_params_error, operation_failed_error,
     unsupported_type_error,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def data_create(payload: dict[str, Any], *, started: float) -> dict[str, Any]:

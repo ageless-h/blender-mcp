@@ -2,10 +2,13 @@
 """Node tree editor — add/remove nodes, connect/disconnect, set values."""
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from ..response import _ok, _error, check_bpy_available, bpy_unavailable_error
 from .reader import _resolve_node_tree
+
+logger = logging.getLogger(__name__)
 
 
 def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]:

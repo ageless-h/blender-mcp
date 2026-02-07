@@ -10,11 +10,13 @@ Or create `.vscode/mcp.json` in your workspace root for project-specific configu
 
 ## Configuration
 
-Add to your VS Code `settings.json`:
+Create `.vscode/mcp.json` in your workspace root (recommended), or add to your VS Code `settings.json`:
+
+### `.vscode/mcp.json` (Recommended)
 
 ```json
 {
-  "github.copilot.chat.mcp.servers": {
+  "servers": {
     "blender": {
       "command": "python",
       "args": ["-m", "blender_mcp.mcp_protocol"],

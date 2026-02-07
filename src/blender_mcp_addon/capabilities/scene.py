@@ -2,6 +2,7 @@
 """Scene capability handlers."""
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from ..handlers.response import (
@@ -11,6 +12,8 @@ from ..handlers.response import (
     check_bpy_available,
     invalid_params_error,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def scene_read(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
@@ -77,8 +80,8 @@ def scene_write(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
             bmesh.ops.create_cube(bm, size=2.0)
             bm.to_mesh(mesh)
             bm.free()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("bmesh cube creation failed, using empty mesh: %s", exc)
 
         obj = bpy.data.objects.new(name=name, object_data=mesh)
         bpy.context.scene.collection.objects.link(obj)

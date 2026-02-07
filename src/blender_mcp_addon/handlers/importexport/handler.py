@@ -40,6 +40,25 @@ _EXPORT_OPERATORS = {
 }
 
 
+def _validate_filepath(filepath: str) -> str | None:
+    """Validate and normalize a file path, rejecting path traversal attempts.
+    
+    Returns the resolved absolute path, or None if the path is invalid.
+    """
+    import os
+    
+    if not filepath or not isinstance(filepath, str):
+        return None
+    
+    # Reject null bytes
+    if "\x00" in filepath:
+        return None
+    
+    # Resolve to absolute path
+    resolved = os.path.realpath(filepath)
+    return resolved
+
+
 def import_export(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
     """Import or export files using Blender operators."""
     available, bpy = check_bpy_available()
@@ -56,6 +75,11 @@ def import_export(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
         return _error(code="invalid_params", message="format is required", started=started)
     if not filepath:
         return _error(code="invalid_params", message="filepath is required", started=started)
+
+    validated_path = _validate_filepath(filepath)
+    if validated_path is None:
+        return _error(code="invalid_params", message="Invalid or unsafe file path", started=started)
+    filepath = validated_path
 
     op_map = _IMPORT_OPERATORS if action == "import" else _EXPORT_OPERATORS
     operator_id = op_map.get(fmt)

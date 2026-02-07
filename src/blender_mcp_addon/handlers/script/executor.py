@@ -133,7 +133,10 @@ def script_execute(payload: dict[str, Any], *, started: float) -> dict[str, Any]
     if not isinstance(code, str):
         return invalid_params_error("'code' must be a string", started)
     
-    timeout = payload.get("timeout", _script_config["default_timeout"])
+    raw_timeout = payload.get("timeout", _script_config["default_timeout"])
+    if not isinstance(raw_timeout, (int, float)) or raw_timeout <= 0:
+        raw_timeout = _script_config["default_timeout"]
+    timeout = int(min(raw_timeout, 300))  # cap at 5 minutes
     
     exec_start = time.perf_counter()
     
@@ -259,7 +262,7 @@ def _execute_with_timeout(code: str, timeout: int, bpy: Any) -> dict[str, Any]:
             elif not isinstance(return_value, (bool, int, float, str, list, dict, type(None))):
                 return_value = str(return_value)
         except Exception:
-            return_value = str(return_value)
+            return_value = str(return_value)  # safe fallback for non-serializable values
     
     return {
         "return_value": return_value,

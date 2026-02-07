@@ -11,16 +11,33 @@ from typing import Any, Dict, Iterable, Set
 class Guardrails:
     max_payload_bytes: int = 65536
     max_payload_keys: int = 128
+    max_nesting_depth: int = 10
     blocked_capabilities: Set[str] = field(default_factory=set)
 
     def allow(self, capability: str, payload: Dict[str, Any]) -> bool:
         if capability in self.blocked_capabilities:
             return False
-        payload_size = len(json.dumps(payload).encode("utf-8"))
+        try:
+            payload_size = len(json.dumps(payload).encode("utf-8"))
+        except (TypeError, ValueError, OverflowError):
+            return False
         if payload_size > self.max_payload_bytes:
             return False
         if len(payload) > self.max_payload_keys:
             return False
+        if not self._check_depth(payload, self.max_nesting_depth):
+            return False
+        return True
+
+    @staticmethod
+    def _check_depth(obj: Any, max_depth: int, current: int = 0) -> bool:
+        """Check that nested structure doesn't exceed max depth."""
+        if current > max_depth:
+            return False
+        if isinstance(obj, dict):
+            return all(Guardrails._check_depth(v, max_depth, current + 1) for v in obj.values())
+        if isinstance(obj, (list, tuple)):
+            return all(Guardrails._check_depth(v, max_depth, current + 1) for v in obj)
         return True
 
     @classmethod

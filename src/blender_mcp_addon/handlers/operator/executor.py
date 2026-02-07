@@ -2,6 +2,7 @@
 """Operator execution with context override support."""
 from __future__ import annotations
 
+import logging
 import time
 from typing import Any
 
@@ -9,6 +10,8 @@ from ..response import (
     _ok, _error, check_bpy_available, bpy_unavailable_error,
     invalid_params_error, operation_failed_error,
 )
+
+logger = logging.getLogger(__name__)
 
 
 OPERATOR_SCOPE_MAP: dict[str, list[str]] = {
@@ -281,8 +284,8 @@ def _build_context_override(bpy: Any, context_override: dict[str, Any]) -> tuple
                     for obj in original_value:
                         if obj:
                             obj.select_set(True)
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("Context cleanup failed for %s: %s", action_type, exc)
     
     return override, cleanup if cleanup_actions else None
 
@@ -300,8 +303,8 @@ def _get_reports_snapshot(bpy: Any) -> list[tuple[str, str]]:
         wm = bpy.context.window_manager
         if hasattr(wm, "reports"):
             return [(r.type, r.message) for r in wm.reports]
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("Failed to get reports snapshot: %s", exc)
     return []
 
 

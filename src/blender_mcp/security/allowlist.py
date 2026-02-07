@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
+import threading
 from dataclasses import dataclass, field
 from typing import Iterable, Set
 
@@ -33,19 +34,22 @@ class Allowlist:
     allowed: Set[str] = field(default_factory=lambda: set(DEFAULT_ALLOWED_TOOLS))
     audit_logger: AuditLogger | None = None
     script_execute_enabled: bool = False
+    _lock: threading.Lock = field(default_factory=threading.Lock, repr=False, compare=False)
 
     def is_allowed(self, capability: str) -> bool:
-        # Special handling for dangerous tools
-        if capability in DANGEROUS_TOOLS:
-            if capability == "script.execute":
-                return self.script_execute_enabled and capability in self.allowed
-            return False
-        return capability in self.allowed
+        with self._lock:
+            # Special handling for dangerous tools
+            if capability in DANGEROUS_TOOLS:
+                if capability == "script.execute":
+                    return self.script_execute_enabled and capability in self.allowed
+                return False
+            return capability in self.allowed
 
     def enable_script_execute(self) -> None:
         """Explicitly enable script.execute (dangerous operation)."""
-        self.script_execute_enabled = True
-        self.allowed.add("script.execute")
+        with self._lock:
+            self.script_execute_enabled = True
+            self.allowed.add("script.execute")
         if self.audit_logger is not None:
             self.audit_logger.record(
                 AuditEvent(
@@ -57,8 +61,9 @@ class Allowlist:
 
     def disable_script_execute(self) -> None:
         """Disable script.execute."""
-        self.script_execute_enabled = False
-        self.allowed.discard("script.execute")
+        with self._lock:
+            self.script_execute_enabled = False
+            self.allowed.discard("script.execute")
         if self.audit_logger is not None:
             self.audit_logger.record(
                 AuditEvent(
@@ -69,16 +74,17 @@ class Allowlist:
             )
 
     def replace(self, capabilities: Iterable[str]) -> None:
-        previous = self.allowed
-        new_capabilities = set(capabilities)
-        
-        # Automatically filter out dangerous tools unless explicitly enabled
-        if not self.script_execute_enabled:
-            new_capabilities -= DANGEROUS_TOOLS
-        
-        self.allowed = new_capabilities
-        added = sorted(self.allowed - previous)
-        removed = sorted(previous - self.allowed)
+        with self._lock:
+            previous = self.allowed
+            new_capabilities = set(capabilities)
+            
+            # Automatically filter out dangerous tools unless explicitly enabled
+            if not self.script_execute_enabled:
+                new_capabilities -= DANGEROUS_TOOLS
+            
+            self.allowed = new_capabilities
+            added = sorted(self.allowed - previous)
+            removed = sorted(previous - self.allowed)
         if self.audit_logger is not None:
             self.audit_logger.record(
                 AuditEvent(
@@ -97,12 +103,14 @@ class Allowlist:
         
         Returns False if the tool is dangerous and not enabled.
         """
-        if capability in DANGEROUS_TOOLS:
-            if capability == "script.execute" and not self.script_execute_enabled:
-                return False
-        self.allowed.add(capability)
-        return True
+        with self._lock:
+            if capability in DANGEROUS_TOOLS:
+                if capability == "script.execute" and not self.script_execute_enabled:
+                    return False
+            self.allowed.add(capability)
+            return True
 
     def remove_tool(self, capability: str) -> None:
         """Remove a tool from the allowlist."""
-        self.allowed.discard(capability)
+        with self._lock:
+            self.allowed.discard(capability)

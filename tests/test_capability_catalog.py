@@ -12,10 +12,7 @@ if str(SRC) not in sys.path:
 
 from blender_mcp.catalog.catalog import (
     CapabilityCatalog,
-    CapabilityMeta,
-    capability_availability,
     capability_scope_map,
-    capability_to_dict,
     minimal_capability_set,
 )
 from blender_mcp.core.lifecycle import ServiceLifecycle

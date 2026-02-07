@@ -2,9 +2,12 @@
 """Physics simulation handler — rigid body, cloth, soft body, fluid, particle, force field."""
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from ..response import _ok, _error, check_bpy_available, bpy_unavailable_error
+
+logger = logging.getLogger(__name__)
 
 
 _PHYSICS_OPERATOR_MAP = {

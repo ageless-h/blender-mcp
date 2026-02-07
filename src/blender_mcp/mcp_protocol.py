@@ -9,10 +9,13 @@ Implements the MCP JSON-RPC protocol with:
 from __future__ import annotations
 
 import json
+import logging
 import os
 import sys
 from dataclasses import dataclass
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from blender_mcp.adapters.mock import MockAdapter
 from blender_mcp.adapters.socket import SocketAdapter
@@ -67,6 +70,14 @@ class MCPServer:
 
     def tools_call(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         """Call a tool with flat parameters (no payload wrapper)."""
+        if not name or not isinstance(name, str):
+            return {
+                "content": [{"type": "text", "text": "Error: 'name' is required and must be a string"}],
+                "isError": True,
+            }
+        if not isinstance(arguments, dict):
+            arguments = {}
+
         # Resolve legacy names to new tool names
         resolved_name = _LEGACY_TOOL_MAP.get(name, name)
 
@@ -127,6 +138,10 @@ class MCPServer:
 
     def prompts_get(self, name: str, arguments: dict[str, str] | None = None) -> dict[str, Any]:
         """Get a specific prompt with generated messages."""
+        if not name or not isinstance(name, str):
+            return {
+                "error": {"code": -32602, "message": "'name' is required and must be a string"},
+            }
         result = get_prompt_messages(name, arguments)
         if result is None:
             return {
@@ -216,7 +231,8 @@ def run_mcp_server() -> int:
             }
             print(json.dumps(error_response))
             sys.stdout.flush()
-        except Exception:
+        except Exception as exc:
+            logger.error("Internal error processing request: %s", exc)
             error_response = {
                 "jsonrpc": "2.0",
                 "id": request.get("id") if request else None,

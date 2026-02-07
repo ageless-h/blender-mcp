@@ -2,7 +2,7 @@
 
 ## Config File Location
 
-- **Windows**: `%USERPROFILE%\.claude\mcp.json`
+- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 - **macOS**: `~/.claude/mcp.json`
 - **Linux**: `~/.claude/mcp.json`
 
