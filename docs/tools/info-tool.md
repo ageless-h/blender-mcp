@@ -1,4 +1,20 @@
-# 信息工具 (info.query)
+# 信息工具 (info.query) ⚠️ **已废弃**
+
+> **注意**：此文档已废弃。`info.query` 工具已被拆分为多个感知层工具。请参阅：
+> - [感知层工具 (Perception Layer)](./perception-layer.md)
+>
+> 具体映射：
+> - `info.query(type="reports")` → 暂无直接映射，可通过 `blender_get_scene` 获取
+> - `info.query(type="last_op")` → 暂无直接映射
+> - `info.query(type="undo_history")` → 暂无直接映射
+> - `info.query(type="scene_stats")` → `blender_get_scene`
+> - `info.query(type="selection")` → `blender_get_selection`
+> - `info.query(type="mode")` → `blender_get_selection`
+> - `info.query(type="viewport_capture")` → `blender_capture_viewport`
+> - `info.query(type="version")` → `blender_get_scene` (include=["version"])
+> - `info.query(type="memory")` → `blender_get_scene` (include=["memory"])
+
+---
 
 信息工具负责查询 Blender 的状态、历史、反馈和统计信息。这对于 LLM 理解当前状态和验证操作结果至关重要。
 

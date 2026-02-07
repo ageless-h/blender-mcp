@@ -1,11 +1,30 @@
-# 操作工具 (operator.execute)
+# 操作工具 (blender_execute_operator)
 
-操作工具负责执行 Blender 操作符（`bpy.ops.*`），覆盖所有无法通过数据 CRUD 完成的操作。
+> **注意**：此工具的旧名称是 `operator.execute`。新名称为 `blender_execute_operator`。两种名称都支持以保持向后兼容性。
+
+操作工具负责执行 Blender 操作符（`bpy.ops.*`），这是后备层中的逃生舱，覆盖所有专用工具无法处理的操作。
+
+## 何时使用
+
+- UV 绘画（空间笔刷操作）
+- 雕刻操作
+- 物理烘焙
+- 文件操作
+- 其他无法通过其他 25 个专用工具完成的操作
+
+## 何时不使用
+
+- 需要读取对象/场景/材质数据 → 使用感知层工具（`blender_get_*`）
+- 需要编辑节点树 → 使用 `blender_edit_nodes`
+- 需要编辑动画 → 使用 `blender_edit_animation`
+- 需要创建/修改对象 → 使用 `blender_create_object` / `blender_modify_object`
+- 需要管理材质/修改器/UV/约束/物理 → 使用相应的 `blender_manage_*` 工具
+- 需要配置场景 → 使用 `blender_setup_scene`
 
 ## 工具签名
 
 ```python
-operator.execute(
+blender_execute_operator(
     operator: str,            # 操作符名称（如 "mesh.subdivide"）
     params: dict = {},        # 操作符参数
     context: dict = {}        # 上下文覆盖（可选）

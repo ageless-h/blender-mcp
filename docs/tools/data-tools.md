@@ -1,4 +1,11 @@
-# 数据工具 (data.*)
+# 数据工具 (data.*) ⚠️ **已废弃**
+
+> **注意**：此文档已废弃。请参阅新的四层架构文档：
+> - [感知层工具 (Perception Layer)](./perception-layer.md)
+> - [声明式写入层工具 (Declarative Write Layer)](./declarative-write-layer.md)
+> - [命令式写入层工具 (Imperative Write Layer)](./imperative-write-layer.md)
+
+---
 
 数据层工具负责对 Blender 数据块（`bpy.data.*`）进行 CRUD 操作。
 

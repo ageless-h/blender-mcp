@@ -21,37 +21,100 @@
 
 MCP server integration for AI-assisted Blender automation.
 
-### Unified Tool Architecture
+### Layered Tool Architecture
 
-Blender MCP uses a highly compressed tool architecture with **8 core tools** that cover 99.9% of Blender functionality:
+Blender MCP uses a **four-layer tool architecture** with **26 specialized tools** organized by intent:
 
+| Layer | Tool Count | Purpose |
+|-------|-----------|---------|
+| **Perception** | 11 tools | Read Blender state deeply with controllable granularity |
+| **Declarative Write** | 3 tools | Node editor (6 contexts) + Animation + VSE Sequencer |
+| **Imperative Write** | 9 tools | Object/Material/Modifier/UV/Constraint/Physics/Scene |
+| **Fallback** | 3 tools | execute_operator + execute_script + import_export |
+
+**Perception Layer (11 tools)**:
 | Tool | Description |
 |------|-------------|
-| `data_create` | Create any Blender data block (objects, meshes, materials, etc.) |
-| `data_read` | Read properties from any data block |
-| `data_write` | Write properties to any data block |
-| `data_delete` | Delete data blocks |
-| `data_list` | List all data blocks of a type |
-| `data_link` | Link/unlink data blocks (e.g., object to collection) |
-| `operator_execute` | Execute any Blender operator (bpy.ops.*) |
-| `info_query` | Query status, history, statistics, and viewport capture |
+| `blender_get_objects` | List/scene objects with filters |
+| `blender_get_object_data` | Deep object data (12 include options) |
+| `blender_get_node_tree` | Read any node tree (6 contexts) |
+| `blender_get_animation_data` | Keyframes/NLA/drivers/shape keys |
+| `blender_get_materials` | Material asset list |
+| `blender_get_scene` | Scene-level global info |
+| `blender_get_collections` | Collection hierarchy tree |
+| `blender_get_armature_data` | Armature/bone hierarchy/constraints/poses |
+| `blender_get_images` | Texture/image asset list |
+| `blender_capture_viewport` | Viewport screenshot |
+| `blender_get_selection` | Current selection/mode/active object |
 
-> **Note**: MCP tool names use underscores (e.g., `data_create`) per MCP specification. Internal capability names use dots (e.g., `data.create`).
+**Declarative Write Layer (3 tools)**:
+| Tool | Description |
+|------|-------------|
+| `blender_edit_nodes` | Edit any node tree (add/remove/connect/disconnect/set_value) ⭐ Core |
+| `blender_edit_animation` | Edit animation (keyframe/NLA/driver/shape_key/frame_range) |
+| `blender_edit_sequencer` | Edit VSE video sequence (strip/transition/effect) |
 
-**Optional (disabled by default):**
-- `script.execute` - Execute arbitrary Python code (requires explicit enablement)
+**Imperative Write Layer (9 tools)**:
+| Tool | Description |
+|------|-------------|
+| `blender_create_object` | Create scene objects (MESH/LIGHT/CAMERA/CURVE/EMPTY/ARMATURE/TEXT) |
+| `blender_modify_object` | Transform/parent/visibility/rename/delete |
+| `blender_manage_material` | Material create/PBR edit/assign/duplicate/delete |
+| `blender_manage_modifier` | Modifier add/configure/apply/delete/reorder |
+| `blender_manage_collection` | Collection create/delete/object link/hierarchy/visibility |
+| `blender_manage_uv` | UV unwrap/seam/pack/layer management |
+| `blender_manage_constraints` | Object/bone constraint add/configure/delete |
+| `blender_manage_physics` | Physics simulation add/configure/bake |
+| `blender_setup_scene` | Render engine/world environment/timeline config |
+
+**Fallback Layer (3 tools)**:
+| Tool | Description |
+|------|-------------|
+| `blender_execute_operator` | Execute any bpy.ops.* operator |
+| `blender_execute_script` | Execute arbitrary Python code (⚠️ use with caution) |
+| `blender_import_export` | Import/export asset files (FBX/OBJ/GLTF/USD/Alembic/STL/etc.) |
+
+> **Note**: All tools use `blender_` prefix to avoid conflicts in multi-server environments. Tool names follow MCP specification with underscores. Payload wrapper is removed - all parameters are exposed directly as top-level inputSchema properties.
+
+**Legacy Compatibility**: Old tool names (`data_create`, `data_read`, etc.) are still supported for backward compatibility.
 
 ### Quick Start
 
 ```json
 // Create a cube
-{"capability": "data.create", "payload": {"type": "object", "name": "MyCube", "params": {"object_type": "MESH"}}}
+{
+  "name": "MyCube",
+  "object_type": "MESH",
+  "primitive": "cube",
+  "size": 2.0
+}
 
 // Move it
-{"capability": "data.write", "payload": {"type": "object", "name": "MyCube", "properties": {"location": [1, 2, 3]}}}
+{
+  "name": "MyCube",
+  "location": [1, 2, 3]
+}
 
 // Add a subdivision modifier
-{"capability": "operator.execute", "payload": {"operator": "object.modifier_add", "params": {"type": "SUBSURF"}}}
+{
+  "action": "add",
+  "object_name": "MyCube",
+  "modifier_name": "Subdivision",
+  "modifier_type": "SUBSURF",
+  "settings": {"levels": 2}
+}
+
+// Read object data
+{
+  "name": "MyCube",
+  "include": ["summary", "modifiers"]
+}
+
+// Capture viewport
+{
+  "shading": "SOLID",
+  "format": "PNG"
+}
 ```
 
 See [docs/migration/tools-migration.md](docs/migration/tools-migration.md) for detailed documentation.
@@ -131,37 +194,100 @@ See [docs/versioning/support-matrix.md](docs/versioning/support-matrix.md) for d
 
 用于 AI 辅助 Blender 自动化的 MCP 服务器集成。
 
-### 统一工具架构
+### 分层工具架构
 
-Blender MCP 采用高度压缩的工具架构，**8 个核心工具** 覆盖 99.9% 的 Blender 功能：
+Blender MCP 采用**四层工具架构**，**26 个专用工具**按意图组织：
 
+| 层级 | 工具数量 | 用途 |
+|------|---------|------|
+| **感知层** | 11 个工具 | 以可控粒度深度读取 Blender 状态 |
+| **声明式写入层** | 3 个工具 | 节点编辑器（6种上下文）+ 动画 + VSE 序列编辑器 |
+| **命令式写入层** | 9 个工具 | 对象/材质/修改器/UV/约束/物理/场景 |
+| **后备层** | 3 个工具 | execute_operator + execute_script + import_export |
+
+**感知层（11 个工具）**：
 | 工具 | 描述 |
 |------|------|
-| `data_create` | 创建任何 Blender 数据块（对象、网格、材质等） |
-| `data_read` | 读取任何数据块的属性 |
-| `data_write` | 写入任何数据块的属性 |
-| `data_delete` | 删除数据块 |
-| `data_list` | 列出某类型的所有数据块 |
-| `data_link` | 链接/取消链接数据块（如将对象链接到集合） |
-| `operator_execute` | 执行任何 Blender 操作符 (bpy.ops.*) |
-| `info_query` | 查询状态、历史、统计信息和视口截图 |
+| `blender_get_objects` | 列出/筛选场景对象 |
+| `blender_get_object_data` | 单对象深度数据（12 种 include 选项） |
+| `blender_get_node_tree` | 读取任意节点树（6 种上下文） |
+| `blender_get_animation_data` | 关键帧/NLA/驱动器/形态键 |
+| `blender_get_materials` | 材质资产列表 |
+| `blender_get_scene` | 场景级全局信息 |
+| `blender_get_collections` | 集合层级树 |
+| `blender_get_armature_data` | 骨架/骨骼层级/约束/姿态 |
+| `blender_get_images` | 纹理/图片资产列表 |
+| `blender_capture_viewport` | 视口截图 |
+| `blender_get_selection` | 当前选择/模式/活动对象 |
 
-> **注意**: MCP 工具名称使用下划线（如 `data_create`），符合 MCP 规范。内部能力名称使用点号（如 `data.create`）。
+**声明式写入层（3 个工具）**：
+| 工具 | 描述 |
+|------|------|
+| `blender_edit_nodes` | 编辑任意节点树（添加/移除/连接/断开/设置值）⭐ 核心 |
+| `blender_edit_animation` | 编辑动画（关键帧/NLA/驱动器/形态键/帧范围） |
+| `blender_edit_sequencer` | 编辑 VSE 视频序列（片段/转场/特效） |
 
-**可选（默认禁用）：**
-- `script.execute` - 执行任意 Python 代码（需要明确启用）
+**命令式写入层（9 个工具）**：
+| 工具 | 描述 |
+|------|------|
+| `blender_create_object` | 创建场景对象（MESH/LIGHT/CAMERA/CURVE/EMPTY/ARMATURE/TEXT） |
+| `blender_modify_object` | 变换/父子/可见性/重命名/删除 |
+| `blender_manage_material` | 材质创建/PBR 编辑/赋予/复制/删除 |
+| `blender_manage_modifier` | 修改器添加/配置/应用/删除/排序 |
+| `blender_manage_collection` | 集合创建/删除/对象链接/层级/可见性 |
+| `blender_manage_uv` | UV 展开/缝合线/打包/图层管理 |
+| `blender_manage_constraints` | 对象/骨骼约束添加/配置/删除 |
+| `blender_manage_physics` | 物理模拟添加/配置/烘焙 |
+| `blender_setup_scene` | 渲染引擎/世界环境/时间线配置 |
+
+**后备层（3 个工具）**：
+| 工具 | 描述 |
+|------|------|
+| `blender_execute_operator` | 执行任意 bpy.ops.* 操作符 |
+| `blender_execute_script` | 执行任意 Python 代码（⚠️ 谨慎使用） |
+| `blender_import_export` | 导入/导出资产文件（FBX/OBJ/GLTF/USD/Alembic/STL 等） |
+
+> **注意**: 所有工具使用 `blender_` 前缀以避免多服务器环境下的命名冲突。工具名称符合 MCP 规范使用下划线。Payload 包装层已移除 - 所有参数直接暴露为顶层 inputSchema 属性。
+
+**向后兼容**: 旧工具名称（`data_create`, `data_read` 等）仍然支持以保持向后兼容性。
 
 ### 快速开始
 
 ```json
 // 创建一个立方体
-{"capability": "data.create", "payload": {"type": "object", "name": "MyCube", "params": {"object_type": "MESH"}}}
+{
+  "name": "MyCube",
+  "object_type": "MESH",
+  "primitive": "cube",
+  "size": 2.0
+}
 
 // 移动它
-{"capability": "data.write", "payload": {"type": "object", "name": "MyCube", "properties": {"location": [1, 2, 3]}}}
+{
+  "name": "MyCube",
+  "location": [1, 2, 3]
+}
 
 // 添加细分修改器
-{"capability": "operator.execute", "payload": {"operator": "object.modifier_add", "params": {"type": "SUBSURF"}}}
+{
+  "action": "add",
+  "object_name": "MyCube",
+  "modifier_name": "Subdivision",
+  "modifier_type": "SUBSURF",
+  "settings": {"levels": 2}
+}
+
+// 读取对象数据
+{
+  "name": "MyCube",
+  "include": ["summary", "modifiers"]
+}
+
+// 捕获视口
+{
+  "shading": "SOLID",
+  "format": "PNG"
+}
 ```
 
 详见 [docs/migration/tools-migration.md](docs/migration/tools-migration.md)。
