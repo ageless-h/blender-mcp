@@ -22,7 +22,6 @@ class TestErrorCodes(unittest.TestCase):
         self.assertEqual(len(ErrorCode), 15)
 
     def test_all_snake_case(self):
-        import re
         for c in ErrorCode:
             self.assertRegex(c.value, r"^[a-z_]+$")
 

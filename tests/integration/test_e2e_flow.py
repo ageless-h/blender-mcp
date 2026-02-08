@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """End-to-end integration tests for MCP request flow."""
-import json, os, unittest, sys
+import os, unittest, sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent
