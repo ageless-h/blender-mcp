@@ -168,7 +168,9 @@ def _dispatch_new_capability(capability: str, payload: dict[str, Any], started: 
     # Imperative Write Layer
     # ---------------------------------------------------------------
     if capability == "blender.create_object":
-        return data_create({"type": "object", **payload}, started=started)
+        obj_name = payload.get("name", "")
+        params = {k: v for k, v in payload.items() if k != "name"}
+        return data_create({"type": "object", "name": obj_name, "params": params}, started=started)
 
     if capability == "blender.modify_object":
         obj_name = payload.get("name", "")
@@ -238,13 +240,16 @@ def _dispatch_new_capability(capability: str, payload: dict[str, Any], started: 
         if action == "add":
             return data_create({
                 "type": "modifier", "name": mod_name,
-                "object": obj, "modifier_type": payload.get("modifier_type", ""),
-                **payload.get("settings", {}),
+                "params": {
+                    "object": obj,
+                    "type": payload.get("modifier_type", ""),
+                    "settings": payload.get("settings", {}),
+                },
             }, started=started)
         elif action == "remove":
-            return data_delete({"type": "modifier", "name": mod_name, "object": obj}, started=started)
+            return data_delete({"type": "modifier", "name": mod_name, "params": {"object": obj}}, started=started)
         elif action == "configure":
-            return data_write({"type": "modifier", "name": mod_name, "object": obj, **payload.get("settings", {})}, started=started)
+            return data_write({"type": "modifier", "name": mod_name, "properties": payload.get("settings", {}), "params": {"object": obj}}, started=started)
         elif action in ("apply", "move_up", "move_down"):
             op_map = {"apply": "object.modifier_apply", "move_up": "object.modifier_move_up", "move_down": "object.modifier_move_down"}
             return operator_execute({"operator": op_map[action], "params": {"modifier": mod_name}, "context": {"active_object": obj}}, started=started)
@@ -254,21 +259,32 @@ def _dispatch_new_capability(capability: str, payload: dict[str, Any], started: 
         action = payload.get("action", "")
         col_name = payload.get("collection_name", "")
         if action == "create":
-            return data_create({"type": "collection", "name": col_name, "parent": payload.get("parent"), "color_tag": payload.get("color_tag")}, started=started)
+            col_params: dict[str, Any] = {}
+            if "parent" in payload:
+                col_params["parent"] = payload["parent"]
+            if "color_tag" in payload:
+                col_params["color_tag"] = payload["color_tag"]
+            return data_create({"type": "collection", "name": col_name, "params": col_params}, started=started)
         elif action == "delete":
             return data_delete({"type": "collection", "name": col_name}, started=started)
         elif action in ("link_object", "unlink_object"):
             return data_link({
-                "type": "object", "name": payload.get("object_name", ""),
-                "target": col_name,
-                "action": "link" if action == "link_object" else "unlink",
+                "source": {"type": "object", "name": payload.get("object_name", "")},
+                "target": {"type": "collection", "name": col_name},
+                "unlink": action == "unlink_object",
             }, started=started)
         elif action == "set_visibility":
-            return data_write({"type": "collection", "name": col_name,
-                             "hide_viewport": payload.get("hide_viewport"),
-                             "hide_render": payload.get("hide_render")}, started=started)
+            vis_props: dict[str, Any] = {}
+            if "hide_viewport" in payload:
+                vis_props["hide_viewport"] = payload["hide_viewport"]
+            if "hide_render" in payload:
+                vis_props["hide_render"] = payload["hide_render"]
+            return data_write({"type": "collection", "name": col_name, "properties": vis_props}, started=started)
         elif action == "set_parent":
-            return data_link({"type": "collection", "name": col_name, "target": payload.get("parent", ""), "action": "link"}, started=started)
+            return data_link({
+                "source": {"type": "collection", "name": col_name},
+                "target": {"type": "collection", "name": payload.get("parent", "")},
+            }, started=started)
         return _error(code="invalid_params", message=f"Unknown collection action: {action}", started=started)
 
     if capability == "blender.manage_uv":
