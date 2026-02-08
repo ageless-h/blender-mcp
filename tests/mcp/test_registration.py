@@ -271,13 +271,14 @@ class MCPRegistrationTest(unittest.TestCase):
         response = self._send_request(request)
         self.assertIn("result", response)
         prompts = response["result"]["prompts"]
-        self.assertEqual(len(prompts), 7, "Should have 7 workflow prompts")
+        self.assertEqual(len(prompts), 10, "Should have 10 prompts (7 workflow + 3 strategy)")
 
         prompt_names = {p["name"] for p in prompts}
         expected = {
             "blender-scene-setup", "blender-material-create", "blender-model-asset",
             "blender-animate", "blender-composite", "blender-render-output",
             "blender-diagnose",
+            "blender-usage-strategy", "blender-resource-strategy", "blender-debugging-strategy",
         }
         self.assertEqual(prompt_names, expected)
 

@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 
 try:
     import bpy  # type: ignore
-    from bpy.props import BoolProperty, IntProperty, StringProperty  # type: ignore
+    from bpy.props import BoolProperty  # type: ignore
     from bpy.types import Panel, PropertyGroup  # type: ignore
 except ImportError:  # pragma: no cover - allow imports outside Blender
     bpy = None  # type: ignore
