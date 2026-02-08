@@ -15,8 +15,5 @@ Blender addon package for installation via Blender's addon preferences:
 - `preferences.py` - Addon preferences (host, port, auto-start)
 - `operators.py` - Start/stop server operators
 - `server/` - Socket server for MCP communication
-- `capabilities/` - Capability handlers (scene.read, scene.write)
-
-## Legacy
-
-The `addon/` directory contains PoC code and is preserved for reference.
+- `capabilities/` - Capability dispatcher for blender.* tools
+- `handlers/` - Data CRUD, animation, nodes, sequencer, and other handlers

@@ -108,7 +108,7 @@ class MCPServer:
 
     @telemetry_tool
     def tools_call(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
-        """Call a tool with flat parameters (no payload wrapper)."""
+        """Call a tool with flat parameters."""
         call_start = time.perf_counter()
 
         if not name or not isinstance(name, str):
@@ -127,12 +127,7 @@ class MCPServer:
                 "isError": True,
             }
 
-        # Arguments are flat (no payload wrapper) — pass directly as payload
-        # For legacy clients sending {"payload": {...}}, unwrap transparently
-        if "payload" in arguments and len(arguments) == 1 and isinstance(arguments["payload"], dict):
-            payload = arguments["payload"]
-        else:
-            payload = arguments
+        payload = arguments
 
         internal_capability = tool_def["internal_capability"]
         logger.info("tools/call %s (capability=%s)", name, internal_capability)

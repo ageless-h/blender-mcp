@@ -33,7 +33,7 @@ class TestGuardrailsExtended(unittest.TestCase):
 
     def test_empty_payload_allowed(self):
         g = Guardrails()
-        self.assertTrue(g.allow("data.read", {}))
+        self.assertTrue(g.allow("blender.get_object_data", {}))
 
 
 if __name__ == "__main__":

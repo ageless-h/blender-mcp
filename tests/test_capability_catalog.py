@@ -12,16 +12,12 @@ if str(SRC) not in sys.path:
 
 from blender_mcp.catalog.catalog import (
     CapabilityCatalog,
+    CapabilityMeta,
+    capability_availability,
     capability_scope_map,
+    capability_to_dict,
     minimal_capability_set,
 )
-from blender_mcp.core.lifecycle import ServiceLifecycle
-from blender_mcp.core.server import MCPServer
-from blender_mcp.core.types import Request
-from blender_mcp.security.allowlist import Allowlist
-from blender_mcp.security.audit import MemoryAuditLogger
-from blender_mcp.security.permissions import PermissionPolicy
-from blender_mcp.security.rate_limit import RateLimiter
 
 
 class TestCapabilityCatalog(unittest.TestCase):
@@ -55,47 +51,43 @@ class TestCapabilityDiscovery(unittest.TestCase):
         self.catalog = CapabilityCatalog()
         for capability in self.capabilities:
             self.catalog.register(capability)
-        self.server = MCPServer(
-            catalog=self.catalog,
-            lifecycle=ServiceLifecycle(),
-            allowlist=Allowlist(
-                {cap.name for cap in self.capabilities} | {"capabilities.list"}
-            ),
-            permissions=PermissionPolicy(capability_scope_map(self.capabilities)),
-            rate_limiter=RateLimiter({}, window_seconds=60.0),
-            audit_logger=MemoryAuditLogger(),
-        )
 
-    def test_capabilities_list_returns_catalog(self) -> None:
-        request = Request(capability="capabilities.list", payload={}, scopes=[])
-        response = self.server.handle_request(request)
-        self.assertTrue(response.ok)
-        names = {cap["name"] for cap in response.result["capabilities"]}
+    def test_catalog_list_returns_all(self) -> None:
+        names = {cap.name for cap in self.catalog.list()}
         self.assertEqual(names, {cap.name for cap in self.capabilities})
 
-    def test_capabilities_list_availability_by_version(self) -> None:
-        request = Request(
-            capability="capabilities.list",
-            payload={"blender_version": "4.0"},
-            scopes=[],
-        )
-        response = self.server.handle_request(request)
-        self.assertTrue(response.ok)
-        entries = response.result["capabilities"]
-        self.assertTrue(all(entry["available"] is False for entry in entries))
-        self.assertTrue(
-            all(entry["unavailable_reason"] == "version_below_min" for entry in entries)
-        )
+    def test_catalog_get_by_name(self) -> None:
+        cap = self.catalog.get("blender.get_scene")
+        self.assertIsNotNone(cap)
+        self.assertEqual(cap.name, "blender.get_scene")
 
-        request_ok = Request(
-            capability="capabilities.list",
-            payload={"blender_version": "4.2"},
-            scopes=[],
-        )
-        response_ok = self.server.handle_request(request_ok)
-        self.assertTrue(response_ok.ok)
-        entries_ok = response_ok.result["capabilities"]
-        self.assertTrue(all(entry["available"] is True for entry in entries_ok))
+    def test_catalog_get_unknown_returns_none(self) -> None:
+        self.assertIsNone(self.catalog.get("nonexistent"))
+
+    def test_capability_availability_below_min(self) -> None:
+        cap = CapabilityMeta(name="test", description="t", min_version="4.2")
+        available, reason = capability_availability(cap, "4.0")
+        self.assertFalse(available)
+        self.assertEqual(reason, "version_below_min")
+
+    def test_capability_availability_at_min(self) -> None:
+        cap = CapabilityMeta(name="test", description="t", min_version="4.2")
+        available, _ = capability_availability(cap, "4.2")
+        self.assertTrue(available)
+
+    def test_capability_to_dict_with_version(self) -> None:
+        cap = CapabilityMeta(name="test", description="t", min_version="4.2")
+        d = capability_to_dict(cap, "4.0")
+        self.assertFalse(d["available"])
+        self.assertEqual(d["unavailable_reason"], "version_below_min")
+
+        d_ok = capability_to_dict(cap, "4.2")
+        self.assertTrue(d_ok["available"])
+
+    def test_scope_map(self) -> None:
+        scope_map = capability_scope_map(self.capabilities)
+        self.assertIn("blender.get_scene", scope_map)
+        self.assertIn("info:read", scope_map["blender.get_scene"])
 
 
 if __name__ == "__main__":

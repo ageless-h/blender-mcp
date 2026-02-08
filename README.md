@@ -119,8 +119,6 @@ Blender MCP uses a **four-layer tool architecture** with **26 specialized tools*
 }
 ```
 
-See [docs/migration/tools-migration.md](docs/migration/tools-migration.md) for detailed documentation.
-
 ### Installation
 
 #### Blender Addon
@@ -292,8 +290,6 @@ Blender MCP 采用**四层工具架构**，**26 个专用工具**按意图组织
   "format": "PNG"
 }
 ```
-
-详见 [docs/migration/tools-migration.md](docs/migration/tools-migration.md)。
 
 ### 安装
 

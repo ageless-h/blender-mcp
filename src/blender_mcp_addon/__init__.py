@@ -26,7 +26,7 @@ bl_info = {
     "name": "Blender MCP",
     "author": "Blender MCP Contributors",
     "version": (0, 1, 0),
-    "blender": (3, 6, 0),
+    "blender": (4, 2, 0),
     "category": "Development",
     "description": "MCP server integration for AI-assisted Blender automation",
 }

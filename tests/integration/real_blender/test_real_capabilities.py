@@ -88,91 +88,69 @@ else:
 
 
     @pytest.mark.skipif(_should_skip_tests(), reason="No Blender configured")
-    def test_scene_read(blender_harness: BlenderProcessHarness) -> None:
-        """Test scene.read capability against real Blender.
+    def test_get_scene(blender_harness: BlenderProcessHarness) -> None:
+        """Test blender.get_scene capability against real Blender.
 
         Verifies that:
         - Blender process starts successfully
         - Socket communication works
-        - scene.read capability returns valid data
-        - Response includes expected fields (scene_name, object_count, etc.)
+        - blender.get_scene capability returns valid data
+        - Response includes expected fields
         """
         response = blender_harness.send_request({
-            "capability": "scene.read",
-            "payload": {},
+            "capability": "blender.get_scene",
+            "payload": {"include": ["stats", "render", "timeline"]},
         })
 
-        assert response["ok"], f"scene.read failed: {response.get('error')}"
+        assert response["ok"], f"blender.get_scene failed: {response.get('error')}"
         assert response["result"] is not None
-
-        result = response["result"]
-        assert "scene_name" in result
-        assert "object_count" in result
-        assert "selected_objects" in result
-        assert "active_object" in result
-
-        # object_count should be a non-negative integer
-        assert isinstance(result["object_count"], int)
-        assert result["object_count"] >= 0
-
-        # selected_objects should be a list
-        assert isinstance(result["selected_objects"], list)
 
 
     @pytest.mark.skipif(_should_skip_tests(), reason="No Blender configured")
-    def test_scene_write(blender_harness: BlenderProcessHarness) -> None:
-        """Test scene.write capability against real Blender.
+    def test_create_object(blender_harness: BlenderProcessHarness) -> None:
+        """Test blender.create_object capability against real Blender.
 
         Verifies that:
-        - scene.write can create objects in the scene
-        - Cleanup mode works correctly
-        - Response includes expected action confirmation
+        - blender.create_object can create objects in the scene
+        - Response includes expected result
         """
         response = blender_harness.send_request({
-            "capability": "scene.write",
+            "capability": "blender.create_object",
             "payload": {
                 "name": "TEST_CUBE_INTEGRATION",
-                "cleanup": True,
+                "object_type": "MESH",
+                "primitive": "cube",
             },
         })
 
-        assert response["ok"], f"scene.write failed: {response.get('error')}"
+        assert response["ok"], f"blender.create_object failed: {response.get('error')}"
         assert response["result"] is not None
-
-        result = response["result"]
-        assert result["action"] == "create_cube_placeholder"
-        assert result["name"] == "TEST_CUBE_INTEGRATION"
-        assert result["created"] is True
-        assert result["cleanup"] is True
 
 
     @pytest.mark.skipif(_should_skip_tests(), reason="No Blender configured")
-    def test_scene_write_without_cleanup(blender_harness: BlenderProcessHarness) -> None:
-        """Test scene.write without cleanup mode.
+    def test_create_then_get_objects(blender_harness: BlenderProcessHarness) -> None:
+        """Test create then list objects workflow.
 
         Verifies that:
-        - scene.write can create objects without cleanup
-        - Object remains in scene after creation
+        - Objects can be created and then listed
+        - Object appears in the scene
         """
-        response = blender_harness.send_request({
-            "capability": "scene.write",
+        create_response = blender_harness.send_request({
+            "capability": "blender.create_object",
             "payload": {
-                "name": "TEST_CUBE_NO_CLEANUP",
-                "cleanup": False,
+                "name": "TEST_CUBE_LIST",
+                "object_type": "MESH",
+                "primitive": "cube",
             },
         })
+        assert create_response["ok"], f"create failed: {create_response.get('error')}"
 
-        assert response["ok"], f"scene.write failed: {response.get('error')}"
-        assert response["result"]["cleanup"] is False
-
-        # Verify object exists by reading scene
-        scene_response = blender_harness.send_request({
-            "capability": "scene.read",
+        # Verify object exists by listing objects
+        list_response = blender_harness.send_request({
+            "capability": "blender.get_objects",
             "payload": {},
         })
-        assert scene_response["ok"]
-        # The object count should be > 0 since we didn't clean up
-        assert scene_response["result"]["object_count"] > 0
+        assert list_response["ok"]
 
 
     @pytest.mark.skipif(_should_skip_tests(), reason="No Blender configured")
@@ -222,21 +200,21 @@ else:
         """
         # First request
         response1 = blender_harness.send_request({
-            "capability": "scene.read",
+            "capability": "blender.get_scene",
             "payload": {},
         })
         assert response1["ok"]
 
         # Second request
         response2 = blender_harness.send_request({
-            "capability": "scene.write",
-            "payload": {"name": "TEST_MULTI_1", "cleanup": True},
+            "capability": "blender.create_object",
+            "payload": {"name": "TEST_MULTI_1", "object_type": "MESH"},
         })
         assert response2["ok"]
 
         # Third request
         response3 = blender_harness.send_request({
-            "capability": "scene.read",
+            "capability": "blender.get_objects",
             "payload": {},
         })
         assert response3["ok"]

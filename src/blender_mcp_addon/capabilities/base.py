@@ -364,29 +364,8 @@ def execute_capability(request: dict[str, Any]) -> dict[str, Any]:
                 started=started,
             )
 
-        # New blender.* capabilities (26-tool architecture)
         if capability.startswith("blender."):
             return _dispatch_new_capability(capability, payload, started)
-
-        # Legacy unified tools
-        if capability == "data.create":
-            return data_create(payload, started=started)
-        if capability == "data.read":
-            return data_read(payload, started=started)
-        if capability == "data.write":
-            return data_write(payload, started=started)
-        if capability == "data.delete":
-            return data_delete(payload, started=started)
-        if capability == "data.list":
-            return data_list(payload, started=started)
-        if capability == "data.link":
-            return data_link(payload, started=started)
-        if capability == "operator.execute":
-            return operator_execute(payload, started=started)
-        if capability == "info.query":
-            return info_query(payload, started=started)
-        if capability == "script.execute":
-            return script_execute(payload, started=started)
 
         return _error(
             code="unsupported_capability",

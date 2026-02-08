@@ -56,7 +56,7 @@ class BlenderProcessHarness:
     Example:
         >>> with BlenderProcessHarness("/path/to/blender") as harness:
         ...     response = harness.send_request({
-        ...         "capability": "scene.read",
+        ...         "capability": "blender.get_scene",
         ...         "payload": {}
         ...     })
         ...     print(response["ok"])
@@ -88,8 +88,8 @@ class BlenderProcessHarness:
         self._stderr: list[str] = []
         self._started = False
 
-        # Path to the socket server script
-        self._server_script = Path(__file__).parent.parent.parent.parent / "addon" / "start_socket_server.py"
+        # Path to the addon package that starts the socket server
+        self._server_script = Path(__file__).parent.parent.parent.parent / "src" / "blender_mcp_addon" / "server" / "socket_server.py"
 
     def start(self) -> bool:
         """Start the Blender process with the socket server.
