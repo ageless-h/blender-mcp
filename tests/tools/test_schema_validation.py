@@ -9,7 +9,7 @@ if str(ROOT / "src") not in sys.path:
 os.environ["MCP_ADAPTER"] = "mock"
 
 from blender_mcp.schemas.tools import TOOL_DEFINITIONS, get_tool
-from blender_mcp.mcp_protocol import MCPServer
+
 
 ANN_KEYS = ["readOnlyHint", "destructiveHint", "idempotentHint", "openWorldHint"]
 
