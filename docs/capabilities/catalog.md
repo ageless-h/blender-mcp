@@ -65,24 +65,6 @@ Blender MCP 采用四层分层架构，共 26 个工具：
 
 ---
 
-## 旧能力（已废弃，向后兼容）
-
-以下旧能力名称仍然可用，但会被自动映射到新工具：
-
-| 旧名称 | 映射到 |
-|--------|--------|
-| `data_create` | `blender_create_object` |
-| `data_read` | `blender_get_object_data` |
-| `data_write` | `blender_modify_object` |
-| `data_delete` | `blender_modify_object` (delete=true) |
-| `data_list` | `blender_get_objects` |
-| `data_link` | `blender_manage_collection` |
-| `operator_execute` | `blender_execute_operator` |
-| `info_query` | `blender_get_scene` / `blender_get_selection` |
-| `script_execute` | `blender_execute_script` |
-
----
-
 ## 工具注解
 
 每个工具都带有 MCP 注解：

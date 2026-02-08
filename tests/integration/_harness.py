@@ -46,7 +46,7 @@ def build_integration_harness(
     audit = MemoryAuditLogger()
 
     rate_limiter = RateLimiter(
-        dict({"data.read": 2} if rate_limits is None else rate_limits),
+        dict({"blender.get_object_data": 2} if rate_limits is None else rate_limits),
         window_seconds=window_seconds,
     )
 

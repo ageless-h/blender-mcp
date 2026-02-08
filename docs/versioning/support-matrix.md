@@ -22,15 +22,15 @@ All capabilities require **Blender 4.2 or later**:
 
 | Capability | Min Version | Reason |
 |------------|-------------|--------|
-| `data.create` | 4.2 | Stable bmesh API from 4.2+ |
-| `data.read` | 4.2 | bpy.data access patterns |
-| `data.write` | 4.2 | Context override API |
-| `data.delete` | 4.2 | Standard API |
-| `data.list` | 4.2 | Standard API |
-| `data.link` | 4.2 | Collection link API |
-| `operator.execute` | 4.2 | bpy.ops context override |
-| `info.query` | 4.2 | Depsgraph API |
-| `script.execute` | 4.2 | Threading support |
+| `blender.get_objects` | 4.2 | bpy.data access patterns |
+| `blender.get_object_data` | 4.2 | bpy.data access patterns |
+| `blender.get_scene` | 4.2 | Depsgraph API |
+| `blender.create_object` | 4.2 | Stable bmesh API from 4.2+ |
+| `blender.modify_object` | 4.2 | Context override API |
+| `blender.execute_operator` | 4.2 | bpy.ops context override |
+| `blender.execute_script` | 4.2 | Threading support |
+| `blender.import_export` | 4.2 | Standard I/O API |
+| All other `blender.*` | 4.2 | Standard API |
 
 ## Testing Status
 

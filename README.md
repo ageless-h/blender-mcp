@@ -76,7 +76,7 @@ Blender MCP uses a **four-layer tool architecture** with **26 specialized tools*
 
 > **Note**: All tools use `blender_` prefix to avoid conflicts in multi-server environments. Tool names follow MCP specification with underscores. Payload wrapper is removed - all parameters are exposed directly as top-level inputSchema properties.
 
-**Legacy Compatibility**: Old tool names (`data_create`, `data_read`, etc.) are still supported for backward compatibility.
+**Tool Naming**: All tools use the `blender_` prefix to avoid conflicts in multi-server environments.
 
 ### Quick Start
 
@@ -250,7 +250,7 @@ Blender MCP 采用**四层工具架构**，**26 个专用工具**按意图组织
 
 > **注意**: 所有工具使用 `blender_` 前缀以避免多服务器环境下的命名冲突。工具名称符合 MCP 规范使用下划线。Payload 包装层已移除 - 所有参数直接暴露为顶层 inputSchema 属性。
 
-**向后兼容**: 旧工具名称（`data_create`, `data_read` 等）仍然支持以保持向后兼容性。
+**工具命名**: 所有工具使用 `blender_` 前缀以避免多服务器环境下的命名冲突。
 
 ### 快速开始
 

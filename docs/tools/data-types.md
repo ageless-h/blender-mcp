@@ -1,6 +1,9 @@
 # 数据类型枚举 (DataType)
 
-`DataType` 枚举定义了 `data.*` 工具支持的所有数据类型，映射到 Blender 的 `bpy.data.*` 集合。
+`DataType` 枚举定义了内部数据处理层支持的所有数据类型，映射到 Blender 的 `bpy.data.*` 集合。
+
+> 注：外部 API 使用 26 个 `blender_*` 工具（如 `blender_create_object`、`blender_manage_modifier`）。
+> 以下 DataType 是内部 handler 层的参考。
 
 ## 完整类型列表
 
@@ -142,31 +145,26 @@ class DataType(str, Enum):
 
 ```python
 # 添加修改器
-data.create(
-    type="modifier",
-    name="Subdivision",
-    params={
-        "object": "Cube",      # 父对象
-        "type": "SUBSURF"      # 修改器类型
-    }
+blender_manage_modifier(
+    action="add",
+    object_name="Cube",
+    modifier_name="Subdivision",
+    modifier_type="SUBSURF"
 )
 
 # 修改修改器属性
-data.write(
-    type="modifier",
-    name="Subdivision",
-    properties={
-        "object": "Cube",
-        "levels": 2,
-        "render_levels": 3
-    }
+blender_manage_modifier(
+    action="configure",
+    object_name="Cube",
+    modifier_name="Subdivision",
+    settings={"levels": 2, "render_levels": 3}
 )
 
 # 删除修改器
-data.delete(
-    type="modifier",
-    name="Subdivision",
-    params={"object": "Cube"}
+blender_manage_modifier(
+    action="remove",
+    object_name="Cube",
+    modifier_name="Subdivision"
 )
 ```
 
@@ -187,29 +185,29 @@ data.delete(
 
 ```python
 # 创建
-data.create(type="object", name="Cube", params={
-    "mesh_name": "CubeMesh"  # 关联的网格
-})
+blender_create_object(
+    name="Cube",
+    object_type="MESH",
+    primitive="cube"
+)
 
 # 读取
-data.read(type="object", name="Cube")
+blender_get_object_data(name="Cube")
 # → {
 #     "name": "Cube",
 #     "type": "MESH",
 #     "location": [0, 0, 0],
 #     "rotation_euler": [0, 0, 0],
 #     "scale": [1, 1, 1],
-#     "data": "CubeMesh",
-#     "parent": null,
-#     "modifiers": ["Subdivision"],
-#     "constraints": []
+#     ...
 # }
 
 # 修改
-data.write(type="object", name="Cube", properties={
-    "location": [1, 2, 3],
-    "scale": [2, 2, 2]
-})
+blender_modify_object(
+    name="Cube",
+    location=[1, 2, 3],
+    scale=[2, 2, 2]
+)
 ```
 
 ### node_tree（节点树）
@@ -217,24 +215,20 @@ data.write(type="object", name="Cube", properties={
 节点组，用于材质、几何节点、合成等。
 
 ```python
-# 创建几何节点组
-data.create(type="node_tree", name="MyGeoNodes", params={
-    "type": "GeometryNodeTree"
-})
-
-# 创建材质节点组
-data.create(type="node_tree", name="MyShaderGroup", params={
-    "type": "ShaderNodeTree"
-})
-
 # 读取节点树
-data.read(type="node_tree", name="MyGeoNodes")
-# → {
-#     "name": "MyGeoNodes",
-#     "type": "GeometryNodeTree",
-#     "nodes": ["Group Input", "Group Output"],
-#     "links": []
-# }
+blender_get_node_tree(
+    tree_type="GEOMETRY",
+    context="MODIFIER",
+    target="MyObject/GeometryNodes"
+)
+
+# 编辑节点树
+blender_edit_nodes(
+    tree_type="SHADER",
+    context="OBJECT",
+    target="MyMaterial",
+    operations=[{"action": "add_node", "type": "ShaderNodeBsdfPrincipled", "name": "BSDF"}]
+)
 ```
 
 ### context（上下文）
@@ -242,32 +236,19 @@ data.read(type="node_tree", name="MyGeoNodes")
 伪类型，用于读写当前上下文状态。
 
 ```python
-# 读取上下文
-data.read(type="context")
+# 读取当前选择状态
+blender_get_selection()
 # → {
 #     "mode": "OBJECT",
 #     "active_object": "Cube",
-#     "selected_objects": ["Cube", "Sphere"],
-#     "scene": "Scene",
-#     "workspace": "Layout",
-#     "tool": "builtin.select_box"
+#     "selected_objects": ["Cube", "Sphere"]
 # }
 
-# 修改上下文（切换模式）
-data.write(type="context", properties={
-    "mode": "EDIT"
-})
-
-# 修改上下文（选择对象）
-data.write(type="context", properties={
-    "active_object": "Sphere",
-    "selected_objects": ["Sphere", "Cube"]
-})
-
-# 修改上下文（切换工作区）
-data.write(type="context", properties={
-    "workspace": "Shading"
-})
+# 切换模式 / 修改上下文通过操作符
+blender_execute_operator(
+    operator="object.mode_set",
+    params={"mode": "EDIT"}
+)
 ```
 
 ## Blender API 映射表

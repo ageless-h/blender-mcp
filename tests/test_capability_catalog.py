@@ -28,27 +28,22 @@ class TestCapabilityCatalog(unittest.TestCase):
     def test_minimal_capability_set_contains_expected(self) -> None:
         capabilities = minimal_capability_set()
         names = {cap.name for cap in capabilities}
-        self.assertEqual(
-            names,
-            {
-                # Data layer tools (CRUD for all Blender data types)
-                "data.create",
-                "data.read",
-                "data.write",
-                "data.delete",
-                "data.list",
-                "data.link",
-                # Operator layer tool
-                "operator.execute",
-                # Info layer tool
-                "info.query",
-                # Optional dangerous tool (disabled by default)
-                "script.execute",
-                # Legacy capabilities (deprecated, for backward compatibility)
-                "scene.read",
-                "scene.write",
-            },
-        )
+        expected = {
+            # Perception layer (11)
+            "blender.get_objects", "blender.get_object_data", "blender.get_node_tree",
+            "blender.get_animation_data", "blender.get_materials", "blender.get_scene",
+            "blender.get_collections", "blender.get_armature_data", "blender.get_images",
+            "blender.capture_viewport", "blender.get_selection",
+            # Declarative write layer (3)
+            "blender.edit_nodes", "blender.edit_animation", "blender.edit_sequencer",
+            # Imperative write layer (9)
+            "blender.create_object", "blender.modify_object", "blender.manage_material",
+            "blender.manage_modifier", "blender.manage_collection", "blender.manage_uv",
+            "blender.manage_constraints", "blender.manage_physics", "blender.setup_scene",
+            # Fallback layer (3)
+            "blender.execute_operator", "blender.execute_script", "blender.import_export",
+        }
+        self.assertEqual(names, expected)
         for cap in capabilities:
             self.assertEqual(cap.min_version, "4.2")
             self.assertTrue(cap.scopes)

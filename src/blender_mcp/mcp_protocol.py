@@ -4,7 +4,6 @@
 Implements the MCP JSON-RPC protocol with:
 - 26 tools with flat parameters, hand-written schemas, and annotations
 - 10 prompts (7 workflow + 3 strategy) for LLM guidance
-- Legacy tool name compatibility (data.create → blender_create_object)
 """
 from __future__ import annotations
 
@@ -40,28 +39,6 @@ from blender_mcp.prompts.registry import (
 from blender_mcp.telemetry import telemetry_tool
 
 
-# Legacy tool name → new tool name mapping for backward compatibility
-_LEGACY_TOOL_MAP: dict[str, str] = {
-    "data.create": "blender_create_object",
-    "data_create": "blender_create_object",
-    "data.read": "blender_get_object_data",
-    "data_read": "blender_get_object_data",
-    "data.write": "blender_modify_object",
-    "data_write": "blender_modify_object",
-    "data.delete": "blender_modify_object",
-    "data_delete": "blender_modify_object",
-    "data.list": "blender_get_objects",
-    "data_list": "blender_get_objects",
-    "data.link": "blender_manage_collection",
-    "data_link": "blender_manage_collection",
-    "operator.execute": "blender_execute_operator",
-    "operator_execute": "blender_execute_operator",
-    "info.query": "blender_get_scene",
-    "info_query": "blender_get_scene",
-    "script.execute": "blender_execute_script",
-    "script_execute": "blender_execute_script",
-}
-
 
 @dataclass
 class MCPServer:
@@ -94,11 +71,8 @@ class MCPServer:
         if not isinstance(arguments, dict):
             arguments = {}
 
-        # Resolve legacy names to new tool names
-        resolved_name = _LEGACY_TOOL_MAP.get(name, name)
-
         # Look up tool definition for internal routing
-        tool_def = get_tool(resolved_name)
+        tool_def = get_tool(name)
         if tool_def is None:
             return {
                 "content": [{"type": "text", "text": f"Error: Unknown tool '{name}'"}],
@@ -113,7 +87,7 @@ class MCPServer:
             payload = arguments
 
         internal_capability = tool_def["internal_capability"]
-        logger.info("tools/call %s (capability=%s)", resolved_name, internal_capability)
+        logger.info("tools/call %s (capability=%s)", name, internal_capability)
 
         adapter_mode = os.environ.get("MCP_ADAPTER", "socket").lower()
         if adapter_mode == "mock":
@@ -129,7 +103,7 @@ class MCPServer:
         elapsed_ms = (time.perf_counter() - call_start) * 1000.0
 
         if result.ok:
-            logger.info("tools/call %s succeeded in %.0fms", resolved_name, elapsed_ms)
+            logger.info("tools/call %s succeeded in %.0fms", name, elapsed_ms)
             return {
                 "content": [{
                     "type": "text",
@@ -137,7 +111,7 @@ class MCPServer:
                 }]
             }
         else:
-            logger.warning("tools/call %s failed in %.0fms: %s", resolved_name, elapsed_ms, result.error)
+            logger.warning("tools/call %s failed in %.0fms: %s", name, elapsed_ms, result.error)
             return {
                 "content": [{
                     "type": "text",

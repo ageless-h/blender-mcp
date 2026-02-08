@@ -93,111 +93,54 @@ def capability_to_dict(capability: CapabilityMeta, version: str | None = None) -
 
 
 def minimal_capability_set() -> list[CapabilityMeta]:
-    """Return the minimal capability set using the new unified tool architecture.
-    
-    The 8 core tools cover 99.9% of Blender functionality:
-    - data.create/read/write/delete/list/link: Unified data CRUD
-    - operator.execute: Universal operator execution
-    - info.query: Status and metadata queries
-    
-    Optional (disabled by default):
-    - script.execute: Arbitrary Python execution
-    
-    NOTE: This function is kept for backward compatibility.
-    The new 26-tool architecture is defined in blender_mcp.schemas.tools.
+    """Return the 26-tool capability set.
+
+    Four layers:
+    - Perception (11): read-only queries
+    - Declarative Write (3): node/animation/VSE batch edits
+    - Imperative Write (9): object/material/modifier etc.
+    - Fallback (3): operator/script/import-export
     """
     return [
-        # Data layer tools (CRUD for all Blender data types)
-        CapabilityMeta(
-            name="data.create",
-            description="[LEGACY] Create new Blender data blocks — use blender_create_object instead",
-            scopes=["data:create"],
-            min_version="4.2",
-        ),
-        CapabilityMeta(
-            name="data.read",
-            description="[LEGACY] Read properties — use blender_get_object_data instead",
-            scopes=["data:read"],
-            min_version="4.2",
-        ),
-        CapabilityMeta(
-            name="data.write",
-            description="[LEGACY] Write properties — use blender_modify_object instead",
-            scopes=["data:write"],
-            min_version="4.2",
-        ),
-        CapabilityMeta(
-            name="data.delete",
-            description="[LEGACY] Delete data blocks — use blender_modify_object with delete=true instead",
-            scopes=["data:delete"],
-            min_version="4.2",
-        ),
-        CapabilityMeta(
-            name="data.list",
-            description="[LEGACY] List data blocks — use blender_get_objects instead",
-            scopes=["data:read"],
-            min_version="4.2",
-        ),
-        CapabilityMeta(
-            name="data.link",
-            description="[LEGACY] Link data blocks — use blender_manage_collection instead",
-            scopes=["data:write"],
-            min_version="4.2",
-        ),
-        # Operator layer tool
-        CapabilityMeta(
-            name="operator.execute",
-            description="[LEGACY] Execute operator — use blender_execute_operator instead",
-            scopes=["operator:execute"],
-            min_version="4.2",
-        ),
-        # Info layer tool
-        CapabilityMeta(
-            name="info.query",
-            description="[LEGACY] Query info — use blender_get_scene instead",
-            scopes=["info:read"],
-            min_version="4.2",
-        ),
-        # Optional dangerous tool (disabled by default)
-        CapabilityMeta(
-            name="script.execute",
-            description="[LEGACY] Execute script — use blender_execute_script instead",
-            scopes=["script:execute"],
-            min_version="4.2",
-        ),
-        # Legacy capabilities (deprecated, for backward compatibility)
-        CapabilityMeta(
-            name="scene.read",
-            description="[DEPRECATED] Read scene - use blender_get_scene instead",
-            scopes=["scene:read"],
-            min_version="4.2",
-        ),
-        CapabilityMeta(
-            name="scene.write",
-            description="[DEPRECATED] Write to scene - use blender_setup_scene instead",
-            scopes=["scene:write"],
-            min_version="4.2",
-        ),
+        # Perception layer (11)
+        CapabilityMeta(name="blender.get_objects", description="List/filter scene objects", scopes=["data:read"], min_version="4.2"),
+        CapabilityMeta(name="blender.get_object_data", description="Deep object data (12 include sections)", scopes=["data:read"], min_version="4.2"),
+        CapabilityMeta(name="blender.get_node_tree", description="Read node tree (6 contexts)", scopes=["data:read"], min_version="4.2"),
+        CapabilityMeta(name="blender.get_animation_data", description="Keyframes/NLA/drivers/shape keys", scopes=["data:read"], min_version="4.2"),
+        CapabilityMeta(name="blender.get_materials", description="Material asset list", scopes=["data:read"], min_version="4.2"),
+        CapabilityMeta(name="blender.get_scene", description="Scene stats/render/world/version/memory", scopes=["info:read"], min_version="4.2"),
+        CapabilityMeta(name="blender.get_collections", description="Collection hierarchy tree", scopes=["data:read"], min_version="4.2"),
+        CapabilityMeta(name="blender.get_armature_data", description="Armature/bone hierarchy/constraints/poses", scopes=["data:read"], min_version="4.2"),
+        CapabilityMeta(name="blender.get_images", description="Texture/image asset list", scopes=["data:read"], min_version="4.2"),
+        CapabilityMeta(name="blender.capture_viewport", description="Viewport screenshot", scopes=["info:read"], min_version="4.2"),
+        CapabilityMeta(name="blender.get_selection", description="Current selection/mode/active object", scopes=["info:read"], min_version="4.2"),
+        # Declarative write layer (3)
+        CapabilityMeta(name="blender.edit_nodes", description="Edit any node tree", scopes=["data:write"], min_version="4.2"),
+        CapabilityMeta(name="blender.edit_animation", description="Keyframe/NLA/driver/shape key edits", scopes=["data:write"], min_version="4.2"),
+        CapabilityMeta(name="blender.edit_sequencer", description="VSE strip/transition/effect edits", scopes=["data:write"], min_version="4.2"),
+        # Imperative write layer (9)
+        CapabilityMeta(name="blender.create_object", description="Create objects (MESH/LIGHT/CAMERA/...)", scopes=["data:create"], min_version="4.2"),
+        CapabilityMeta(name="blender.modify_object", description="Transform/parent/visibility/rename/delete", scopes=["data:write"], min_version="4.2"),
+        CapabilityMeta(name="blender.manage_material", description="Material CRUD + PBR + assign", scopes=["data:write"], min_version="4.2"),
+        CapabilityMeta(name="blender.manage_modifier", description="Modifier add/configure/apply/remove/move", scopes=["data:write"], min_version="4.2"),
+        CapabilityMeta(name="blender.manage_collection", description="Collection CRUD + object linking", scopes=["data:write"], min_version="4.2"),
+        CapabilityMeta(name="blender.manage_uv", description="UV unwrap/seam/pack/layers", scopes=["data:write"], min_version="4.2"),
+        CapabilityMeta(name="blender.manage_constraints", description="Object/bone constraint management", scopes=["data:write"], min_version="4.2"),
+        CapabilityMeta(name="blender.manage_physics", description="Physics simulation management", scopes=["data:write"], min_version="4.2"),
+        CapabilityMeta(name="blender.setup_scene", description="Render engine/output/world/timeline", scopes=["data:write"], min_version="4.2"),
+        # Fallback layer (3)
+        CapabilityMeta(name="blender.execute_operator", description="Execute any bpy.ops.*", scopes=["operator:execute"], min_version="4.2"),
+        CapabilityMeta(name="blender.execute_script", description="Execute Python code (dangerous, disabled by default)", scopes=["script:execute"], min_version="4.2"),
+        CapabilityMeta(name="blender.import_export", description="Import/export FBX/OBJ/GLTF/GLB/USD/STL", scopes=["data:write", "operator:execute"], min_version="4.2"),
     ]
 
 
 def new_tool_scope_map() -> dict[str, set[str]]:
-    """Return scope mappings for new 26-tool architecture.
+    """Return scope mappings for the 26-tool architecture.
     
     Maps internal capability names to required scopes.
     """
     return {
-        # Legacy mappings (kept for backward compatibility)
-        "data.create": {"data:create"},
-        "data.read": {"data:read"},
-        "data.write": {"data:write"},
-        "data.delete": {"data:delete"},
-        "data.list": {"data:read"},
-        "data.link": {"data:write"},
-        "operator.execute": {"operator:execute"},
-        "info.query": {"info:read"},
-        "script.execute": {"script:execute"},
-        # New tool internal capabilities
         "blender.get_objects": {"data:read"},
         "blender.get_object_data": {"data:read"},
         "blender.get_node_tree": {"data:read"},
@@ -230,39 +173,26 @@ def new_tool_scope_map() -> dict[str, set[str]]:
 def get_dynamic_scopes(capability: str, payload: dict) -> set[str]:
     """Get dynamic scopes based on capability and payload.
     
-    For data.* tools, the required scope depends on the data type.
-    For operator.execute, the scope depends on the operator category.
+    For blender.execute_operator, the scope depends on the operator category.
+    For other capabilities, falls back to the static scope map.
     
     Args:
-        capability: The capability name
+        capability: The capability name (blender.* format)
         payload: The request payload
         
     Returns:
         Set of required scope strings
     """
-    if capability.startswith("data."):
-        data_type = payload.get("type", "")
-        action = capability.split(".")[-1]
-        if action in ("read", "list"):
-            return {f"{data_type}:read"} if data_type else {"data:read"}
-        elif action == "create":
-            return {f"{data_type}:create"} if data_type else {"data:create"}
-        elif action in ("write", "link"):
-            return {f"{data_type}:write"} if data_type else {"data:write"}
-        elif action == "delete":
-            return {f"{data_type}:delete"} if data_type else {"data:delete"}
-    
-    elif capability == "operator.execute":
+    if capability == "blender.execute_operator":
         operator_id = payload.get("operator", "")
         if "." in operator_id:
             category = operator_id.split(".")[0]
             return {f"{category}:execute"}
         return {"operator:execute"}
     
-    elif capability == "info.query":
-        return {"info:read"}
-    
-    elif capability == "script.execute":
+    if capability == "blender.execute_script":
         return {"script:execute"}
     
-    return set()
+    # Fall back to static scope map
+    scope_map = new_tool_scope_map()
+    return scope_map.get(capability, set())

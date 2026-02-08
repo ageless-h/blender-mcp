@@ -1,15 +1,13 @@
 # -*- coding: utf-8 -*-
 """Base capability dispatcher and helpers.
 
-Routes both legacy capabilities (data.*, operator.execute, info.query)
-and new blender.* capabilities from the 26-tool architecture.
+Routes internal capabilities (data.*, operator.execute, info.query,
+script.execute) and new blender.* capabilities from the 26-tool architecture.
 """
 from __future__ import annotations
 
 import time
 from typing import Any
-
-from .scene import scene_read, scene_write
 
 from ..handlers.data.dispatcher import (
     data_create,
@@ -317,8 +315,8 @@ def _dispatch_new_capability(capability: str, payload: dict[str, Any], started: 
 def execute_capability(request: dict[str, Any]) -> dict[str, Any]:
     """Execute a capability request and return the result.
     
-    Supports legacy capabilities (scene.read, scene.write, data.*, operator.execute,
-    info.query, script.execute) and new blender.* capabilities from the 26-tool architecture.
+    Supports internal capabilities (data.*, operator.execute, info.query,
+    script.execute) and new blender.* capabilities from the 26-tool architecture.
     """
     started = time.perf_counter()
     try:
@@ -373,12 +371,6 @@ def execute_capability(request: dict[str, Any]) -> dict[str, Any]:
             return info_query(payload, started=started)
         if capability == "script.execute":
             return script_execute(payload, started=started)
-
-        # Legacy capabilities (deprecated, will be removed in future)
-        if capability == "scene.read":
-            return scene_read(payload, started=started)
-        if capability == "scene.write":
-            return scene_write(payload, started=started)
 
         return _error(
             code="unsupported_capability",

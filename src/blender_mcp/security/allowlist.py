@@ -8,8 +8,9 @@ from typing import Iterable, Set
 from blender_mcp.security.audit import AuditEvent, AuditLogger
 
 
-# Default allowlist for new unified tools (excludes script.execute for safety)
+# Default allowlist for 26-tool architecture (excludes blender.execute_script for safety)
 DEFAULT_ALLOWED_TOOLS: Set[str] = {
+    # Internal capabilities used by the 26-tool architecture
     "data.create",
     "data.read",
     "data.write",
@@ -18,14 +19,38 @@ DEFAULT_ALLOWED_TOOLS: Set[str] = {
     "data.link",
     "operator.execute",
     "info.query",
-    # Legacy tools (deprecated)
-    "scene.read",
-    "scene.write",
+    # New blender.* capabilities
+    "blender.get_objects",
+    "blender.get_object_data",
+    "blender.get_node_tree",
+    "blender.get_animation_data",
+    "blender.get_materials",
+    "blender.get_scene",
+    "blender.get_collections",
+    "blender.get_armature_data",
+    "blender.get_images",
+    "blender.capture_viewport",
+    "blender.get_selection",
+    "blender.edit_nodes",
+    "blender.edit_animation",
+    "blender.edit_sequencer",
+    "blender.create_object",
+    "blender.modify_object",
+    "blender.manage_material",
+    "blender.manage_modifier",
+    "blender.manage_collection",
+    "blender.manage_uv",
+    "blender.manage_constraints",
+    "blender.manage_physics",
+    "blender.setup_scene",
+    "blender.execute_operator",
+    "blender.import_export",
 }
 
 # Dangerous tools that require explicit enablement
 DANGEROUS_TOOLS: Set[str] = {
     "script.execute",
+    "blender.execute_script",
 }
 
 
@@ -40,30 +65,32 @@ class Allowlist:
         with self._lock:
             # Special handling for dangerous tools
             if capability in DANGEROUS_TOOLS:
-                if capability == "script.execute":
+                if capability in ("script.execute", "blender.execute_script"):
                     return self.script_execute_enabled and capability in self.allowed
                 return False
             return capability in self.allowed
 
     def enable_script_execute(self) -> None:
-        """Explicitly enable script.execute (dangerous operation)."""
+        """Explicitly enable script execution (dangerous operation)."""
         with self._lock:
             self.script_execute_enabled = True
             self.allowed.add("script.execute")
+            self.allowed.add("blender.execute_script")
         if self.audit_logger is not None:
             self.audit_logger.record(
                 AuditEvent(
                     capability="allowlist.enable_dangerous",
                     ok=True,
-                    data={"tool": "script.execute", "warning": "Arbitrary code execution enabled"},
+                    data={"tool": "blender.execute_script", "warning": "Arbitrary code execution enabled"},
                 )
             )
 
     def disable_script_execute(self) -> None:
-        """Disable script.execute."""
+        """Disable script execution."""
         with self._lock:
             self.script_execute_enabled = False
             self.allowed.discard("script.execute")
+            self.allowed.discard("blender.execute_script")
         if self.audit_logger is not None:
             self.audit_logger.record(
                 AuditEvent(

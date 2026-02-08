@@ -10,8 +10,9 @@
 
 ### 1. 发布到 PyPI，支持 uvx 安装
 
-> 当前状态：未发布，用户需克隆仓库 + 手动设 PYTHONPATH
-> 目标状态：`uvx blender-mcp` 一行命令即可运行
+> ~~当前状态：未发布，用户需克隆仓库 + 手动设 PYTHONPATH~~
+> 当前状态：✅ 已发布 `ageless-blender-mcp 0.1.0` 到 PyPI
+> 目标状态：`uvx ageless-blender-mcp` 一行命令即可运行 — ✅ 已达成
 
 - [x] 1.1 `pyproject.toml` 添加 `[project.scripts]` 入口点
   - 文件：`pyproject.toml`
@@ -20,9 +21,11 @@
   - 文件：`pyproject.toml`
 - [x] 1.3 确认 `hatchling` 构建产物包含所有必需文件
   - 文件：`pyproject.toml` `[tool.hatch.build]`
-- [ ] 1.4 本地测试 `uvx` 运行
-- [ ] 1.5 发布到 TestPyPI 验证
-- [ ] 1.6 发布到正式 PyPI
+- [x] 1.4 本地测试 `uvx` 运行
+  - 已构建：`dist/ageless_blender_mcp-0.1.0-py3-none-any.whl`
+- [x] 1.5 发布到 TestPyPI 验证
+- [x] 1.6 发布到正式 PyPI
+  - 已发布：`ageless-blender-mcp 0.1.0` on [PyPI](https://pypi.org/project/ageless-blender-mcp/)
 - [x] 1.7 README 更新安装说明为 `uvx blender-mcp`
   - 文件：`README.md`
 - [x] 1.8 所有客户端文档更新配置示例
@@ -123,18 +126,21 @@
   - 文件：`src/blender_mcp/telemetry.py`
 - [x] 8.3 支持环境变量 `DISABLE_TELEMETRY=true` 完全禁用
   - 文件：`src/blender_mcp/telemetry.py`
-- [x] 8.4 Blender 插件侧边栏添加遥测同意复选框（通过 MCP_TELEMETRY 环境变量控制）
+- [ ] 8.4 Blender 插件侧边栏添加遥测同意复选框（通过 MCP_TELEMETRY 环境变量控制）
   - 文件：`src/blender_mcp_addon/ui.py`
+  - ⚠️ 当前 ui.py 中无遥测 UI，仅通过环境变量控制
 
 ### 9. 多平台一键安装
 
 > 当前状态：无深度链接
 > 目标状态：Cursor / VS Code / Windsurf/以及其他Z:\8_code\blender-mcp\docs\clients中的客户端 一键安装按钮
 
-- [x] 9.1 添加 Cursor 一键安装深度链接
-  - 文件：`README.md`、`docs/clients/cursor.md`
-- [x] 9.2 添加 VS Code 一键安装协议链接
-  - 文件：`README.md`、`docs/clients/vs-code-copilot.md`
+- [ ] 9.1 添加 Cursor 一键安装深度链接
+  - `README.md` ✅ 已有 deeplink 按钮
+  - `docs/clients/cursor.md` ❌ 未添加 deeplink
+- [ ] 9.2 添加 VS Code 一键安装协议链接
+  - `README.md` ✅ 已有 deeplink 按钮
+  - `docs/clients/vs-code-copilot.md` ❌ 未添加 deeplink
 - [ ] 9.3 更新其他客户端文档添加简化配置
   - 文件：`docs/clients/*.md`
 - [ ] 9.4 更多客户端支持

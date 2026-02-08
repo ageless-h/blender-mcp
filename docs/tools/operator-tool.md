@@ -1,6 +1,6 @@
 # 操作工具 (blender_execute_operator)
 
-> **注意**：此工具的旧名称是 `operator.execute`。新名称为 `blender_execute_operator`。两种名称都支持以保持向后兼容性。
+> 工具名称：`blender_execute_operator`，内部能力：`blender.execute_operator`
 
 操作工具负责执行 Blender 操作符（`bpy.ops.*`），这是后备层中的逃生舱，覆盖所有专用工具无法处理的操作。
 

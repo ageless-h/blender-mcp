@@ -1,15 +1,15 @@
-# 脚本工具 (script.execute)
+# 脚本工具 (blender_execute_script)
 
 ⚠️ **警告**：这是一个危险工具，默认禁用。启用前请确保理解安全风险。
 
 ## 概述
 
-`script.execute` 允许执行任意 Python 代码，用于覆盖核心工具无法处理的边缘情况（约 0.1%）。
+`blender_execute_script` 允许执行任意 Python 代码，用于覆盖核心工具无法处理的边缘情况（约 0.1%）。
 
 ## 工具签名
 
 ```python
-script.execute(
+blender_execute_script(
     code: str,                # Python 代码
     timeout: int = 30         # 超时秒数
 ) -> {

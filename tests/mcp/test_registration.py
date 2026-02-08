@@ -185,20 +185,20 @@ class MCPRegistrationTest(unittest.TestCase):
         self.assertIsInstance(result["content"], list)
         self.assertFalse(response.get("error"), "tools/call should not return error")
 
-    def test_tools_call_legacy_name_compatibility(self):
-        """Test that legacy tool names (data.read) are resolved to new names."""
+    def test_tools_call_unknown_name_returns_error(self):
+        """Test that unknown tool names return error."""
         request = {
             "jsonrpc": "2.0",
             "id": 4,
             "method": "tools/call",
-            "params": {"name": "data.read", "arguments": {"payload": {}}},
+            "params": {"name": "data.read", "arguments": {}},
         }
 
         response = self._send_request(request)
 
         self.assertIn("result", response, "Response should have result field")
         result = response["result"]
-        self.assertIn("content", result, "Legacy tools/call should still work")
+        self.assertTrue(result.get("isError"), "Unknown tool name should return error")
 
     def test_tools_have_annotations(self):
         """Test that all tools have MCP annotations."""

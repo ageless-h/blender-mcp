@@ -22,7 +22,7 @@ class TestWorkflowScenarios(unittest.TestCase):
 
     def test_allowed_capability_executes(self) -> None:
         request = Request(
-            capability="scene.read", payload={}, scopes=["scene:read"]
+            capability="blender.get_scene", payload={}, scopes=["info:read"]
         )
         response = self.server.handle_request(request)
         self.assertTrue(response.ok)
@@ -36,20 +36,20 @@ class TestWorkflowScenarios(unittest.TestCase):
         self.assertEqual(names, expected)
 
     def test_disallowed_capability_rejected(self) -> None:
-        request = Request(capability="scene.delete", payload={}, scopes=[])
+        request = Request(capability="nonexistent.delete", payload={}, scopes=[])
         response = self.server.handle_request(request)
         self.assertFalse(response.ok)
         self.assertEqual(response.error, "capability_not_allowed")
 
     def test_missing_scope_rejected(self) -> None:
-        request = Request(capability="data.read", payload={}, scopes=[])
+        request = Request(capability="blender.get_object_data", payload={}, scopes=[])
         response = self.server.handle_request(request)
         self.assertFalse(response.ok)
         self.assertEqual(response.error, "missing_scope")
 
     def test_rate_limit_rejected(self) -> None:
         request = Request(
-            capability="data.read", payload={}, scopes=["data:read"]
+            capability="blender.get_object_data", payload={}, scopes=["data:read"]
         )
         self.assertTrue(self.server.handle_request(request).ok)
         self.assertTrue(self.server.handle_request(request).ok)
@@ -60,7 +60,7 @@ class TestWorkflowScenarios(unittest.TestCase):
     def test_rate_limit_window_reset(self) -> None:
         self.harness.rate_limiter.window_seconds = 0.0
         request = Request(
-            capability="data.read", payload={}, scopes=["data:read"]
+            capability="blender.get_object_data", payload={}, scopes=["data:read"]
         )
         self.assertTrue(self.server.handle_request(request).ok)
         self.assertTrue(self.server.handle_request(request).ok)
@@ -75,11 +75,11 @@ class TestAdapterDispatch(unittest.TestCase):
     def test_adapter_result_returned_in_response(self) -> None:
         expected_result = {"scene_name": "TestScene", "object_count": 5}
         self.adapter.set_response(
-            "scene.read",
+            "blender.get_scene",
             AdapterResult(ok=True, result=expected_result),
         )
         request = Request(
-            capability="scene.read", payload={}, scopes=["scene:read"]
+            capability="blender.get_scene", payload={}, scopes=["info:read"]
         )
         response = self.server.handle_request(request)
         self.assertTrue(response.ok)
@@ -87,11 +87,11 @@ class TestAdapterDispatch(unittest.TestCase):
 
     def test_adapter_error_returned_in_response(self) -> None:
         self.adapter.set_response(
-            "scene.read",
+            "blender.get_scene",
             AdapterResult(ok=False, error="bpy_unavailable"),
         )
         request = Request(
-            capability="scene.read", payload={}, scopes=["scene:read"]
+            capability="blender.get_scene", payload={}, scopes=["info:read"]
         )
         response = self.server.handle_request(request)
         self.assertFalse(response.ok)
@@ -99,11 +99,11 @@ class TestAdapterDispatch(unittest.TestCase):
 
     def test_security_checks_before_adapter_dispatch(self) -> None:
         self.adapter.set_response(
-            "scene.read",
+            "blender.get_scene",
             AdapterResult(ok=True, result={"should_not_reach": True}),
         )
         request = Request(
-            capability="scene.read", payload={}, scopes=[]
+            capability="blender.get_scene", payload={}, scopes=[]
         )
         response = self.server.handle_request(request)
         self.assertFalse(response.ok)
@@ -117,11 +117,11 @@ class TestAdapterDispatch(unittest.TestCase):
             "active_object": "Cube",
         }
         self.adapter.set_response(
-            "scene.read",
+            "blender.get_scene",
             AdapterResult(ok=True, result=simulated_scene),
         )
         request = Request(
-            capability="scene.read", payload={}, scopes=["scene:read"]
+            capability="blender.get_scene", payload={}, scopes=["info:read"]
         )
         response = self.server.handle_request(request)
         self.assertTrue(response.ok)

@@ -9,7 +9,7 @@ if str(ROOT / "src") not in sys.path:
 os.environ["MCP_ADAPTER"] = "mock"
 
 from blender_mcp.schemas.tools import TOOL_DEFINITIONS, get_tool
-from blender_mcp.mcp_protocol import MCPServer, _LEGACY_TOOL_MAP
+from blender_mcp.mcp_protocol import MCPServer
 
 ANN_KEYS = ["readOnlyHint", "destructiveHint", "idempotentHint", "openWorldHint"]
 
@@ -96,18 +96,6 @@ class TestGetToolLookup(unittest.TestCase):
     def test_unknown_tool(self):
         self.assertIsNone(get_tool("nonexistent"))
 
-
-class TestLegacyMapping(unittest.TestCase):
-    def test_legacy_names_resolve(self):
-        for legacy, new in _LEGACY_TOOL_MAP.items():
-            self.assertIsNotNone(
-                get_tool(new), f"Legacy {legacy} -> {new} not found"
-            )
-
-    def test_legacy_call_via_server(self):
-        server = MCPServer()
-        result = server.tools_call("data.read", {})
-        self.assertIn("content", result)
 
 
 class TestEnumValues(unittest.TestCase):

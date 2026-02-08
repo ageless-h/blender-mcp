@@ -51,9 +51,9 @@ class TestE2EFlow(unittest.TestCase):
         r2 = self._rpc("prompts/get", {"name": "blender-diagnose"}, 8)
         self.assertIn("messages", r2["result"])
 
-    def test_legacy_tool_call(self):
-        resp = self._rpc("tools/call", {"name": "data.read", "arguments": {"payload": {}}}, 9)
-        self.assertIn("content", resp["result"])
+    def test_unknown_tool_returns_error(self):
+        resp = self._rpc("tools/call", {"name": "data.read", "arguments": {}}, 9)
+        self.assertTrue(resp["result"].get("isError"))
 
     def test_notification_no_response(self):
         resp = self._rpc("notifications/initialized", {}, None)
