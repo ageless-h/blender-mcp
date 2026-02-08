@@ -7,7 +7,6 @@ nested under the "params" key (not spread at top level).
 """
 import os
 import sys
-import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch, MagicMock

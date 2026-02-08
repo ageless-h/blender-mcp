@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 """Integration workflow tests using the production mcp_protocol.MCPServer."""
-import json
 import os
 import sys
 import unittest
