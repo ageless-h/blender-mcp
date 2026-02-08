@@ -57,6 +57,7 @@ class MeshHandler(BaseHandler):
                 radius = params.get("radius", size / 2)
                 bmesh.ops.create_cone(
                     bm,
+                    cap_ends=True, cap_tris=False,
                     segments=segments,
                     radius1=radius,
                     radius2=radius,
@@ -66,7 +67,8 @@ class MeshHandler(BaseHandler):
                 segments = params.get("segments", 32)
                 depth = params.get("depth", 2.0)
                 radius = params.get("radius", size / 2)
-                bmesh.ops.create_cone(bm, segments=segments, radius1=radius, radius2=0, depth=depth)
+                bmesh.ops.create_cone(bm, cap_ends=True, cap_tris=False,
+                                      segments=segments, radius1=radius, radius2=0, depth=depth)
             elif kind == "plane":
                 bmesh.ops.create_grid(bm, x_segments=1, y_segments=1, size=size)
             elif kind == "icosphere":
@@ -90,7 +92,8 @@ class MeshHandler(BaseHandler):
             
             bm.to_mesh(mesh)
             bm.free()
-            mesh.update()
+            mesh.validate()
+            mesh.update(calc_edges=True, calc_edges_loose=True)
         
         vertices = params.get("vertices")
         edges = params.get("edges")
@@ -105,15 +108,30 @@ class MeshHandler(BaseHandler):
             mesh.validate()
             mesh.update()
         
-        return {
+        result = {
             "name": mesh.name,
             "type": "mesh",
             "geometry_type": primitive.lower() if isinstance(primitive, str) else None,
             "vertices": len(mesh.vertices),
             "edges": len(mesh.edges),
             "polygons": len(mesh.polygons),
-            "params": params,
         }
+        
+        if params.get("link_object", False):
+            obj_name = params.get("object_name", name)
+            obj = bpy.data.objects.new(obj_name, mesh)
+            collection_name = params.get("collection")
+            if collection_name and collection_name in bpy.data.collections:
+                bpy.data.collections[collection_name].objects.link(obj)
+            else:
+                bpy.context.scene.collection.objects.link(obj)
+            if "location" in params:
+                obj.location = tuple(params["location"])
+            if "rotation" in params:
+                obj.rotation_euler = tuple(params["rotation"])
+            result["object_name"] = obj.name
+        
+        return result
     
     def read(self, name: str, path: str | None, params: dict[str, Any]) -> dict[str, Any]:
         """Read mesh properties.

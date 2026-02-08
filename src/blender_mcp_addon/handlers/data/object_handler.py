@@ -31,6 +31,9 @@ class ObjectHandler(BaseHandler):
         import bpy  # type: ignore
         
         object_type = params.get("object_type", "MESH").upper()
+        # Map TEXT → FONT for Blender compatibility
+        if object_type == "TEXT":
+            object_type = "FONT"
         data_name = params.get("data_name")
         mesh_name = params.get("mesh_name")
         
@@ -46,17 +49,32 @@ class ObjectHandler(BaseHandler):
                     obj_data = bpy.data.meshes.new(name=mesh_name)
             else:
                 obj_data = bpy.data.meshes.new(name=f"{name}_mesh")
+            
+            # Create primitive geometry via bmesh if requested
+            primitive = params.get("primitive")
+            if primitive and obj_data:
+                self._create_mesh_primitive(obj_data, primitive, params)
         elif object_type == "CAMERA":
             if data_name and data_name in bpy.data.cameras:
                 obj_data = bpy.data.cameras[data_name]
             else:
                 obj_data = bpy.data.cameras.new(name=data_name or f"{name}_camera")
+            if "lens" in params:
+                obj_data.lens = params["lens"]
+            if "clip_start" in params:
+                obj_data.clip_start = params["clip_start"]
+            if "clip_end" in params:
+                obj_data.clip_end = params["clip_end"]
         elif object_type == "LIGHT":
             light_type = params.get("light_type", "POINT")
             if data_name and data_name in bpy.data.lights:
                 obj_data = bpy.data.lights[data_name]
             else:
                 obj_data = bpy.data.lights.new(name=data_name or f"{name}_light", type=light_type)
+            if "energy" in params:
+                obj_data.energy = params["energy"]
+            if "color" in params:
+                obj_data.color = tuple(params["color"][:3])
         elif object_type == "EMPTY":
             obj_data = None
         elif object_type == "ARMATURE":
@@ -134,8 +152,12 @@ class ObjectHandler(BaseHandler):
         Args:
             name: Name of the object
             path: Optional property path to read specific property
-            params: Read parameters
-            
+            params: Read parameters:
+                - include: list of sections to return. Valid values:
+                  summary, mesh_stats, modifiers, materials, constraints,
+                  physics, animation, custom_properties, vertex_groups,
+                  shape_keys, uv_maps, particle_systems
+                  
         Returns:
             Dict with object properties
         """
@@ -154,24 +176,98 @@ class ObjectHandler(BaseHandler):
                     pass
             return {"name": name, "path": path, "value": value}
         
-        data_info = None
-        if obj.data:
-            data_info = {"name": obj.data.name, "type": type(obj.data).__name__}
+        include = params.get("include", ["summary"])
+        result: dict[str, Any] = {"name": obj.name, "type": obj.type}
         
-        return {
-            "name": obj.name,
-            "type": obj.type,
-            "location": list(obj.location),
-            "rotation_euler": list(obj.rotation_euler),
-            "scale": list(obj.scale),
-            "visible": obj.visible_get(),
-            "selected": obj.select_get(),
-            "data": data_info,
-            "parent": obj.parent.name if obj.parent else None,
-            "children": [c.name for c in obj.children],
-            "modifiers": [m.name for m in obj.modifiers],
-            "constraints": [c.name for c in obj.constraints],
-        }
+        if "summary" in include:
+            data_info = None
+            if obj.data:
+                data_info = {"name": obj.data.name, "type": type(obj.data).__name__}
+            result["summary"] = {
+                "location": list(obj.location),
+                "rotation_euler": list(obj.rotation_euler),
+                "scale": list(obj.scale),
+                "visible": obj.visible_get(),
+                "selected": obj.select_get(),
+                "data": data_info,
+                "parent": obj.parent.name if obj.parent else None,
+                "children": [c.name for c in obj.children],
+            }
+        
+        if "mesh_stats" in include and obj.type == "MESH" and obj.data:
+            mesh = obj.data
+            result["mesh_stats"] = {
+                "vertices": len(mesh.vertices),
+                "edges": len(mesh.edges),
+                "polygons": len(mesh.polygons),
+                "loops": len(mesh.loops),
+                "has_custom_normals": mesh.has_custom_normals,
+                "materials_count": len(mesh.materials),
+            }
+        
+        if "modifiers" in include:
+            mods = []
+            for m in obj.modifiers:
+                mod_info: dict[str, Any] = {"name": m.name, "type": m.type, "show_viewport": m.show_viewport, "show_render": m.show_render}
+                mods.append(mod_info)
+            result["modifiers"] = mods
+        
+        if "materials" in include:
+            result["materials"] = [
+                {"slot_index": i, "name": slot.material.name if slot.material else None, "link": slot.link}
+                for i, slot in enumerate(obj.material_slots)
+            ]
+        
+        if "constraints" in include:
+            result["constraints"] = [
+                {"name": c.name, "type": c.type, "enabled": not c.mute}
+                for c in obj.constraints
+            ]
+        
+        if "physics" in include:
+            physics = {}
+            for mod in obj.modifiers:
+                if mod.type in {"PARTICLE_SYSTEM", "CLOTH", "SOFT_BODY", "FLUID", "COLLISION", "DYNAMIC_PAINT"}:
+                    physics[mod.name] = {"type": mod.type}
+            if hasattr(obj, "rigid_body") and obj.rigid_body:
+                physics["rigid_body"] = {"type": obj.rigid_body.type, "mass": obj.rigid_body.mass, "enabled": obj.rigid_body.enabled}
+            result["physics"] = physics
+        
+        if "animation" in include:
+            anim: dict[str, Any] = {"has_action": False}
+            if obj.animation_data:
+                ad = obj.animation_data
+                anim["has_action"] = ad.action is not None
+                if ad.action:
+                    anim["action_name"] = ad.action.name
+                    anim["fcurves_count"] = len(ad.action.fcurves)
+                anim["nla_tracks_count"] = len(ad.nla_tracks)
+                anim["drivers_count"] = len(ad.drivers)
+            result["animation"] = anim
+        
+        if "custom_properties" in include:
+            result["custom_properties"] = {k: v for k, v in obj.items() if k != "_RNA_UI" and not k.startswith("_")}
+        
+        if "vertex_groups" in include:
+            result["vertex_groups"] = [{"index": vg.index, "name": vg.name, "lock_weight": vg.lock_weight} for vg in obj.vertex_groups]
+        
+        if "shape_keys" in include and obj.data and hasattr(obj.data, "shape_keys") and obj.data.shape_keys:
+            sk = obj.data.shape_keys
+            result["shape_keys"] = {
+                "reference_key": sk.reference_key.name if sk.reference_key else None,
+                "keys": [{"name": k.name, "value": k.value, "mute": k.mute} for k in sk.key_blocks],
+            }
+        
+        if "uv_maps" in include and obj.type == "MESH" and obj.data:
+            result["uv_maps"] = [{"name": uv.name, "active": uv.active} for uv in obj.data.uv_layers]
+        
+        if "particle_systems" in include:
+            result["particle_systems"] = [
+                {"name": ps.name, "type": ps.settings.type if ps.settings else None, "count": ps.settings.count if ps.settings else 0}
+                for ps in obj.particle_systems
+            ]
+        
+        return result
     
     def write(self, name: str, properties: dict[str, Any], params: dict[str, Any]) -> dict[str, Any]:
         """Write properties to an object.
@@ -256,16 +352,29 @@ class ObjectHandler(BaseHandler):
                 - object_type: Filter by object type (MESH, CAMERA, etc.)
                 - selected: Filter by selection state
                 - visible: Filter by visibility
+                - name_pattern: Glob pattern to filter by name
+                - collection: Filter by collection name
                 
         Returns:
             Dict with items list
         """
         import bpy  # type: ignore
+        import fnmatch
         
         filter_params = filter_params or {}
         object_type = filter_params.get("object_type")
         selected_only = filter_params.get("selected")
         visible_only = filter_params.get("visible")
+        name_pattern = filter_params.get("name_pattern")
+        collection_name = filter_params.get("collection")
+        
+        collection_objects = None
+        if collection_name:
+            col = bpy.data.collections.get(collection_name)
+            if col:
+                collection_objects = {obj.name for obj in col.objects}
+            else:
+                return {"items": [], "count": 0}
         
         items = []
         for obj in bpy.data.objects:
@@ -274,6 +383,10 @@ class ObjectHandler(BaseHandler):
             if selected_only is not None and obj.select_get() != selected_only:
                 continue
             if visible_only is not None and obj.visible_get() != visible_only:
+                continue
+            if name_pattern and not fnmatch.fnmatch(obj.name, name_pattern):
+                continue
+            if collection_objects is not None and obj.name not in collection_objects:
                 continue
             
             items.append({
@@ -329,3 +442,59 @@ class ObjectHandler(BaseHandler):
                 collection.objects.link(obj)
                 return {"action": "link", "object": source_name, "collection": target_name}
             return {"action": "link", "skipped": True, "reason": "Object already in collection"}
+
+    @staticmethod
+    def _create_mesh_primitive(mesh, primitive: str, params: dict[str, Any]) -> None:
+        """Create primitive geometry on a mesh data block using bmesh.
+
+        Args:
+            mesh: The bpy.types.Mesh to fill with geometry
+            primitive: Primitive type (cube, sphere, cylinder, cone, plane, icosphere, torus)
+            params: Additional parameters (size, radius, depth, segments, etc.)
+        """
+        import bmesh  # type: ignore
+
+        bm = bmesh.new()
+        kind = primitive.lower()
+        size = params.get("size", 2.0)
+
+        if kind == "cube":
+            bmesh.ops.create_cube(bm, size=size)
+        elif kind == "sphere":
+            segments = params.get("segments", 32)
+            ring_count = params.get("ring_count", 16)
+            radius = params.get("radius", size / 2)
+            bmesh.ops.create_uvsphere(bm, u_segments=segments, v_segments=ring_count, radius=radius)
+        elif kind == "cylinder":
+            segments = params.get("segments", 32)
+            depth = params.get("depth", 2.0)
+            radius = params.get("radius", size / 2)
+            bmesh.ops.create_cone(bm, cap_ends=True, cap_tris=False,
+                                  segments=segments, radius1=radius, radius2=radius, depth=depth)
+        elif kind == "cone":
+            segments = params.get("segments", 32)
+            depth = params.get("depth", 2.0)
+            radius = params.get("radius", size / 2)
+            bmesh.ops.create_cone(bm, cap_ends=True, cap_tris=False,
+                                  segments=segments, radius1=radius, radius2=0, depth=depth)
+        elif kind == "plane":
+            bmesh.ops.create_grid(bm, x_segments=1, y_segments=1, size=size)
+        elif kind == "icosphere":
+            subdivisions = params.get("subdivisions", 2)
+            radius = params.get("radius", size / 2)
+            bmesh.ops.create_icosphere(bm, subdivisions=subdivisions, radius=radius)
+        elif kind == "torus":
+            major_radius = params.get("major_radius", 1.0)
+            minor_radius = params.get("minor_radius", 0.25)
+            major_segments = params.get("major_segments", 48)
+            minor_segments = params.get("minor_segments", 12)
+            bmesh.ops.create_torus(bm, major_segments=major_segments, minor_segments=minor_segments,
+                                   major_radius=major_radius, minor_radius=minor_radius)
+        else:
+            bm.free()
+            raise ValueError(f"Unknown primitive type: {primitive}")
+
+        bm.to_mesh(mesh)
+        bm.free()
+        mesh.validate()
+        mesh.update(calc_edges=True, calc_edges_loose=True)

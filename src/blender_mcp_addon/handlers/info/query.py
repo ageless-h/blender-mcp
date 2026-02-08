@@ -40,7 +40,7 @@ _change_tracking: dict[str, set[str]] = {
 }
 
 
-def record_last_op(operator: str, success: bool, result: str, reports: list, duration_ms: float, params: dict) -> None:
+def record_last_op(operator: str, success: bool, result: str, reports: list[dict[str, Any]], duration_ms: float, params: dict[str, Any]) -> None:
     """Record last operation info for later query."""
     global _last_op_info
     _last_op_info = {

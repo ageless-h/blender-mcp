@@ -56,10 +56,11 @@ class CollectionHandler(BaseHandler):
         Args:
             name: Name of the collection
             path: Optional property path
-            params: Read parameters
+            params: Read parameters:
+                - max_depth: Maximum recursion depth for child collections (default: 10)
             
         Returns:
-            Dict with collection properties
+            Dict with collection tree
         """
         import bpy  # type: ignore
         
@@ -76,14 +77,29 @@ class CollectionHandler(BaseHandler):
                     pass
             return {"name": name, "path": path, "value": value}
         
-        return {
+        max_depth = params.get("max_depth", 10)
+        return self._read_collection_tree(collection, max_depth, 1)
+    
+    @staticmethod
+    def _read_collection_tree(collection, max_depth: int, current_depth: int) -> dict[str, Any]:
+        """Recursively read collection tree up to max_depth."""
+        result: dict[str, Any] = {
             "name": collection.name,
             "objects": [obj.name for obj in collection.objects],
-            "children": [child.name for child in collection.children],
+            "objects_count": len(collection.objects),
             "hide_viewport": collection.hide_viewport,
             "hide_render": collection.hide_render,
             "color_tag": collection.color_tag,
         }
+        if current_depth < max_depth and collection.children:
+            result["children"] = [
+                CollectionHandler._read_collection_tree(child, max_depth, current_depth + 1)
+                for child in collection.children
+            ]
+        else:
+            result["children"] = [child.name for child in collection.children]
+            result["children_count"] = len(collection.children)
+        return result
     
     def write(self, name: str, properties: dict[str, Any], params: dict[str, Any]) -> dict[str, Any]:
         """Write properties to a collection.

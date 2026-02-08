@@ -268,6 +268,7 @@ class ArmatureHandler(BaseHandler):
         self, name: str, path: str | None, params: dict[str, Any]
     ) -> dict[str, Any]:
         import bpy  # type: ignore
+        import fnmatch
 
         armature = bpy.data.armatures.get(name)
         if armature is None:
@@ -277,15 +278,70 @@ class ArmatureHandler(BaseHandler):
             value = self._get_nested_attr(armature, path)
             return {"name": name, "path": path, "value": value}
 
-        bones_info = [
-            {"name": b.name, "head": list(b.head), "tail": list(b.tail)}
-            for b in armature.bones
-        ]
-        return {
-            "name": armature.name,
-            "bones": bones_info,
-            "bones_count": len(armature.bones),
-        }
+        include = params.get("include", ["hierarchy"])
+        bone_filter = params.get("bone_filter")
+
+        def _match(n: str) -> bool:
+            return not bone_filter or fnmatch.fnmatch(n, bone_filter)
+
+        result: dict[str, Any] = {"name": armature.name, "bones_count": len(armature.bones)}
+
+        if "hierarchy" in include:
+            result["hierarchy"] = [
+                {"name": b.name, "head": list(b.head), "tail": list(b.tail),
+                 "length": b.length, "parent": b.parent.name if b.parent else None,
+                 "children": [c.name for c in b.children], "connected": b.use_connect}
+                for b in armature.bones if _match(b.name)
+            ]
+
+        arm_obj = None
+        if any(s in include for s in ("poses", "constraints", "bone_groups", "ik_chains")):
+            for obj in bpy.data.objects:
+                if obj.type == "ARMATURE" and obj.data == armature:
+                    arm_obj = obj
+                    break
+
+        if "poses" in include and arm_obj and arm_obj.pose:
+            result["poses"] = [
+                {"name": pb.name, "location": list(pb.location),
+                 "rotation_quaternion": list(pb.rotation_quaternion),
+                 "scale": list(pb.scale), "rotation_mode": pb.rotation_mode}
+                for pb in arm_obj.pose.bones if _match(pb.name)
+            ]
+
+        if "constraints" in include and arm_obj and arm_obj.pose:
+            cons = []
+            for pb in arm_obj.pose.bones:
+                if not _match(pb.name):
+                    continue
+                for c in pb.constraints:
+                    cons.append({"bone": pb.name, "name": c.name, "type": c.type,
+                                 "enabled": not c.mute, "influence": c.influence})
+            result["constraints"] = cons
+
+        if "bone_groups" in include and arm_obj and arm_obj.pose:
+            if hasattr(arm_obj.pose, "bone_groups"):
+                result["bone_groups"] = [
+                    {"name": bg.name, "color_set": bg.color_set}
+                    for bg in arm_obj.pose.bone_groups
+                ]
+            else:
+                result["bone_groups"] = []
+
+        if "ik_chains" in include and arm_obj and arm_obj.pose:
+            chains = []
+            for pb in arm_obj.pose.bones:
+                if not _match(pb.name):
+                    continue
+                for c in pb.constraints:
+                    if c.type == "IK":
+                        chains.append({"bone": pb.name,
+                                       "target": c.target.name if c.target else None,
+                                       "subtarget": c.subtarget,
+                                       "chain_count": c.chain_count})
+            result["ik_chains"] = chains
+
+        return result
 
     def write(
         self, name: str, properties: dict[str, Any], params: dict[str, Any]
@@ -385,7 +441,23 @@ class CurveHandler(BaseHandler):
                             co.append(point_data.get("w", 1.0))
                         point.co = co
 
-        return {"name": curve.name, "type": "curve"}
+        result = {"name": curve.name, "type": "curve", "splines_count": len(curve.splines)}
+
+        if params.get("link_object", False):
+            obj_name = params.get("object_name", name)
+            obj = bpy.data.objects.new(obj_name, curve)
+            collection_name = params.get("collection")
+            if collection_name and collection_name in bpy.data.collections:
+                bpy.data.collections[collection_name].objects.link(obj)
+            else:
+                bpy.context.scene.collection.objects.link(obj)
+            if "location" in params:
+                obj.location = tuple(params["location"])
+            if "rotation" in params:
+                obj.rotation_euler = tuple(params["rotation"])
+            result["object_name"] = obj.name
+
+        return result
 
     def read(
         self, name: str, path: str | None, params: dict[str, Any]
@@ -459,7 +531,21 @@ class FontHandler(BaseHandler):
         if "size" in params:
             font_curve.size = params["size"]
 
-        return {"name": font_curve.name, "type": "font"}
+        result = {"name": font_curve.name, "type": "font"}
+
+        if params.get("link_object", False):
+            obj_name = params.get("object_name", name)
+            obj = bpy.data.objects.new(obj_name, font_curve)
+            collection_name = params.get("collection")
+            if collection_name and collection_name in bpy.data.collections:
+                bpy.data.collections[collection_name].objects.link(obj)
+            else:
+                bpy.context.scene.collection.objects.link(obj)
+            if "location" in params:
+                obj.location = tuple(params["location"])
+            result["object_name"] = obj.name
+
+        return result
 
     def read(
         self, name: str, path: str | None, params: dict[str, Any]
@@ -536,7 +622,21 @@ class TextHandler(BaseHandler):
         if "size" in params:
             font_curve.size = params["size"]
 
-        return {"name": font_curve.name, "type": "text"}
+        result = {"name": font_curve.name, "type": "text"}
+
+        if params.get("link_object", False):
+            obj_name = params.get("object_name", name)
+            obj = bpy.data.objects.new(obj_name, font_curve)
+            collection_name = params.get("collection")
+            if collection_name and collection_name in bpy.data.collections:
+                bpy.data.collections[collection_name].objects.link(obj)
+            else:
+                bpy.context.scene.collection.objects.link(obj)
+            if "location" in params:
+                obj.location = tuple(params["location"])
+            result["object_name"] = obj.name
+
+        return result
 
     def read(
         self, name: str, path: str | None, params: dict[str, Any]
@@ -705,7 +805,21 @@ class MetaBallHandler(BaseHandler):
                 el.size_y = element["size_y"]
             if "size_z" in element:
                 el.size_z = element["size_z"]
-        return {"name": meta.name, "type": "metaball", "elements": len(meta.elements)}
+        result = {"name": meta.name, "type": "metaball", "elements": len(meta.elements)}
+
+        if params.get("link_object", False):
+            obj_name = params.get("object_name", name)
+            obj = bpy.data.objects.new(obj_name, meta)
+            collection_name = params.get("collection")
+            if collection_name and collection_name in bpy.data.collections:
+                bpy.data.collections[collection_name].objects.link(obj)
+            else:
+                bpy.context.scene.collection.objects.link(obj)
+            if "location" in params:
+                obj.location = tuple(params["location"])
+            result["object_name"] = obj.name
+
+        return result
 
     def read(
         self, name: str, path: str | None, params: dict[str, Any]
@@ -780,13 +894,27 @@ class GreasePencilHandler(BaseHandler):
             len(frame.strokes) for layer in gp.layers for frame in layer.frames
         )
 
-        return {
+        result = {
             "name": gp.name,
             "type": "grease_pencil",
             "layers_count": layers_count,
             "frames_total": frames_total,
             "strokes_total": strokes_total,
         }
+
+        if params.get("link_object", False):
+            obj_name = params.get("object_name", name)
+            obj = bpy.data.objects.new(obj_name, gp)
+            collection_name = params.get("collection")
+            if collection_name and collection_name in bpy.data.collections:
+                bpy.data.collections[collection_name].objects.link(obj)
+            else:
+                bpy.context.scene.collection.objects.link(obj)
+            if "location" in params:
+                obj.location = tuple(params["location"])
+            result["object_name"] = obj.name
+
+        return result
 
     def read(
         self, name: str, path: str | None, params: dict[str, Any]

@@ -1,239 +1,92 @@
-# Tool Migration Guide: scene.* → Unified Tools
+# Tool Migration Guide
 
-This guide helps migrate from the legacy `scene.read`/`scene.write` capabilities to the new unified tool architecture.
+> 更新日期: 2026-02-08
 
-## Overview
+## 概述
 
-The legacy capabilities (`scene.read`, `scene.write`) are **deprecated** and will be removed in a future version. The new unified tool architecture provides:
+Blender MCP 经历了两次架构演进：
 
-- **8 core tools** that cover 99.9% of Blender functionality
-- **Parameterized data access** via `type` parameter instead of separate capabilities per data type
-- **Universal operator execution** instead of per-operator capabilities
-- **Comprehensive info queries** for LLM feedback
+1. **旧架构** (scene.read / scene.write) — 已废弃
+2. **中间架构** (data.*/operator.execute/info.query, 8 工具) — 已废弃, 向后兼容
+3. **当前架构** (26 个 blender_* 工具, 四层分层) — **推荐**
 
-> **Naming Convention**: MCP exposes tools with underscores (e.g., `data_create`) per MCP specification. Internal capability names shown in payload examples use dots (e.g., `data.create`). The MCP server automatically converts between these formats.
+所有旧工具名称通过 _LEGACY_TOOL_MAP 自动映射到新工具。
 
-## Migration Table
+---
 
-| Legacy Capability | New Tool | Example |
-|-------------------|----------|---------|
-| `scene.read` | `data.read` with `type="context"` | See below |
-| `scene.write` (create object) | `data.create` with `type="object"` | See below |
-| N/A | `operator.execute` | Execute any bpy.ops.* |
-| N/A | `info.query` | Get reports, stats, viewport capture |
+## 完整映射表
 
-## Detailed Migration Examples
+### scene.* (第一代)
 
-### Reading Scene State
+| 旧能力 | 新工具 | 说明 |
+|--------|--------|------|
+| scene.read | blender_get_scene / blender_get_objects | 按需选择 |
+| scene.write | blender_create_object / blender_modify_object | 按操作选择 |
 
-**Before (legacy):**
-```json
-{
-  "capability": "scene.read",
-  "payload": {}
-}
-```
+### data.* (第二代)
 
-**After (new):**
-```json
-{
-  "capability": "data.read",
-  "payload": {
-    "type": "context"
-  }
-}
-```
+| 旧工具 | 新工具 | 说明 |
+|--------|--------|------|
+| data_create | blender_create_object | 对象创建 |
+| data_read | blender_get_object_data | 或其他 blender_get_* |
+| data_write | blender_modify_object | 或 blender_manage_* |
+| data_delete | blender_modify_object | delete: true |
+| data_list | blender_get_objects | 或 blender_get_materials |
+| data_link | blender_manage_collection | link/unlink |
+| operator_execute | blender_execute_operator | 直接映射 |
+| info_query | 见下表 | 拆分为多个感知层工具 |
+| script_execute | blender_execute_script | 直接映射 |
+### info.query 类型映射
 
-The response now includes more information:
-- `mode`: Current editing mode
-- `active_object`: Active object name
-- `selected_objects`: List of selected object names
-- `scene`: Current scene name
-- `view_layer`: Current view layer
-- `workspace`: Current workspace
+| info.query 类型 | 新工具 | 参数 |
+|----------------|--------|------|
+| scene_stats | blender_get_scene | include: ["stats"] |
+| selection | blender_get_selection | 无 |
+| mode | blender_get_selection | 无 |
+| viewport_capture | blender_capture_viewport | shading, camera_view, format |
+| version | blender_get_scene | include: ["version"] |
+| memory | blender_get_scene | include: ["memory"] |
 
-### Creating Objects
+---
 
-**Before (legacy):**
-```json
-{
-  "capability": "scene.write",
-  "payload": {
-    "name": "MyCube",
-    "cleanup": false
-  }
-}
-```
+## 迁移示例
 
-**After (new):**
-```json
-{
-  "capability": "data.create",
-  "payload": {
-    "type": "object",
-    "name": "MyCube",
-    "params": {
-      "object_type": "MESH",
-      "location": [0, 0, 0]
-    }
-  }
-}
-```
+### 读取场景
 
-### Reading Object Properties
+**旧:** `info.query(type="scene_stats")`
+**新:** `blender_get_scene(include=["stats", "render", "timeline"])`
 
-**New (no legacy equivalent):**
-```json
-{
-  "capability": "data.read",
-  "payload": {
-    "type": "object",
-    "name": "Cube",
-    "path": "location"
-  }
-}
-```
+### 创建对象
 
-### Writing Object Properties
+**旧:** `data.create(type="object", name="Cube")`
+**新:** `blender_create_object(name="Cube", object_type="MESH", primitive="cube")`
 
-**New (no legacy equivalent):**
-```json
-{
-  "capability": "data.write",
-  "payload": {
-    "type": "object",
-    "name": "Cube",
-    "properties": {
-      "location": [1, 2, 3],
-      "scale": [2, 2, 2]
-    }
-  }
-}
-```
+### 修改对象
 
-### Executing Operators
+**旧:** `data.write(type="object", name="Cube", properties={location: [1,2,3]})`
+**新:** `blender_modify_object(name="Cube", location=[1, 2, 3])`
 
-**New (no legacy equivalent):**
-```json
-{
-  "capability": "operator.execute",
-  "payload": {
-    "operator": "mesh.primitive_cube_add",
-    "params": {
-      "size": 2.0,
-      "location": [0, 0, 0]
-    }
-  }
-}
-```
+### 管理材质
 
-With context override:
-```json
-{
-  "capability": "operator.execute",
-  "payload": {
-    "operator": "mesh.subdivide",
-    "params": {"number_cuts": 2},
-    "context": {
-      "mode": "EDIT",
-      "active_object": "Cube"
-    }
-  }
-}
-```
+**旧:** `data.create(type="material", name="Red")`
+**新:** `blender_manage_material(action="create", name="Red", base_color=[1,0,0,1])`
 
-### Querying Information
+---
 
-**New (no legacy equivalent):**
-```json
-{
-  "capability": "info.query",
-  "payload": {
-    "type": "scene_stats"
-  }
-}
-```
+## 新架构优势
 
-Available query types:
-- `reports`: Recent operation reports
-- `last_op`: Last operation details
-- `undo_history`: Undo stack
-- `scene_stats`: Scene statistics (vertex count, etc.)
-- `selection`: Current selection state
-- `mode`: Current editing mode
-- `viewport_capture`: Capture viewport as base64
+| 对比项 | 旧架构 (data.*) | 新架构 (blender_*) |
+|--------|-----------------|-------------------|
+| 工具数量 | 8 | 26 |
+| LLM 理解 | 需理解内部类型系统 | 意图驱动, Schema 自描述 |
+| 参数格式 | 嵌套 payload | 展平, 无包装层 |
+| 枚举约束 | 无 | 每个分类参数有 enum |
+| 工具注解 | 无 | readOnly/destructive/idempotent |
+| 覆盖率 | 99% | 99.9% (四层覆盖) |
 
-## New Tool Reference
+---
 
-### data.create
-Create new Blender data blocks.
-```json
-{"capability": "data.create", "payload": {"type": "<DataType>", "name": "<name>", "params": {...}}}
-```
+## 废弃时间线
 
-### data.read
-Read properties from data blocks.
-```json
-{"capability": "data.read", "payload": {"type": "<DataType>", "name": "<name>", "path": "<optional.path>"}}
-```
-
-### data.write
-Write properties to data blocks.
-```json
-{"capability": "data.write", "payload": {"type": "<DataType>", "name": "<name>", "properties": {...}}}
-```
-
-### data.delete
-Delete data blocks.
-```json
-{"capability": "data.delete", "payload": {"type": "<DataType>", "name": "<name>"}}
-```
-
-### data.list
-List all data blocks of a type.
-```json
-{"capability": "data.list", "payload": {"type": "<DataType>", "filter": {...}}}
-```
-
-### data.link
-Link/unlink data blocks.
-```json
-{"capability": "data.link", "payload": {"source": {"type": "...", "name": "..."}, "target": {"type": "...", "name": "..."}, "unlink": false}}
-```
-
-### operator.execute
-Execute any Blender operator.
-```json
-{"capability": "operator.execute", "payload": {"operator": "<category>.<name>", "params": {...}, "context": {...}}}
-```
-
-### info.query
-Query Blender state and metadata.
-```json
-{"capability": "info.query", "payload": {"type": "<query_type>", "params": {...}}}
-```
-
-## Supported DataTypes
-
-Core: `object`, `mesh`, `curve`, `surface`, `metaball`, `armature`, `lattice`
-
-Appearance: `material`, `texture`, `image`, `world`, `linestyle`
-
-Light/Camera: `camera`, `light`, `probe`
-
-Nodes: `node_tree`
-
-Organization: `collection`, `scene`, `workspace`
-
-Animation: `action`, `grease_pencil`
-
-Special: `context` (pseudo-type), `preferences` (pseudo-type)
-
-Attached: `modifier`, `constraint` (require `params.object`)
-
-## Deprecation Timeline
-
-- **Current**: Legacy capabilities work but emit deprecation warnings
-- **Next Major**: Legacy capabilities removed
-
-We recommend migrating to the new unified tools as soon as possible.
+- **当前**: 旧名称可用, 自动映射到新工具
+- **下一主版本**: 旧名称将被移除
