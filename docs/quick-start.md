@@ -35,7 +35,7 @@ Add this to your client's MCP configuration (e.g., Cursor, Windsurf, Claude Code
   "mcpServers": {
     "blender": {
       "command": "uvx",
-      "args": ["blender-mcp"],
+      "args": ["ageless-blender-mcp"],
       "env": {
         "MCP_ADAPTER": "socket",
         "MCP_SOCKET_HOST": "127.0.0.1",
@@ -132,7 +132,7 @@ The assistant should:
   "mcpServers": {
     "blender": {
       "command": "uvx",
-      "args": ["blender-mcp"],
+      "args": ["ageless-blender-mcp"],
       "env": {
         "MCP_ADAPTER": "socket",
         "MCP_SOCKET_HOST": "127.0.0.1",

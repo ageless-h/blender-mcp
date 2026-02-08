@@ -17,7 +17,7 @@ For project-specific configuration, create `.claude/mcp.json` in your project ro
   "mcpServers": {
     "blender": {
       "command": "uvx",
-      "args": ["blender-mcp"],
+      "args": ["ageless-blender-mcp"],
       "env": {
         "MCP_ADAPTER": "socket",
         "MCP_SOCKET_HOST": "127.0.0.1",
@@ -28,7 +28,7 @@ For project-specific configuration, create `.claude/mcp.json` in your project ro
 }
 ```
 
-> **Prerequisite**: Install [uv](https://docs.astral.sh/uv/getting-started/installation/) first. The `uvx` command will automatically download and run `blender-mcp` from PyPI.
+> **Prerequisite**: Install [uv](https://docs.astral.sh/uv/getting-started/installation/) first. The `uvx` command will automatically download and run `ageless-blender-mcp` from PyPI.
 
 ## Verification
 
