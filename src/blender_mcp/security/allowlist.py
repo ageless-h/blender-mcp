@@ -10,16 +10,6 @@ from blender_mcp.security.audit import AuditEvent, AuditLogger
 
 # Default allowlist for 26-tool architecture (excludes blender.execute_script for safety)
 DEFAULT_ALLOWED_TOOLS: Set[str] = {
-    # Internal capabilities used by the 26-tool architecture
-    "data.create",
-    "data.read",
-    "data.write",
-    "data.delete",
-    "data.list",
-    "data.link",
-    "operator.execute",
-    "info.query",
-    # New blender.* capabilities
     "blender.get_objects",
     "blender.get_object_data",
     "blender.get_node_tree",
@@ -49,7 +39,6 @@ DEFAULT_ALLOWED_TOOLS: Set[str] = {
 
 # Dangerous tools that require explicit enablement
 DANGEROUS_TOOLS: Set[str] = {
-    "script.execute",
     "blender.execute_script",
 }
 
@@ -63,18 +52,14 @@ class Allowlist:
 
     def is_allowed(self, capability: str) -> bool:
         with self._lock:
-            # Special handling for dangerous tools
             if capability in DANGEROUS_TOOLS:
-                if capability in ("script.execute", "blender.execute_script"):
-                    return self.script_execute_enabled and capability in self.allowed
-                return False
+                return self.script_execute_enabled and capability in self.allowed
             return capability in self.allowed
 
     def enable_script_execute(self) -> None:
         """Explicitly enable script execution (dangerous operation)."""
         with self._lock:
             self.script_execute_enabled = True
-            self.allowed.add("script.execute")
             self.allowed.add("blender.execute_script")
         if self.audit_logger is not None:
             self.audit_logger.record(
@@ -89,14 +74,13 @@ class Allowlist:
         """Disable script execution."""
         with self._lock:
             self.script_execute_enabled = False
-            self.allowed.discard("script.execute")
             self.allowed.discard("blender.execute_script")
         if self.audit_logger is not None:
             self.audit_logger.record(
                 AuditEvent(
                     capability="allowlist.disable_dangerous",
                     ok=True,
-                    data={"tool": "script.execute"},
+                    data={"tool": "blender.execute_script"},
                 )
             )
 
@@ -131,9 +115,8 @@ class Allowlist:
         Returns False if the tool is dangerous and not enabled.
         """
         with self._lock:
-            if capability in DANGEROUS_TOOLS:
-                if capability == "script.execute" and not self.script_execute_enabled:
-                    return False
+            if capability in DANGEROUS_TOOLS and not self.script_execute_enabled:
+                return False
             self.allowed.add(capability)
             return True
 

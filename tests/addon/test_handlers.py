@@ -273,37 +273,37 @@ class TestAllowlist(unittest.TestCase):
         
         allowlist = Allowlist()
         
-        self.assertTrue(allowlist.is_allowed("data.create"))
-        self.assertTrue(allowlist.is_allowed("data.read"))
-        self.assertTrue(allowlist.is_allowed("data.write"))
-        self.assertTrue(allowlist.is_allowed("operator.execute"))
-        self.assertTrue(allowlist.is_allowed("info.query"))
+        self.assertTrue(allowlist.is_allowed("blender.get_objects"))
+        self.assertTrue(allowlist.is_allowed("blender.get_object_data"))
+        self.assertTrue(allowlist.is_allowed("blender.create_object"))
+        self.assertTrue(allowlist.is_allowed("blender.execute_operator"))
+        self.assertTrue(allowlist.is_allowed("blender.get_scene"))
     
     def test_script_execute_blocked_by_default(self):
-        """Test script.execute is blocked by default."""
+        """Test blender.execute_script is blocked by default."""
         from blender_mcp.security.allowlist import Allowlist
         
         allowlist = Allowlist()
-        self.assertFalse(allowlist.is_allowed("script.execute"))
+        self.assertFalse(allowlist.is_allowed("blender.execute_script"))
     
     def test_enable_script_execute(self):
-        """Test enabling script.execute."""
+        """Test enabling blender.execute_script."""
         from blender_mcp.security.allowlist import Allowlist
         
         allowlist = Allowlist()
         allowlist.enable_script_execute()
         
-        self.assertTrue(allowlist.is_allowed("script.execute"))
+        self.assertTrue(allowlist.is_allowed("blender.execute_script"))
     
     def test_disable_script_execute(self):
-        """Test disabling script.execute."""
+        """Test disabling blender.execute_script."""
         from blender_mcp.security.allowlist import Allowlist
         
         allowlist = Allowlist()
         allowlist.enable_script_execute()
         allowlist.disable_script_execute()
         
-        self.assertFalse(allowlist.is_allowed("script.execute"))
+        self.assertFalse(allowlist.is_allowed("blender.execute_script"))
 
 
 if __name__ == "__main__":

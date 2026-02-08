@@ -18,14 +18,14 @@ class TestAllowlist(unittest.TestCase):
             self.assertTrue(al.is_allowed(t))
 
     def test_script_blocked(self):
-        self.assertFalse(Allowlist().is_allowed("script.execute"))
+        self.assertFalse(Allowlist().is_allowed("blender.execute_script"))
 
     def test_enable_script(self):
         al = Allowlist()
         al.enable_script_execute()
-        self.assertTrue(al.is_allowed("script.execute"))
+        self.assertTrue(al.is_allowed("blender.execute_script"))
         al.disable_script_execute()
-        self.assertFalse(al.is_allowed("script.execute"))
+        self.assertFalse(al.is_allowed("blender.execute_script"))
 
     def test_add_remove(self):
         al = Allowlist()
@@ -35,13 +35,13 @@ class TestAllowlist(unittest.TestCase):
         self.assertFalse(al.is_allowed("custom.x"))
 
     def test_add_dangerous_rejected(self):
-        self.assertFalse(Allowlist().add_tool("script.execute"))
+        self.assertFalse(Allowlist().add_tool("blender.execute_script"))
 
     def test_replace_filters_dangerous(self):
         al = Allowlist()
-        al.replace(["data.read", "script.execute"])
-        self.assertTrue(al.is_allowed("data.read"))
-        self.assertFalse(al.is_allowed("script.execute"))
+        al.replace(["blender.get_objects", "blender.execute_script"])
+        self.assertTrue(al.is_allowed("blender.get_objects"))
+        self.assertFalse(al.is_allowed("blender.execute_script"))
 
 
 if __name__ == "__main__":

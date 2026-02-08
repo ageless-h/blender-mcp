@@ -36,13 +36,61 @@ from blender_mcp.prompts.registry import (
     BLENDER_PROMPTS,
     get_prompt_messages,
 )
+from blender_mcp.security.allowlist import Allowlist
+from blender_mcp.security.audit import AuditEvent, JsonFileAuditLogger, MemoryAuditLogger
+from blender_mcp.security.guardrails import Guardrails
+from blender_mcp.security.rate_limit import RateLimiter
 from blender_mcp.telemetry import telemetry_tool
 
 
 
 @dataclass
 class MCPServer:
-    """MCP protocol server with 26 tools and 10 prompts."""
+    """MCP protocol server with 26 tools, 10 prompts, and security pipeline.
+
+    Security checks run in order on every tools/call:
+      1. Allowlist  — is this capability permitted?
+      2. Guardrails — payload size / depth / blocked-list
+      3. Rate limit — per-capability sliding window
+      4. Audit log  — record every call and outcome
+    """
+
+    def __post_init__(self) -> None:
+        # Adapter — created once, reused for all requests
+        adapter_mode = os.environ.get("MCP_ADAPTER", "socket").lower()
+        if adapter_mode == "mock":
+            self._adapter = MockAdapter()
+        else:
+            self._adapter = SocketAdapter(
+                host=os.environ.get("MCP_SOCKET_HOST", "127.0.0.1"),
+                port=int(os.environ.get("MCP_SOCKET_PORT", "9876")),
+                max_retries=int(os.environ.get("MCP_MAX_RETRIES", "3")),
+            )
+
+        # Security modules — all configurable via environment variables
+        audit_path = os.environ.get("MCP_AUDIT_LOG")
+        self._audit = (
+            JsonFileAuditLogger(audit_path) if audit_path
+            else MemoryAuditLogger()
+        )
+        self._allowlist = Allowlist(audit_logger=self._audit)
+        if os.environ.get("MCP_ENABLE_SCRIPT_EXECUTE", "").lower() in ("1", "true", "yes"):
+            self._allowlist.enable_script_execute()
+        self._guardrails = Guardrails.from_env()
+
+        # Rate limits: env var format "capability=limit,capability=limit"
+        rate_cfg: dict[str, int] = {}
+        raw_limits = os.environ.get("MCP_RATE_LIMITS", "")
+        for pair in raw_limits.split(","):
+            pair = pair.strip()
+            if "=" in pair:
+                cap, lim = pair.split("=", 1)
+                try:
+                    rate_cfg[cap.strip()] = int(lim.strip())
+                except ValueError:
+                    pass
+        window = float(os.environ.get("MCP_RATE_WINDOW_SECONDS", "60"))
+        self._rate_limiter = RateLimiter(rate_cfg, window_seconds=window)
 
     def tools_list(self) -> dict[str, Any]:
         """List all 26 available tools with full schemas and annotations."""
@@ -89,21 +137,50 @@ class MCPServer:
         internal_capability = tool_def["internal_capability"]
         logger.info("tools/call %s (capability=%s)", name, internal_capability)
 
-        adapter_mode = os.environ.get("MCP_ADAPTER", "socket").lower()
-        if adapter_mode == "mock":
-            adapter = MockAdapter()
-        else:
-            adapter = SocketAdapter(
-                host=os.environ.get("MCP_SOCKET_HOST", "127.0.0.1"),
-                port=int(os.environ.get("MCP_SOCKET_PORT", "9876")),
-                max_retries=int(os.environ.get("MCP_MAX_RETRIES", "3")),
-            )
+        # ── Security check chain ──────────────────────────────
+        # 1. Allowlist
+        if not self._allowlist.is_allowed(internal_capability):
+            logger.warning("tools/call %s BLOCKED by allowlist", name)
+            self._audit.record(AuditEvent(
+                capability=internal_capability, ok=False, error="capability_not_allowed",
+            ))
+            return {
+                "content": [{"type": "text", "text": f"Error: tool '{name}' is not allowed"}],
+                "isError": True,
+            }
 
-        result = adapter.execute(internal_capability, payload)
+        # 2. Guardrails (payload size / depth / blocked-list)
+        if not self._guardrails.allow(internal_capability, payload):
+            logger.warning("tools/call %s BLOCKED by guardrails", name)
+            self._audit.record(AuditEvent(
+                capability=internal_capability, ok=False, error="guardrails_blocked",
+            ))
+            return {
+                "content": [{"type": "text", "text": "Error: request blocked by guardrails (payload too large or nested)"}],
+                "isError": True,
+            }
+
+        # 3. Rate limit
+        if not self._rate_limiter.allow(internal_capability):
+            logger.warning("tools/call %s BLOCKED by rate limiter", name)
+            self._audit.record(AuditEvent(
+                capability=internal_capability, ok=False, error="rate_limited",
+            ))
+            return {
+                "content": [{"type": "text", "text": f"Error: rate limit exceeded for '{name}'"}],
+                "isError": True,
+            }
+        # ── End security checks ───────────────────────────────
+
+        result = self._adapter.execute(internal_capability, payload)
         elapsed_ms = (time.perf_counter() - call_start) * 1000.0
 
         if result.ok:
             logger.info("tools/call %s succeeded in %.0fms", name, elapsed_ms)
+            self._audit.record(AuditEvent(
+                capability=internal_capability, ok=True,
+                data={"elapsed_ms": round(elapsed_ms)},
+            ))
             return {
                 "content": [{
                     "type": "text",
@@ -112,6 +189,10 @@ class MCPServer:
             }
         else:
             logger.warning("tools/call %s failed in %.0fms: %s", name, elapsed_ms, result.error)
+            self._audit.record(AuditEvent(
+                capability=internal_capability, ok=False, error=result.error,
+                data={"elapsed_ms": round(elapsed_ms)},
+            ))
             return {
                 "content": [{
                     "type": "text",

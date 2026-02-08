@@ -12,6 +12,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 os.environ["MCP_ADAPTER"] = "mock"
+os.environ["MCP_ENABLE_SCRIPT_EXECUTE"] = "1"
 
 from blender_mcp.mcp_protocol import MCPServer
 
