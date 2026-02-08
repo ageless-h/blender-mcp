@@ -19,20 +19,19 @@ If editing the settings file directly, add to your `settings.json`:
   "mcpServers": {
     "blender": {
       "transport": "stdio",
-      "command": "python",
-      "args": ["-m", "blender_mcp.mcp_protocol"],
+      "command": "uvx",
+      "args": ["blender-mcp"],
       "env": {
         "MCP_ADAPTER": "socket",
         "MCP_SOCKET_HOST": "127.0.0.1",
-        "MCP_SOCKET_PORT": "9876",
-        "PYTHONPATH": "<path-to-blender-mcp>/src"
+        "MCP_SOCKET_PORT": "9876"
       }
     }
   }
 }
 ```
 
-Replace `<path-to-blender-mcp>` with the actual path to your Blender MCP installation.
+> **Prerequisite**: Install [uv](https://docs.astral.sh/uv/getting-started/installation/) first. The `uvx` command will automatically download and run `blender-mcp` from PyPI.
 
 > **Note**: It's recommended to configure MCP servers through the Qoder IDE settings UI instead of editing files directly.
 

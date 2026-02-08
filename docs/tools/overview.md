@@ -266,9 +266,37 @@
 
 ---
 
+## Prompt 系统
+
+除了 26 个工具，Blender MCP 还提供 **10 个 prompt**，分为两类：
+
+### 工作流 Prompt（7 个）
+
+通过 `/slash-command` 触发，注入分步工具使用指引：
+
+| Prompt | 用途 |
+|--------|------|
+| `blender-scene-setup` | 场景设置（相机、灯光、世界） |
+| `blender-material-create` | 创建并分配 PBR 材质 |
+| `blender-model-asset` | 创建模型资产（修改器、UV、集合） |
+| `blender-animate` | 创建动画（关键帧、NLA） |
+| `blender-composite` | 合成器后期处理 |
+| `blender-render-output` | 配置并执行渲染 |
+| `blender-diagnose` | 系统化诊断场景问题 |
+
+### 策略 Prompt（3 个）
+
+提供全局性策略引导，帮助 LLM 更有效地使用工具：
+
+| Prompt | 用途 |
+|--------|------|
+| `blender-usage-strategy` | 工具使用策略：先读后写、层级选择优先级、最佳实践 |
+| `blender-resource-strategy` | 资源使用策略：可控粒度读取、避免一次取过多数据 |
+| `blender-debugging-strategy` | 调试策略：常见错误排查流程、恢复步骤 |
+
+---
+
 ## 参考
 
 - [Blender Python API 文档](https://docs.blender.org/api/current/index.html)
 - [MCP 工具规范](https://modelcontextprotocol.io/)
-
-

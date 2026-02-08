@@ -1,10 +1,35 @@
 [project]
 name = "blender-mcp"
 version = "0.1.0"
-description = "Blender MCP server and addon"
+description = "MCP server integration for AI-assisted Blender automation"
 readme = "README.md"
 requires-python = ">=3.11"
+license = "MIT"
+authors = [
+  { name = "Blender MCP Contributors" },
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Multimedia :: Graphics :: 3D Modeling",
+  "Topic :: Software Development :: Libraries",
+]
+keywords = ["blender", "mcp", "model-context-protocol", "ai", "automation"]
 dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/ageless-h/blender-mcp"
+Repository = "https://github.com/ageless-h/blender-mcp"
+Documentation = "https://github.com/ageless-h/blender-mcp/blob/main/docs/quick-start.md"
+Issues = "https://github.com/ageless-h/blender-mcp/issues"
+
+[project.scripts]
+blender-mcp = "blender_mcp.mcp_protocol:run_mcp_server"
 
 [dependency-groups]
 dev = [
@@ -18,6 +43,9 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/blender_mcp"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/blender_mcp/**", "README.md", "LICENSE"]
 
 [tool.pyright]
 extraPaths = ["src"]

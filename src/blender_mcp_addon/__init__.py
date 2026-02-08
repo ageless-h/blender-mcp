@@ -41,10 +41,12 @@ def register() -> None:
     _logger.info("Registering Blender MCP addon")
 
     from . import operators  # Local import to avoid bpy dependency at module import time
+    from . import ui  # Local import; sidebar panel requires bpy
     from .preferences import BlenderMCPPreferences  # Local import; requires bpy
 
     bpy.utils.register_class(BlenderMCPPreferences)
     operators.register()
+    ui.register()
 
     prefs = bpy.context.preferences.addons[__name__].preferences
     if prefs.auto_start:
@@ -65,12 +67,14 @@ def unregister() -> None:
     _logger.info("Unregistering Blender MCP addon")
 
     from . import operators  # Local import to avoid bpy dependency at module import time
+    from . import ui  # Local import; sidebar panel requires bpy
     from .preferences import BlenderMCPPreferences  # Local import; requires bpy
 
     if is_server_running():
         _logger.info("Stopping MCP socket server")
         stop_socket_server()
 
+    ui.unregister()
     operators.unregister()
     bpy.utils.unregister_class(BlenderMCPPreferences)
 

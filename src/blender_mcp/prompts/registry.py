@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""MCP Prompt definitions for Blender MCP workflow guidance.
+"""MCP Prompt definitions for Blender MCP - 10 prompts (7 workflow + 3 strategy) for LLM guidance.
 
 Prompts are user-controlled workflow templates triggered via /slash-commands.
 They inject step-by-step tool usage guidance into the conversation.
@@ -66,6 +66,24 @@ BLENDER_PROMPTS: dict[str, dict[str, Any]] = {
         "name": "blender-diagnose",
         "title": "Diagnose Scene Issues",
         "description": "Systematically diagnose issues in a Blender scene.",
+        "arguments": [],
+    },
+    "blender-usage-strategy": {
+        "name": "blender-usage-strategy",
+        "title": "Tool Usage Strategy",
+        "description": "Overall strategy for using Blender MCP tools effectively: read before write, layer selection priority, and best practices.",
+        "arguments": [],
+    },
+    "blender-resource-strategy": {
+        "name": "blender-resource-strategy",
+        "title": "Resource Usage Strategy",
+        "description": "Strategy for reading Blender data efficiently: controllable granularity, avoiding excessive data retrieval.",
+        "arguments": [],
+    },
+    "blender-debugging-strategy": {
+        "name": "blender-debugging-strategy",
+        "title": "Debugging Strategy",
+        "description": "Common error troubleshooting workflow for Blender MCP operations.",
         "arguments": [],
     },
 }
@@ -171,6 +189,93 @@ def _diagnose_messages(args: dict[str, str]) -> list[dict[str, Any]]:
     )}}]
 
 
+def _usage_strategy_messages(args: dict[str, str]) -> list[dict[str, Any]]:
+    return [{"role": "user", "content": {"type": "text", "text": (
+        "Provide the overall strategy for using Blender MCP tools.\n\n"
+        "## Core Principle: Read Before Write\n\n"
+        "Always use Perception layer tools to understand the current scene state "
+        "before making any changes. This prevents overwriting existing work.\n\n"
+        "## Tool Selection Priority (top to bottom)\n\n"
+        "1. **Perception Layer** (11 tools) — Always start here.\n"
+        "   - `blender_get_scene` for global overview\n"
+        "   - `blender_get_objects` to list objects\n"
+        "   - `blender_get_object_data` for deep inspection of a single object\n"
+        "   - `blender_capture_viewport` for visual verification\n\n"
+        "2. **Declarative Write Layer** (3 tools) — Preferred for node-based and animation work.\n"
+        "   - `blender_edit_nodes` for any node tree (shader, compositor, geometry nodes)\n"
+        "   - `blender_edit_animation` for keyframes, NLA, drivers\n"
+        "   - `blender_edit_sequencer` for video editing\n\n"
+        "3. **Imperative Write Layer** (9 tools) — For direct object/scene manipulation.\n"
+        "   - `blender_create_object`, `blender_modify_object`, etc.\n"
+        "   - Each tool is scoped to one domain (material, modifier, UV, etc.)\n\n"
+        "4. **Fallback Layer** (3 tools) — Only when no specialized tool exists.\n"
+        "   - `blender_execute_operator` for bpy.ops calls\n"
+        "   - `blender_execute_script` as last resort (full Python access)\n"
+        "   - `blender_import_export` for file I/O\n\n"
+        "## Best Practices\n\n"
+        "- **Batch operations**: Group related changes to minimize round-trips.\n"
+        "- **Verify after changes**: Call `blender_capture_viewport` after significant modifications.\n"
+        "- **Use `include` parameters**: Only request data you need (e.g., `blender_get_object_data` with specific includes).\n"
+        "- **Prefer specialized tools**: `blender_manage_material` over `blender_execute_script` for material work."
+    )}}]
+
+
+def _resource_strategy_messages(args: dict[str, str]) -> list[dict[str, Any]]:
+    return [{"role": "user", "content": {"type": "text", "text": (
+        "Provide the strategy for reading Blender data efficiently.\n\n"
+        "## Controllable Granularity\n\n"
+        "Most perception tools support filtering to avoid retrieving excessive data:\n\n"
+        "- **`blender_get_objects`**: Use `type_filter`, `collection`, `name_pattern`, "
+        "`visible_only`, `selected_only` to narrow results.\n"
+        "- **`blender_get_object_data`**: Use `include` parameter to request only needed sections "
+        "(e.g., `['summary', 'modifiers']` instead of requesting everything).\n"
+        "  Available includes: summary, mesh_stats, modifiers, materials, constraints, "
+        "physics, animation, custom_properties, vertex_groups, shape_keys, uv_maps, particle_systems.\n"
+        "- **`blender_get_node_tree`**: Use `depth='summary'` for overview, `depth='full'` only when editing.\n"
+        "- **`blender_get_armature_data`**: Use `bone_filter` glob and selective `include` sections.\n"
+        "- **`blender_get_animation_data`**: Use `frame_range` to limit keyframe data.\n"
+        "- **`blender_get_materials`/`blender_get_images`**: Use `filter` and `name_pattern`.\n\n"
+        "## Data Retrieval Order\n\n"
+        "1. **Start broad**: `blender_get_scene` → `blender_get_objects` for scene overview.\n"
+        "2. **Narrow down**: Use filters to find specific objects/materials.\n"
+        "3. **Deep dive**: `blender_get_object_data` with targeted includes on specific objects.\n"
+        "4. **Visual check**: `blender_capture_viewport` to confirm understanding.\n\n"
+        "## Avoid\n\n"
+        "- Requesting `blender_get_object_data` with all includes on every object in a large scene.\n"
+        "- Using `blender_execute_script` to read data when a perception tool exists.\n"
+        "- Calling `blender_get_node_tree` with `depth='full'` before knowing which material to edit."
+    )}}]
+
+
+def _debugging_strategy_messages(args: dict[str, str]) -> list[dict[str, Any]]:
+    return [{"role": "user", "content": {"type": "text", "text": (
+        "Provide the debugging strategy for Blender MCP operations.\n\n"
+        "## Common Error Patterns\n\n"
+        "### Connection Errors\n"
+        "- **\"Cannot connect to Blender\"**: Blender addon server not started. "
+        "Check N-panel → Blender MCP → Start Server.\n"
+        "- **Timeout**: Command too complex. Break into smaller steps.\n"
+        "- **Empty response**: Blender may have crashed or addon state is inconsistent. Restart server.\n\n"
+        "### Object Errors\n"
+        "- **\"Object not found\"**: Name mismatch. Call `blender_get_objects` to list actual names.\n"
+        "- **\"Cannot edit in current mode\"**: Object may be in wrong mode. "
+        "Check `blender_get_selection` for current mode.\n\n"
+        "### Material/Node Errors\n"
+        "- **\"Material not found\"**: Call `blender_get_materials` to verify name.\n"
+        "- **\"Node not found\"**: Call `blender_get_node_tree` with `depth='full'` to see actual node names.\n"
+        "- **Socket connection errors**: Verify socket names match exactly (case-sensitive).\n\n"
+        "### Modifier/Physics Errors\n"
+        "- **\"Cannot apply modifier\"**: Object may have shape keys or be in edit mode.\n"
+        "- **\"Physics type already exists\"**: Remove existing physics first.\n\n"
+        "## Debugging Workflow\n\n"
+        "1. **Reproduce**: Note exact tool name, parameters, and error message.\n"
+        "2. **Inspect state**: Call relevant perception tools to understand current state.\n"
+        "3. **Simplify**: Try the operation with minimal parameters.\n"
+        "4. **Fallback**: If a specialized tool fails, try `blender_execute_operator` or `blender_execute_script`.\n"
+        "5. **Verify**: After fixing, call `blender_capture_viewport` to confirm visually."
+    )}}]
+
+
 _PROMPT_HANDLERS = {
     "blender-scene-setup": _scene_setup_messages,
     "blender-material-create": _material_create_messages,
@@ -179,6 +284,9 @@ _PROMPT_HANDLERS = {
     "blender-composite": _composite_messages,
     "blender-render-output": _render_output_messages,
     "blender-diagnose": _diagnose_messages,
+    "blender-usage-strategy": _usage_strategy_messages,
+    "blender-resource-strategy": _resource_strategy_messages,
+    "blender-debugging-strategy": _debugging_strategy_messages,
 }
 
 

@@ -15,16 +15,15 @@ Add to your `config.toml`:
 ```toml
 [mcp_servers.blender]
 type = "stdio"
-launcher_command = "python -m blender_mcp.mcp_protocol"
+launcher_command = "uvx blender-mcp"
 
 [mcp_servers.blender.env_vars]
 MCP_ADAPTER = "socket"
 MCP_SOCKET_HOST = "127.0.0.1"
 MCP_SOCKET_PORT = "9876"
-PYTHONPATH = "<path-to-blender-mcp>/src"
 ```
 
-Replace `<path-to-blender-mcp>` with the actual path to your Blender MCP installation.
+> **Prerequisite**: Install [uv](https://docs.astral.sh/uv/getting-started/installation/) first. The `uvx` command will automatically download and run `blender-mcp` from PyPI.
 
 ## Verification
 

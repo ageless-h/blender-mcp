@@ -7,12 +7,12 @@
 [![Blender](https://img.shields.io/badge/Blender-4.2%2B-orange.svg)](https://www.blender.org/)
 [![MCP](https://img.shields.io/badge/MCP-2024--11--05-green.svg)](https://modelcontextprotocol.io/)
 [![License](https://img.shields.io/badge/license-MIT-lightgrey.svg)](LICENSE)
-
-<!-- Package Registry Placeholders -->
-<!--
 [![PyPI](https://img.shields.io/pypi/v/blender-mcp.svg)](https://pypi.org/project/blender-mcp/)
-[![npm](https://img.shields.io/npm/v/blender-mcp.svg)](https://www.npmjs.com/package/blender-mcp)
--->
+
+<!-- One-click install buttons -->
+[<img src="https://cursor.com/deeplink/mcp-install-dark.svg" alt="Install in Cursor" height="32">](https://cursor.com/install-mcp?name=blender&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyJibGVuZGVyLW1jcCJdLCJlbnYiOnsiTUNQX0FEQVBURVIiOiJzb2NrZXQiLCJNQ1BfU09DS0VUX0hPU1QiOiIxMjcuMC4wLjEiLCJNQ1BfU09DS0VUX1BPUlQiOiI5ODc2In19)
+&nbsp;
+[<img src="https://img.shields.io/badge/VS_Code-Install_MCP_Server-0098FF?style=for-the-badge&logo=visualstudiocode&logoColor=white" alt="Install in VS Code" height="32">](https://insiders.vscode.dev/redirect?url=vscode%3Amcp%2Finstall%3F%7B%22name%22%3A%22blender%22%2C%22command%22%3A%22uvx%22%2C%22args%22%3A%5B%22blender-mcp%22%5D%2C%22env%22%3A%7B%22MCP_ADAPTER%22%3A%22socket%22%2C%22MCP_SOCKET_HOST%22%3A%22127.0.0.1%22%2C%22MCP_SOCKET_PORT%22%3A%229876%22%7D%7D)
 
 ---
 
@@ -80,6 +80,8 @@ Blender MCP uses a **four-layer tool architecture** with **26 specialized tools*
 
 ### Quick Start
 
+> **New to Blender MCP?** See the [5-Minute Quick Start Guide](docs/quick-start.md) for step-by-step setup instructions.
+
 ```json
 // Create a cube
 {
@@ -135,18 +137,17 @@ See [docs/migration/tools-migration.md](docs/migration/tools-migration.md) for d
 #### MCP Server
 
 ```bash
-# Install
-uv sync  # or pip install .
+# Recommended: one-line install & run
+uvx blender-mcp
 
-# Run
+# Or install globally
+pip install blender-mcp
+blender-mcp
+
+# Or from source
+uv sync
 python -m blender_mcp.mcp_protocol
 ```
-
-<!-- Package Installation (Coming Soon)
-```bash
-pip install blender-mcp
-```
--->
 
 ### Supported MCP Clients
 
@@ -253,6 +254,8 @@ Blender MCP 采用**四层工具架构**，**26 个专用工具**按意图组织
 
 ### 快速开始
 
+> **初次使用？** 请参阅 [5 分钟快速开始指南](docs/quick-start.md) 获取详细安装步骤。
+
 ```json
 // 创建一个立方体
 {
@@ -308,18 +311,17 @@ Blender MCP 采用**四层工具架构**，**26 个专用工具**按意图组织
 #### MCP 服务器
 
 ```bash
-# 安装
-uv sync  # 或 pip install .
+# 推荐：一行命令安装并运行
+uvx blender-mcp
 
-# 运行
+# 或全局安装
+pip install blender-mcp
+blender-mcp
+
+# 或从源码
+uv sync
 python -m blender_mcp.mcp_protocol
 ```
-
-<!-- 包安装（即将推出）
-```bash
-pip install blender-mcp
-```
--->
 
 ### 支持的 MCP 客户端
 
@@ -361,6 +363,14 @@ pip install blender-mcp
 详见 [docs/versioning/support-matrix.md](docs/versioning/support-matrix.md)。
 
 ---
+
+## Contributing
+
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=ageless-h/blender-mcp&type=Date)](https://star-history.com/#ageless-h/blender-mcp&Date)
 
 ## License
 

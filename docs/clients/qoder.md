@@ -20,17 +20,18 @@ Qoder manages MCP servers through its built-in settings UI.
 {
   "blender": {
     "transport": "stdio",
-    "command": "python",
-    "args": ["-m", "blender_mcp.mcp_protocol"],
+    "command": "uvx",
+    "args": ["blender-mcp"],
     "env": {
       "MCP_ADAPTER": "socket",
       "MCP_SOCKET_HOST": "127.0.0.1",
-      "MCP_SOCKET_PORT": "9876",
-      "PYTHONPATH": "<path-to-blender-mcp>/src"
+      "MCP_SOCKET_PORT": "9876"
     }
   }
 }
 ```
+
+> **Prerequisite**: Install [uv](https://docs.astral.sh/uv/getting-started/installation/) first. The `uvx` command will automatically download and run `blender-mcp` from PyPI.
 
 ### In Qoder AI Chat Panel
 
@@ -38,8 +39,6 @@ Qoder manages MCP servers through its built-in settings UI.
 2. Click the dropdown menu in the top-right corner
 3. Select **Your Settings**
 4. Navigate to **MCP Servers**
-
-Replace `<path-to-blender-mcp>` with the actual path to your Blender MCP installation.
 
 ## Config File Location (Reference)
 

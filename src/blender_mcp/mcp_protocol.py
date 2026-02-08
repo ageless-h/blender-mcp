@@ -3,7 +3,7 @@
 
 Implements the MCP JSON-RPC protocol with:
 - 26 tools with flat parameters, hand-written schemas, and annotations
-- 7 workflow prompts for LLM guidance
+- 10 prompts (7 workflow + 3 strategy) for LLM guidance
 - Legacy tool name compatibility (data.create → blender_create_object)
 """
 from __future__ import annotations
@@ -12,10 +12,22 @@ import json
 import logging
 import os
 import sys
+import time
 from dataclasses import dataclass
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+
+def _configure_logging() -> None:
+    """Configure logging level from MCP_LOG_LEVEL environment variable."""
+    level_name = os.environ.get("MCP_LOG_LEVEL", "WARNING").upper()
+    level = getattr(logging, level_name, logging.WARNING)
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        stream=sys.stderr,
+    )
 
 from blender_mcp.adapters.mock import MockAdapter
 from blender_mcp.adapters.socket import SocketAdapter
@@ -25,6 +37,7 @@ from blender_mcp.prompts.registry import (
     BLENDER_PROMPTS,
     get_prompt_messages,
 )
+from blender_mcp.telemetry import telemetry_tool
 
 
 # Legacy tool name → new tool name mapping for backward compatibility
@@ -52,7 +65,7 @@ _LEGACY_TOOL_MAP: dict[str, str] = {
 
 @dataclass
 class MCPServer:
-    """MCP protocol server with 26 tools and 7 workflow prompts."""
+    """MCP protocol server with 26 tools and 10 prompts."""
 
     def tools_list(self) -> dict[str, Any]:
         """List all 26 available tools with full schemas and annotations."""
@@ -68,8 +81,11 @@ class MCPServer:
             tools.append(tool_entry)
         return {"tools": tools}
 
+    @telemetry_tool
     def tools_call(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         """Call a tool with flat parameters (no payload wrapper)."""
+        call_start = time.perf_counter()
+
         if not name or not isinstance(name, str):
             return {
                 "content": [{"type": "text", "text": "Error: 'name' is required and must be a string"}],
@@ -97,6 +113,7 @@ class MCPServer:
             payload = arguments
 
         internal_capability = tool_def["internal_capability"]
+        logger.info("tools/call %s (capability=%s)", resolved_name, internal_capability)
 
         adapter_mode = os.environ.get("MCP_ADAPTER", "socket").lower()
         if adapter_mode == "mock":
@@ -105,11 +122,14 @@ class MCPServer:
             adapter = SocketAdapter(
                 host=os.environ.get("MCP_SOCKET_HOST", "127.0.0.1"),
                 port=int(os.environ.get("MCP_SOCKET_PORT", "9876")),
+                max_retries=int(os.environ.get("MCP_MAX_RETRIES", "3")),
             )
 
         result = adapter.execute(internal_capability, payload)
+        elapsed_ms = (time.perf_counter() - call_start) * 1000.0
 
         if result.ok:
+            logger.info("tools/call %s succeeded in %.0fms", resolved_name, elapsed_ms)
             return {
                 "content": [{
                     "type": "text",
@@ -117,6 +137,7 @@ class MCPServer:
                 }]
             }
         else:
+            logger.warning("tools/call %s failed in %.0fms: %s", resolved_name, elapsed_ms, result.error)
             return {
                 "content": [{
                     "type": "text",
@@ -208,6 +229,17 @@ class MCPServer:
 
 def run_mcp_server() -> int:
     """Run the MCP server stdio loop."""
+    _configure_logging()
+
+    adapter_mode = os.environ.get("MCP_ADAPTER", "socket").lower()
+    host = os.environ.get("MCP_SOCKET_HOST", "127.0.0.1")
+    port = os.environ.get("MCP_SOCKET_PORT", "9876")
+    log_level = os.environ.get("MCP_LOG_LEVEL", "WARNING")
+    logger.info(
+        "Blender MCP server v%s starting (adapter=%s, host=%s, port=%s, log_level=%s)",
+        pkg_version, adapter_mode, host, port, log_level,
+    )
+
     server = MCPServer()
 
     for line in sys.stdin:
