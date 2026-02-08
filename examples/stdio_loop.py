@@ -2,15 +2,9 @@
 from __future__ import annotations
 
 import os
-import sys
 from dataclasses import dataclass
-from pathlib import Path
 
-
-_REPO_ROOT = Path(__file__).resolve().parents[1]
-_SRC_ROOT = _REPO_ROOT / "src"
-if _SRC_ROOT.exists():
-    sys.path.insert(0, str(_SRC_ROOT))
+from . import _pathfix  # noqa: F401 — ensure src/ is on sys.path
 
 from blender_mcp.adapters.base import BlenderAdapter
 from blender_mcp.adapters.mock import MockAdapter

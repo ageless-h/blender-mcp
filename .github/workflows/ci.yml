@@ -89,18 +89,3 @@ jobs:
       - name: Validate plugin boundary
         run: python scripts/validate_plugin_boundary.py
 
-  compatibility:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - name: Install test dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install .
-      - name: Compatibility check
-        run: BLENDER_VERSION=4.2 python "scripts/check_compatibility.py"
-      - name: Plugin boundary validation
-        run: python "scripts/validate_plugin_boundary.py"

@@ -5,13 +5,9 @@ import ast
 import sys
 from pathlib import Path
 
-try:
-    from blender_mcp.adapters.plugin_contract import PluginContract, validate_contract
-except ModuleNotFoundError:
-    repo_root = Path(__file__).resolve().parents[1]
-    sys.path.insert(0, str(repo_root))
-    sys.path.insert(0, str(repo_root / "src"))
-    from blender_mcp.adapters.plugin_contract import PluginContract, validate_contract
+import _pathfix  # noqa: F401 — ensure src/ is on sys.path
+
+from blender_mcp.adapters.plugin_contract import PluginContract, validate_contract
 
 
 def _has_function(source_path: Path, function_name: str) -> bool:
@@ -48,8 +44,7 @@ def main() -> int:
 
     # Verify the actual implementation exists by checking the source file
     # (We can't import the module directly because it requires bpy)
-    repo_root = Path(__file__).resolve().parents[1]
-    impl_path = repo_root / "src" / "blender_mcp_addon" / "capabilities" / "base.py"
+    impl_path = _pathfix.ROOT / "src" / "blender_mcp_addon" / "capabilities" / "base.py"
 
     if not impl_path.exists():
         print(f"ERROR: Implementation file not found: {impl_path}", file=sys.stderr)

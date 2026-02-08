@@ -1,23 +1,4 @@
-# Code Layout Conventions
-
-## Purpose
-TBD.
-
-## Requirements
-
-### Requirement: Core package naming is stable
-The core service package SHALL use a stable, lowercase package name aligned with the repository name.
-
-#### Scenario: Import path consistency
-- **WHEN** new modules are added
-- **THEN** import paths remain under a single package root
-
-### Requirement: Module layering is enforced
-Core modules SHALL be grouped by responsibility (core, transport, adapters, security, catalog, versioning, validation).
-
-#### Scenario: New capability module
-- **WHEN** a new capability module is introduced
-- **THEN** it is placed under the appropriate responsibility group
+## ADDED Requirements
 
 ### Requirement: No ad-hoc sys.path manipulation in source files
 Source files outside tests/ SHALL NOT contain inline sys.path manipulation. Path resolution SHALL be delegated to a per-directory _pathfix.py module.

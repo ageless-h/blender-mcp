@@ -11,8 +11,12 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import tempfile
+import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
+
+import _pathfix  # noqa: F401 — ensure src/ and repo root are on sys.path
 
 # Paths
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -39,28 +43,43 @@ def run_pytest_for_version(blender_version: str, blender_path: str) -> dict[str,
     print(f"Path: {blender_path}")
     print('=' * 60)
 
-    # Run pytest
-    result = subprocess.run(
-        [
-            sys.executable, "-m", "pytest",
-            "tests/integration/real_blender/test_real_capabilities.py",
-            "-v",
-            "--tb=short",
-            "-o", "console_output_style=classic",
-        ],
-        cwd=PROJECT_ROOT,
-        env=env,
-        capture_output=True,
-        text=True,
-    )
+    # Run pytest with JUnit XML output for structured result parsing
+    xml_fd, xml_path = tempfile.mkstemp(suffix=".xml", prefix="pytest_results_")
+    os.close(xml_fd)
+    try:
+        result = subprocess.run(
+            [
+                sys.executable, "-m", "pytest",
+                "tests/integration/real_blender/test_real_capabilities.py",
+                "-v",
+                "--tb=short",
+                "-o", "console_output_style=classic",
+                f"--junitxml={xml_path}",
+            ],
+            cwd=PROJECT_ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+        )
 
-    # Parse output
-    output = result.stdout + result.stderr
+        # Parse output
+        output = result.stdout + result.stderr
 
-    # Count tests
-    total_tests = output.count("PASSED") + output.count("FAILED")
-    passed_tests = output.count("PASSED")
-    failed_tests = output.count("FAILED")
+        # Parse test counts from JUnit XML
+        total_tests = 0
+        passed_tests = 0
+        failed_tests = 0
+        try:
+            tree = ET.parse(xml_path)
+            root = tree.getroot()
+            for suite in root.iter("testsuite"):
+                total_tests += int(suite.get("tests", 0))
+                failed_tests += int(suite.get("failures", 0)) + int(suite.get("errors", 0))
+            passed_tests = total_tests - failed_tests
+        except (ET.ParseError, FileNotFoundError):
+            pass
+    finally:
+        Path(xml_path).unlink(missing_ok=True)
 
     return {
         "version": blender_version,
@@ -90,7 +109,7 @@ def load_existing_results() -> dict[str, any]:
     return {
         "format_version": "1.0",
         "last_updated": None,
-        "blender_versions": [],
+        "test_results": [],
     }
 
 
@@ -116,13 +135,6 @@ def main() -> int:
     Returns:
         Exit code (0 for success, 1 for failure).
     """
-    import sys
-    from pathlib import Path
-
-    # Add project root to path
-    project_root = Path(__file__).parent.parent
-    sys.path.insert(0, str(project_root))
-
     from tests.integration.real_blender._config import load_blender_configs
 
     # Load Blender configurations
@@ -141,7 +153,7 @@ def main() -> int:
 
     # Create a map of existing results by version
     existing_by_version = {
-        v["version"]: v for v in existing_results.get("blender_versions", [])
+        v["version"]: v for v in existing_results.get("test_results", [])
     }
 
     # Run tests for each version
@@ -160,7 +172,7 @@ def main() -> int:
     results = {
         "format_version": existing_results.get("format_version", "1.0"),
         "last_updated": datetime.now().isoformat(),
-        "blender_versions": list(existing_by_version.values()),
+        "test_results": list(existing_by_version.values()),
     }
 
     # Save results
