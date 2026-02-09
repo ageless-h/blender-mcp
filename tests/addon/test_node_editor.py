@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import unittest
-from typing import Any
 
 
 class _MockNode:
