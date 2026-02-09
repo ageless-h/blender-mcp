@@ -3,7 +3,7 @@
 [English](#english) | [中文](#中文)
 
 <!-- Badges -->
-[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/ageless-h/blender-mcp/releases)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/ageless-h/blender-mcp/releases)
 [![Blender](https://img.shields.io/badge/Blender-4.2%2B-orange.svg)](https://www.blender.org/)
 [![MCP](https://img.shields.io/badge/MCP-2024--11--05-green.svg)](https://modelcontextprotocol.io/)
 [![License](https://img.shields.io/badge/license-MIT-lightgrey.svg)](LICENSE)
