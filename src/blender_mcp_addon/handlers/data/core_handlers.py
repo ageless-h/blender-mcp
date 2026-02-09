@@ -55,8 +55,6 @@ class CameraHandler(GenericCollectionHandler):
         }
 
     def _read_summary(self, item: Any) -> dict[str, Any]:
-        import bpy  # type: ignore
-
         refs = find_referencing_objects(item, "CAMERA")
 
         return {
