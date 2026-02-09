@@ -5,16 +5,11 @@ These tests mock data_create/data_write/data_delete/data_read at the import site
 in base.py and verify that the payloads are correctly structured with params
 nested under the "params" key (not spread at top level).
 """
-import os
-import sys
-import unittest
-from pathlib import Path
-from unittest.mock import patch, MagicMock
+from __future__ import annotations
 
-ROOT = Path(__file__).resolve().parent.parent.parent
-SRC = ROOT / "src"
-if str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
+import os
+import unittest
+from unittest.mock import patch, MagicMock
 
 # Must set before importing addon modules
 os.environ.setdefault("MCP_ADAPTER", "mock")

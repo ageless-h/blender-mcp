@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 """End-to-end integration tests for MCP request flow."""
-import os, unittest, sys
-from pathlib import Path
+from __future__ import annotations
 
-ROOT = Path(__file__).resolve().parent.parent.parent
-if str(ROOT / "src") not in sys.path:
-    sys.path.insert(0, str(ROOT / "src"))
+import os
+import unittest
+
 os.environ["MCP_ADAPTER"] = "mock"
 
 from blender_mcp.mcp_protocol import MCPServer

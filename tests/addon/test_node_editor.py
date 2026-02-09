@@ -50,6 +50,8 @@ class TestGetNode(unittest.TestCase):
 
     def test_bl_idname_fallback(self):
         """When name doesn't match, bl_idname fallback finds the node."""
+        # Chinese-localized node name ("Principled BSDF" in Chinese)
+        # Tests that bl_idname lookup works when display name is localized
         node = _MockNode("原理化 BSDF", "ShaderNodeBsdfPrincipled")
         tree = _MockNodeTree([node])
         result = self._get_node(tree, "ShaderNodeBsdfPrincipled")
@@ -57,6 +59,7 @@ class TestGetNode(unittest.TestCase):
 
     def test_bl_idname_fallback_japanese(self):
         """bl_idname fallback works for Japanese-localized names."""
+        # Japanese-localized node name ("Principled BSDF" in Japanese)
         node = _MockNode("プリンシプルBSDF", "ShaderNodeBsdfPrincipled")
         tree = _MockNodeTree([node])
         result = self._get_node(tree, "ShaderNodeBsdfPrincipled")
@@ -64,6 +67,7 @@ class TestGetNode(unittest.TestCase):
 
     def test_not_found_returns_none(self):
         """Returns None when neither name nor bl_idname match."""
+        # Chinese-localized node name for testing not-found scenario
         node = _MockNode("原理化 BSDF", "ShaderNodeBsdfPrincipled")
         tree = _MockNodeTree([node])
         self.assertIsNone(self._get_node(tree, "NonexistentNode"))
@@ -71,6 +75,7 @@ class TestGetNode(unittest.TestCase):
     def test_exact_name_takes_priority_over_bl_idname(self):
         """Exact name match is preferred over bl_idname match."""
         node_a = _MockNode("ShaderNodeBsdfPrincipled", "ShaderNodeCustom")
+        # Chinese-localized node name
         node_b = _MockNode("原理化 BSDF", "ShaderNodeBsdfPrincipled")
         tree = _MockNodeTree([node_a, node_b])
         # Should match node_a by exact name, not node_b by bl_idname

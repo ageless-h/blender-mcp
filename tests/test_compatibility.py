@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""Tests for version compatibility checks."""
 from __future__ import annotations
 
 import json

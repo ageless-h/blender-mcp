@@ -1,12 +1,9 @@
 # -*- coding: utf-8 -*-
-"""Tests for error_codes and response_schema."""
-import unittest, time, sys
-from pathlib import Path
+"""Tests for error codes and response schema."""
+from __future__ import annotations
 
-ROOT = Path(__file__).resolve().parent.parent
-SRC = ROOT / "src"
-if str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
+import time
+import unittest
 
 from blender_mcp_addon.handlers.error_codes import ErrorCode
 from blender_mcp_addon.handlers.response_schema import (

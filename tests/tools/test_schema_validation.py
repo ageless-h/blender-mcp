@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 """Schema validation tests for all 26 tools."""
-import os, unittest, sys
-from pathlib import Path
+from __future__ import annotations
 
-ROOT = Path(__file__).resolve().parent.parent.parent
-if str(ROOT / "src") not in sys.path:
-    sys.path.insert(0, str(ROOT / "src"))
+import os
+import unittest
+
 os.environ["MCP_ADAPTER"] = "mock"
 
 from blender_mcp.schemas.tools import TOOL_DEFINITIONS, get_tool

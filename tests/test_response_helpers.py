@@ -1,13 +1,9 @@
 # -*- coding: utf-8 -*-
-import unittest
-import time
-import sys
-from pathlib import Path
+"""Tests for response helper functions."""
+from __future__ import annotations
 
-ROOT = Path(__file__).resolve().parent.parent
-SRC = ROOT / "src"
-if str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
+import time
+import unittest
 
 from blender_mcp_addon.handlers.response import (
     _ok, _error, not_found_error, invalid_params_error,

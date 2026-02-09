@@ -1,14 +1,10 @@
 # -*- coding: utf-8 -*-
-import os
-import sys
-import unittest
-from pathlib import Path
-from unittest.mock import patch
+"""Tests for telemetry collection."""
+from __future__ import annotations
 
-ROOT = Path(__file__).resolve().parent.parent
-SRC = ROOT / "src"
-if str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
+import os
+import unittest
+from unittest.mock import patch
 
 from blender_mcp.telemetry import (
     TelemetryCollector,

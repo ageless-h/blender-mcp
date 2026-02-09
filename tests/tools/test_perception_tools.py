@@ -6,17 +6,11 @@ Each tool is tested for:
 - Required parameter validation
 - Response structure (content array with text type)
 """
+from __future__ import annotations
+
 import json
 import os
 import unittest
-
-import sys
-from pathlib import Path
-
-ROOT = Path(__file__).resolve().parent.parent.parent
-SRC = ROOT / "src"
-if str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
 
 os.environ["MCP_ADAPTER"] = "mock"
 

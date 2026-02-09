@@ -1,14 +1,9 @@
 # -*- coding: utf-8 -*-
 """Integration workflow tests using the production mcp_protocol.MCPServer."""
-import os
-import sys
-import unittest
-from pathlib import Path
+from __future__ import annotations
 
-ROOT = Path(__file__).resolve().parent.parent.parent
-SRC = ROOT / "src"
-if str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
+import os
+import unittest
 
 os.environ["MCP_ADAPTER"] = "mock"
 

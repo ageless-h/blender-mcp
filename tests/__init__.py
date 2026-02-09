@@ -1,12 +1,2 @@
-"""Test package initializer to add src/ to sys.path for unittest discovery."""
-from __future__ import annotations
-
-import sys
-from pathlib import Path
-
-
-ROOT = Path(__file__).resolve().parent
-SRC = ROOT.parent / "src"
-
-if str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
+# -*- coding: utf-8 -*-
+"""Test package - pytest uses conftest.py for path setup."""

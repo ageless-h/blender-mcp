@@ -1,14 +1,10 @@
 # -*- coding: utf-8 -*-
-import unittest
-import tempfile
-import os
-import sys
-from pathlib import Path
+"""Tests for audit logging."""
+from __future__ import annotations
 
-ROOT = Path(__file__).resolve().parent.parent
-SRC = ROOT / "src"
-if str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
+import os
+import tempfile
+import unittest
 
 from blender_mcp.security.audit import AuditEvent, MemoryAuditLogger, JsonFileAuditLogger
 
