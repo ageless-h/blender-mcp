@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import unittest
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from blender_mcp_addon.handlers.base import GenericCollectionHandler
 from blender_mcp_addon.handlers.types import DataType
