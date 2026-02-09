@@ -210,7 +210,9 @@ class MaterialHandler(BaseHandler):
             raise KeyError(f"Object '{target_name}' not found")
         
         params = params or {}
-        slot = params.get("slot", 0)
+        slot = params.get("slot")
+        if slot is None:
+            slot = 0
         
         if unlink:
             if slot < len(obj.material_slots):

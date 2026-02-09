@@ -102,8 +102,24 @@ def import_export(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
         parts = operator_id.split(".")
         op_module = getattr(bpy.ops, parts[0])
         op_func = getattr(op_module, parts[1])
-        # Use context override for operators that need it
-        with bpy.context.temp_override(**{}):
+        # Build a context override with window/area so operators have the
+        # 3D-View context they may require (especially exporters).
+        override = {}
+        try:
+            window = bpy.context.window
+            if window:
+                override["window"] = window
+                for area in window.screen.areas:
+                    if area.type == 'VIEW_3D':
+                        override["area"] = area
+                        for region in area.regions:
+                            if region.type == 'WINDOW':
+                                override["region"] = region
+                                break
+                        break
+        except Exception:
+            pass
+        with bpy.context.temp_override(**override):
             result = op_func(**params)
         status = "FINISHED" if result == {"FINISHED"} else str(result)
     except Exception as exc:

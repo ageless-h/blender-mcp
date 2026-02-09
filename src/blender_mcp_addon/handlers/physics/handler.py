@@ -61,36 +61,58 @@ def physics_manage(payload: dict[str, Any], *, started: float) -> dict[str, Any]
         return _error(code="operation_failed", message=f"Physics {action} failed: {exc}", started=started)
 
 
+def _get_view3d_override(bpy: Any, obj: Any) -> dict[str, Any]:
+    """Build a context override dict with window, area, region, and active object."""
+    override: dict[str, Any] = {"active_object": obj, "selected_objects": [obj]}
+    try:
+        window = bpy.context.window
+        if window:
+            override["window"] = window
+            for area in window.screen.areas:
+                if area.type == 'VIEW_3D':
+                    override["area"] = area
+                    for region in area.regions:
+                        if region.type == 'WINDOW':
+                            override["region"] = region
+                            break
+                    break
+    except Exception:
+        pass
+    return override
+
+
 def _add_physics(bpy: Any, obj: Any, payload: dict[str, Any], started: float) -> dict[str, Any]:
     physics_type = payload.get("physics_type", "")
     if not physics_type:
         return _error(code="invalid_params", message="physics_type is required for add", started=started)
+
+    ctx = _get_view3d_override(bpy, obj)
 
     if physics_type in ("RIGID_BODY", "RIGID_BODY_PASSIVE"):
         # Ensure scene has a Rigid Body World
         if bpy.context.scene.rigidbody_world is None:
             bpy.ops.rigidbody.world_add()
         rb_type = "PASSIVE" if physics_type == "RIGID_BODY_PASSIVE" else "ACTIVE"
-        with bpy.context.temp_override(active_object=obj, object=obj, selected_objects=[obj]):
+        with bpy.context.temp_override(**ctx):
             bpy.ops.rigidbody.object_add(type=rb_type)
     elif physics_type == "CLOTH":
-        with bpy.context.temp_override(active_object=obj, object=obj, selected_objects=[obj]):
+        with bpy.context.temp_override(**ctx):
             bpy.ops.object.modifier_add(type="CLOTH")
     elif physics_type == "SOFT_BODY":
-        with bpy.context.temp_override(active_object=obj, object=obj, selected_objects=[obj]):
+        with bpy.context.temp_override(**ctx):
             bpy.ops.object.modifier_add(type="SOFT_BODY")
     elif physics_type == "FLUID_DOMAIN":
-        with bpy.context.temp_override(active_object=obj, object=obj, selected_objects=[obj]):
+        with bpy.context.temp_override(**ctx):
             bpy.ops.object.modifier_add(type="FLUID")
         if obj.modifiers and obj.modifiers[-1].type == "FLUID":
             obj.modifiers[-1].fluid_type = "DOMAIN"
     elif physics_type == "FLUID_FLOW":
-        with bpy.context.temp_override(active_object=obj, object=obj, selected_objects=[obj]):
+        with bpy.context.temp_override(**ctx):
             bpy.ops.object.modifier_add(type="FLUID")
         if obj.modifiers and obj.modifiers[-1].type == "FLUID":
             obj.modifiers[-1].fluid_type = "FLOW"
     elif physics_type == "PARTICLE":
-        with bpy.context.temp_override(active_object=obj, object=obj, selected_objects=[obj]):
+        with bpy.context.temp_override(**ctx):
             bpy.ops.object.particle_system_add()
     elif physics_type == "FORCE_FIELD":
         ff_type = payload.get("force_field_type", "FORCE")

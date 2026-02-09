@@ -58,57 +58,75 @@ def uv_manage(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
         bpy.context.view_layer.objects.active = obj
         obj.select_set(True)
 
+        # Build a context override with window/area/region for operators
+        ctx: dict[str, Any] = {"active_object": obj, "selected_objects": [obj]}
+        try:
+            window = bpy.context.window
+            if window:
+                ctx["window"] = window
+                for area in window.screen.areas:
+                    if area.type == 'VIEW_3D':
+                        ctx["area"] = area
+                        for region in area.regions:
+                            if region.type == 'WINDOW':
+                                ctx["region"] = region
+                                break
+                        break
+        except Exception:
+            pass
+
         if original_mode != "EDIT":
-            with bpy.context.temp_override(active_object=obj, object=obj, selected_objects=[obj]):
+            with bpy.context.temp_override(**ctx):
                 bpy.ops.object.mode_set(mode="EDIT")
                 bpy.ops.mesh.select_all(action="SELECT")
 
         try:
-            if action == "mark_seam":
-                bpy.ops.mesh.mark_seam(clear=False)
-                result_msg = "Seams marked on selected edges"
-            elif action == "clear_seam":
-                bpy.ops.mesh.mark_seam(clear=True)
-                result_msg = "Seams cleared on selected edges"
-            elif action == "unwrap":
-                bpy.ops.uv.unwrap()
-                result_msg = "UV unwrap completed"
-            elif action == "smart_project":
-                angle = payload.get("angle_limit", 66.0)
-                margin = payload.get("island_margin", 0.02)
-                correct = payload.get("correct_aspect", True)
-                bpy.ops.uv.smart_project(
-                    angle_limit=angle * 3.14159 / 180.0,
-                    island_margin=margin,
-                    correct_aspect=correct,
-                )
-                result_msg = f"Smart UV project completed (angle={angle}°, margin={margin})"
-            elif action == "cube_project":
-                bpy.ops.uv.cube_project()
-                result_msg = "Cube projection completed"
-            elif action == "cylinder_project":
-                correct = payload.get("correct_aspect", True)
-                bpy.ops.uv.cylinder_project(correct_aspect=correct)
-                result_msg = "Cylinder projection completed"
-            elif action == "sphere_project":
-                correct = payload.get("correct_aspect", True)
-                bpy.ops.uv.sphere_project(correct_aspect=correct)
-                result_msg = "Sphere projection completed"
-            elif action == "lightmap_pack":
-                bpy.ops.uv.lightmap_pack()
-                result_msg = "Lightmap pack completed"
-            elif action == "pack_islands":
-                margin = payload.get("island_margin", 0.02)
-                bpy.ops.uv.pack_islands(margin=margin)
-                result_msg = f"UV islands packed (margin={margin})"
-            elif action == "average_island_scale":
-                bpy.ops.uv.average_islands_scale()
-                result_msg = "UV island scales averaged"
-            else:
-                return _error(code="invalid_params", message=f"Unknown UV action: {action}", started=started)
+            with bpy.context.temp_override(**ctx):
+                if action == "mark_seam":
+                    bpy.ops.mesh.mark_seam(clear=False)
+                    result_msg = "Seams marked on selected edges"
+                elif action == "clear_seam":
+                    bpy.ops.mesh.mark_seam(clear=True)
+                    result_msg = "Seams cleared on selected edges"
+                elif action == "unwrap":
+                    bpy.ops.uv.unwrap()
+                    result_msg = "UV unwrap completed"
+                elif action == "smart_project":
+                    angle = payload.get("angle_limit", 66.0)
+                    margin = payload.get("island_margin", 0.02)
+                    correct = payload.get("correct_aspect", True)
+                    bpy.ops.uv.smart_project(
+                        angle_limit=angle * 3.14159 / 180.0,
+                        island_margin=margin,
+                        correct_aspect=correct,
+                    )
+                    result_msg = f"Smart UV project completed (angle={angle}°, margin={margin})"
+                elif action == "cube_project":
+                    bpy.ops.uv.cube_project()
+                    result_msg = "Cube projection completed"
+                elif action == "cylinder_project":
+                    correct = payload.get("correct_aspect", True)
+                    bpy.ops.uv.cylinder_project(correct_aspect=correct)
+                    result_msg = "Cylinder projection completed"
+                elif action == "sphere_project":
+                    correct = payload.get("correct_aspect", True)
+                    bpy.ops.uv.sphere_project(correct_aspect=correct)
+                    result_msg = "Sphere projection completed"
+                elif action == "lightmap_pack":
+                    bpy.ops.uv.lightmap_pack()
+                    result_msg = "Lightmap pack completed"
+                elif action == "pack_islands":
+                    margin = payload.get("island_margin", 0.02)
+                    bpy.ops.uv.pack_islands(margin=margin)
+                    result_msg = f"UV islands packed (margin={margin})"
+                elif action == "average_island_scale":
+                    bpy.ops.uv.average_islands_scale()
+                    result_msg = "UV island scales averaged"
+                else:
+                    return _error(code="invalid_params", message=f"Unknown UV action: {action}", started=started)
         finally:
             if original_mode != "EDIT":
-                with bpy.context.temp_override(active_object=obj, object=obj, selected_objects=[obj]):
+                with bpy.context.temp_override(**ctx):
                     bpy.ops.object.mode_set(mode=original_mode)
 
         return _ok(result={"action": action, "object": object_name, "message": result_msg}, started=started)

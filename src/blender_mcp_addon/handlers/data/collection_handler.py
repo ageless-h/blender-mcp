@@ -64,7 +64,10 @@ class CollectionHandler(BaseHandler):
         """
         import bpy  # type: ignore
         
-        collection = bpy.data.collections.get(name)
+        if not name or name == "Scene Collection":
+            collection = bpy.context.scene.collection
+        else:
+            collection = bpy.data.collections.get(name)
         if collection is None:
             raise KeyError(f"Collection '{name}' not found")
         

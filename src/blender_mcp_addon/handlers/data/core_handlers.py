@@ -272,7 +272,11 @@ class ArmatureHandler(BaseHandler):
 
         armature = bpy.data.armatures.get(name)
         if armature is None:
-            raise KeyError(f"Armature '{name}' not found")
+            obj = bpy.data.objects.get(name)
+            if obj is not None and obj.type == "ARMATURE":
+                armature = obj.data
+            else:
+                raise KeyError(f"Armature '{name}' not found")
 
         if path:
             value = self._get_nested_attr(armature, path)

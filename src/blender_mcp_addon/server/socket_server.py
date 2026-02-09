@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import queue
 import socket
 import threading
 from typing import Any
@@ -16,6 +17,12 @@ _server_lock = threading.Lock()
 _server_socket: socket.socket | None = None
 _server_thread: threading.Thread | None = None
 _shutdown_flag = threading.Event()
+
+# Main-thread dispatch queue: items are (request, response_holder, done_event)
+_dispatch_queue: queue.Queue[tuple[dict, list, threading.Event]] = queue.Queue()
+_timer_registered = False
+
+_TIMER_INTERVAL = 0.05  # seconds between main-thread polls
 
 
 def is_server_running() -> bool:
@@ -61,6 +68,7 @@ def start_socket_server(host: str | None = None, port: int | None = None) -> dic
                 daemon=True,
             )
             _server_thread.start()
+            _ensure_timer_registered()
 
             logger.info("Socket server started on %s:%s", host, port)
             return {"ok": True, "host": host, "port": port}
@@ -90,6 +98,7 @@ def stop_socket_server() -> dict[str, Any]:
             _server_thread = None
 
         _server_socket = None
+        _unregister_timer()
         logger.info("Socket server stopped")
         return {"ok": True}
 
@@ -147,7 +156,7 @@ def _handle_client(client_socket: socket.socket) -> None:
             client_socket.sendall((json.dumps(response) + "\n").encode("utf-8"))
             return
 
-        response = execute_capability(request)
+        response = _dispatch_to_main_thread(request)
         client_socket.sendall((json.dumps(response, ensure_ascii=False) + "\n").encode("utf-8"))
 
     except Exception as exc:
@@ -157,3 +166,72 @@ def _handle_client(client_socket: socket.socket) -> None:
             client_socket.close()
         except Exception as exc:
             logger.debug("Error closing client socket: %s", exc)
+
+
+def _dispatch_to_main_thread(request: dict) -> dict:
+    """Queue a request for main-thread execution and block until done."""
+    response_holder: list[dict] = []
+    done_event = threading.Event()
+    _dispatch_queue.put((request, response_holder, done_event))
+    done_event.wait(timeout=120.0)
+    if response_holder:
+        return response_holder[0]
+    return {
+        "ok": False,
+        "result": None,
+        "error": {"code": "timeout", "message": "Main-thread dispatch timed out"},
+    }
+
+
+def _main_thread_poll() -> float | None:
+    """Timer callback — runs on Blender's main thread, drains the queue."""
+    while not _dispatch_queue.empty():
+        try:
+            request, response_holder, done_event = _dispatch_queue.get_nowait()
+        except queue.Empty:
+            break
+        try:
+            result = execute_capability(request)
+            response_holder.append(result)
+        except Exception as exc:
+            logger.error("Main-thread execution error: %s", exc)
+            response_holder.append({
+                "ok": False,
+                "result": None,
+                "error": {"code": "main_thread_error", "message": str(exc)},
+            })
+        finally:
+            done_event.set()
+
+    if _shutdown_flag.is_set():
+        return None  # unregister timer
+    return _TIMER_INTERVAL
+
+
+def _ensure_timer_registered() -> None:
+    """Register the main-thread poll timer if not already active."""
+    global _timer_registered
+    if _timer_registered:
+        return
+    try:
+        import bpy  # type: ignore
+        bpy.app.timers.register(_main_thread_poll, first_interval=_TIMER_INTERVAL, persistent=True)
+        _timer_registered = True
+        logger.debug("Main-thread dispatch timer registered")
+    except Exception as exc:
+        logger.error("Failed to register dispatch timer: %s", exc)
+
+
+def _unregister_timer() -> None:
+    """Unregister the main-thread poll timer."""
+    global _timer_registered
+    if not _timer_registered:
+        return
+    try:
+        import bpy  # type: ignore
+        if bpy.app.timers.is_registered(_main_thread_poll):
+            bpy.app.timers.unregister(_main_thread_poll)
+        _timer_registered = False
+        logger.debug("Main-thread dispatch timer unregistered")
+    except Exception as exc:
+        logger.debug("Error unregistering dispatch timer: %s", exc)

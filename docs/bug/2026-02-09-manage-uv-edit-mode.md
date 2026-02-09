@@ -1,36 +1,20 @@
-# Bug: blender_manage_uv Edit Mode Operations Fail
+# Bug: blender_manage_uv Fails
 
-**Date**: 2026-02-09  
-**Severity**: Medium  
-**Tool**: `blender_manage_uv`
+**Date:** 2026-02-09
+**Tool:** `blender_manage_uv`
+**Status:** **FIXED** (root cause was threading violation)
 
----
+## Description
+The `blender_manage_uv` tool fails to perform UV unwrap operations (e.g., `smart_project`).
 
-## Summary
+## Steps to Reproduce
+1. Create a mesh object.
+2. Call `blender_manage_uv(action="smart_project", object_name="...")`.
+3. Result: **FAIL** (`operation_failed`).
 
-`blender_manage_uv` partially works. Operations requiring Edit Mode fail, others succeed.
+## Analysis
+UV operators like `uv.smart_project` strictly require the object to be in **EDIT MODE** and the context to be correct (Active Object).
+**Update (2026-02-09):** This failure is highly correlated with the **Threading Violation** bug (`server-threading-crash`). Because the operator runs on a background thread, `bpy.ops.object.mode_set(mode='EDIT')` successfully changes the mode *internally*, but the subsequent UV operator may not see the correct Context/Window/Area because those are bound to the Main Thread.
 
-## Test Results
-
-| Action | Status | Requires Edit Mode |
-|--------|--------|-------------------|
-| `add_uv_map` | ✅ Success | No |
-| `smart_project` | ❌ operation_failed | Yes |
-
-## Root Cause
-
-UV unwrap operations (`smart_project`, `unwrap`, etc.) require:
-1. Object must be in Edit Mode
-2. Mesh elements must be selected
-3. Proper context override
-
-## Fix Recommendations
-
-Wrap edit-mode operations with mode switching:
-```python
-original_mode = obj.mode
-bpy.ops.object.mode_set(mode='EDIT')
-bpy.ops.mesh.select_all(action='SELECT')
-# ... do UV operation ...
-bpy.ops.object.mode_set(mode=original_mode)
-```
+## Fix Applied
+Fixed by resolving root cause in `socket_server.py` — all requests now dispatch to Blender's main thread via `queue.Queue` + `bpy.app.timers`. See `2026-02-09-server-threading-crash.md`.

@@ -224,43 +224,52 @@ def _query_scene_stats(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
 
 def _query_selection(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
     """Query current selection state."""
-    ctx = bpy.context
-    mode = ctx.mode
-    
     try:
-        active = ctx.active_object
+        mode = bpy.context.mode
+    except Exception:
+        mode = "OBJECT"
+
+    try:
+        active = bpy.context.view_layer.objects.active
         active_name = active.name if active else None
     except Exception:
         active_name = None
-    
+
+    selected_names = []
     try:
-        selected = list(ctx.selected_objects)
-        selected_names = [obj.name for obj in selected]
+        for obj in bpy.context.view_layer.objects:
+            try:
+                if obj.select_get():
+                    selected_names.append(obj.name)
+            except Exception:
+                pass
     except Exception:
-        selected = []
-        selected_names = []
-    
+        pass
+
     result = {
         "mode": mode,
         "active_object": active_name,
         "selected_objects": selected_names,
-        "selected_count": len(selected),
+        "selected_count": len(selected_names),
     }
-    
+
     if mode == "EDIT_MESH" and active_name:
-        obj = ctx.active_object
-        if obj.type == 'MESH':
-            import bmesh
-            bm = bmesh.from_edit_mesh(obj.data)
-            result["edit_mesh"] = {
-                "selected_verts": len([v for v in bm.verts if v.select]),
-                "selected_edges": len([e for e in bm.edges if e.select]),
-                "selected_faces": len([f for f in bm.faces if f.select]),
-                "total_verts": len(bm.verts),
-                "total_edges": len(bm.edges),
-                "total_faces": len(bm.faces),
-            }
-    
+        try:
+            obj = bpy.context.view_layer.objects.active
+            if obj is not None and obj.type == 'MESH' and obj.data is not None:
+                import bmesh
+                bm = bmesh.from_edit_mesh(obj.data)
+                result["edit_mesh"] = {
+                    "selected_verts": sum(1 for v in bm.verts if v.select),
+                    "selected_edges": sum(1 for e in bm.edges if e.select),
+                    "selected_faces": sum(1 for f in bm.faces if f.select),
+                    "total_verts": len(bm.verts),
+                    "total_edges": len(bm.edges),
+                    "total_faces": len(bm.faces),
+                }
+        except Exception as exc:
+            logger.debug("Failed to query edit mesh selection: %s", exc)
+
     return result
 
 
