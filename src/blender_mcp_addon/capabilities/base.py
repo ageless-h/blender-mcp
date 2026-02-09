@@ -122,7 +122,7 @@ def _dispatch_new_capability(capability: str, payload: dict[str, Any], started: 
         read_params = {}
         if "depth" in payload:
             read_params["max_depth"] = payload["depth"]
-        return data_read({"type": "collection", "name": payload.get("root", "Scene Collection"), "params": read_params}, started=started)
+        return data_read({"type": "collection", "name": payload.get("root", "Collection"), "params": read_params}, started=started)
 
     if capability == "blender.get_armature_data":
         read_params = {}

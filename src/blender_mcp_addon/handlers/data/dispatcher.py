@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import unicodedata
 from typing import Any
 
 from ..registry import HandlerRegistry
@@ -66,6 +67,8 @@ def data_read(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
         return unsupported_type_error(type_str, started)
     
     name = payload.get("name", "")
+    if name:
+        name = unicodedata.normalize("NFC", name)
     path = payload.get("path")
     params = payload.get("params", {})
     

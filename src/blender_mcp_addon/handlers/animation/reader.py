@@ -2,6 +2,7 @@
 """Animation data reader — keyframes, F-Curves, NLA, drivers, shape keys."""
 from __future__ import annotations
 
+import unicodedata
 from typing import Any
 
 from ..response import _ok, _error, check_bpy_available, bpy_unavailable_error
@@ -104,6 +105,7 @@ def animation_read(payload: dict[str, Any], *, started: float) -> dict[str, Any]
     target = payload.get("target", "")
     if not target:
         return _error(code="invalid_params", message="target is required", started=started)
+    target = unicodedata.normalize("NFC", target)
 
     include = payload.get("include", ["keyframes"])
     frame_range = payload.get("frame_range")

@@ -91,16 +91,20 @@ def import_export(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
     settings = payload.get("settings", {})
     params.update(settings)
 
-    # Handle GLB export format
+    # Handle GLTF/GLB export format parameter
     if fmt == "GLB" and action == "export":
         params.setdefault("export_format", "GLB")
+    elif fmt == "GLTF" and action == "export":
+        params.setdefault("export_format", "GLTF_SEPARATE")
 
     try:
         # Resolve operator
         parts = operator_id.split(".")
         op_module = getattr(bpy.ops, parts[0])
         op_func = getattr(op_module, parts[1])
-        result = op_func(**params)
+        # Use context override for operators that need it
+        with bpy.context.temp_override(**{}):
+            result = op_func(**params)
         status = "FINISHED" if result == {"FINISHED"} else str(result)
     except Exception as exc:
         return _error(code="operation_failed", message=f"{action} {fmt} failed: {exc}", started=started)

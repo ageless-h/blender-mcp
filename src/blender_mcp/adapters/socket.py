@@ -100,7 +100,7 @@ class SocketAdapter:
                 sock.connect((self.host, self.port))
                 logger.debug("Connected to %s:%d", self.host, self.port)
 
-                request = json.dumps({"capability": capability, "payload": payload})
+                request = json.dumps({"capability": capability, "payload": payload}, ensure_ascii=False)
                 sock.sendall((request + "\n").encode("utf-8"))
 
                 response_data = b""

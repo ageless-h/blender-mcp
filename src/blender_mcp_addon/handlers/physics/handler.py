@@ -67,22 +67,31 @@ def _add_physics(bpy: Any, obj: Any, payload: dict[str, Any], started: float) ->
         return _error(code="invalid_params", message="physics_type is required for add", started=started)
 
     if physics_type in ("RIGID_BODY", "RIGID_BODY_PASSIVE"):
+        # Ensure scene has a Rigid Body World
+        if bpy.context.scene.rigidbody_world is None:
+            bpy.ops.rigidbody.world_add()
         rb_type = "PASSIVE" if physics_type == "RIGID_BODY_PASSIVE" else "ACTIVE"
-        bpy.ops.rigidbody.object_add(type=rb_type)
+        with bpy.context.temp_override(active_object=obj, object=obj, selected_objects=[obj]):
+            bpy.ops.rigidbody.object_add(type=rb_type)
     elif physics_type == "CLOTH":
-        bpy.ops.object.modifier_add(type="CLOTH")
+        with bpy.context.temp_override(active_object=obj, object=obj, selected_objects=[obj]):
+            bpy.ops.object.modifier_add(type="CLOTH")
     elif physics_type == "SOFT_BODY":
-        bpy.ops.object.modifier_add(type="SOFT_BODY")
+        with bpy.context.temp_override(active_object=obj, object=obj, selected_objects=[obj]):
+            bpy.ops.object.modifier_add(type="SOFT_BODY")
     elif physics_type == "FLUID_DOMAIN":
-        bpy.ops.object.modifier_add(type="FLUID")
+        with bpy.context.temp_override(active_object=obj, object=obj, selected_objects=[obj]):
+            bpy.ops.object.modifier_add(type="FLUID")
         if obj.modifiers and obj.modifiers[-1].type == "FLUID":
             obj.modifiers[-1].fluid_type = "DOMAIN"
     elif physics_type == "FLUID_FLOW":
-        bpy.ops.object.modifier_add(type="FLUID")
+        with bpy.context.temp_override(active_object=obj, object=obj, selected_objects=[obj]):
+            bpy.ops.object.modifier_add(type="FLUID")
         if obj.modifiers and obj.modifiers[-1].type == "FLUID":
             obj.modifiers[-1].fluid_type = "FLOW"
     elif physics_type == "PARTICLE":
-        bpy.ops.object.particle_system_add()
+        with bpy.context.temp_override(active_object=obj, object=obj, selected_objects=[obj]):
+            bpy.ops.object.particle_system_add()
     elif physics_type == "FORCE_FIELD":
         ff_type = payload.get("force_field_type", "FORCE")
         obj.field.type = ff_type

@@ -56,10 +56,12 @@ def uv_manage(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
         # Operations requiring edit mode
         original_mode = obj.mode if hasattr(obj, "mode") else "OBJECT"
         bpy.context.view_layer.objects.active = obj
+        obj.select_set(True)
 
         if original_mode != "EDIT":
-            bpy.ops.object.mode_set(mode="EDIT")
-            bpy.ops.mesh.select_all(action="SELECT")
+            with bpy.context.temp_override(active_object=obj, object=obj, selected_objects=[obj]):
+                bpy.ops.object.mode_set(mode="EDIT")
+                bpy.ops.mesh.select_all(action="SELECT")
 
         try:
             if action == "mark_seam":
@@ -106,7 +108,8 @@ def uv_manage(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
                 return _error(code="invalid_params", message=f"Unknown UV action: {action}", started=started)
         finally:
             if original_mode != "EDIT":
-                bpy.ops.object.mode_set(mode=original_mode)
+                with bpy.context.temp_override(active_object=obj, object=obj, selected_objects=[obj]):
+                    bpy.ops.object.mode_set(mode=original_mode)
 
         return _ok(result={"action": action, "object": object_name, "message": result_msg}, started=started)
 

@@ -227,14 +227,27 @@ def _query_selection(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
     ctx = bpy.context
     mode = ctx.mode
     
+    try:
+        active = ctx.active_object
+        active_name = active.name if active else None
+    except Exception:
+        active_name = None
+    
+    try:
+        selected = list(ctx.selected_objects)
+        selected_names = [obj.name for obj in selected]
+    except Exception:
+        selected = []
+        selected_names = []
+    
     result = {
         "mode": mode,
-        "active_object": ctx.active_object.name if ctx.active_object else None,
-        "selected_objects": [obj.name for obj in ctx.selected_objects],
-        "selected_count": len(ctx.selected_objects),
+        "active_object": active_name,
+        "selected_objects": selected_names,
+        "selected_count": len(selected),
     }
     
-    if mode == "EDIT_MESH" and ctx.active_object:
+    if mode == "EDIT_MESH" and active_name:
         obj = ctx.active_object
         if obj.type == 'MESH':
             import bmesh
@@ -323,11 +336,18 @@ def _query_viewport_capture(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
     resolution = params.get("resolution")
     shading = params.get("shading")
     
+    screen = getattr(bpy.context, "screen", None)
+    if screen is None:
+        raise RuntimeError(
+            "No screen context available. Viewport capture requires a GUI "
+            "window and cannot run in headless or background mode."
+        )
+    
     with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
         tmp_path = tmp.name
     
     try:
-        for area in bpy.context.screen.areas:
+        for area in screen.areas:
             if area.type == 'VIEW_3D':
                 for space in area.spaces:
                     if space.type == 'VIEW_3D':

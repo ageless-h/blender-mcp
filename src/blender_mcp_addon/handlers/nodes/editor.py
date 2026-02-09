@@ -40,6 +40,17 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
             if scene:
                 scene.use_nodes = True
                 node_tree = scene.node_tree
+        if tree_type == "GEOMETRY" and context == "MODIFIER" and target and "/" in target:
+            obj_name, mod_name = target.split("/", 1)
+            obj = bpy.data.objects.get(obj_name)
+            if obj:
+                mod = obj.modifiers.get(mod_name)
+                if mod and mod.type == "NODES" and not mod.node_group:
+                    node_group = bpy.data.node_groups.new(mod_name, "GeometryNodeTree")
+                    node_group.nodes.new("NodeGroupInput")
+                    node_group.nodes.new("NodeGroupOutput")
+                    mod.node_group = node_group
+                    node_tree = node_group
         if node_tree is None:
             return _error(
                 code="not_found",

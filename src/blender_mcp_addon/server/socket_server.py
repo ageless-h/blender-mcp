@@ -148,7 +148,7 @@ def _handle_client(client_socket: socket.socket) -> None:
             return
 
         response = execute_capability(request)
-        client_socket.sendall((json.dumps(response) + "\n").encode("utf-8"))
+        client_socket.sendall((json.dumps(response, ensure_ascii=False) + "\n").encode("utf-8"))
 
     except Exception as exc:
         logger.error("Error handling client: %s", exc)
