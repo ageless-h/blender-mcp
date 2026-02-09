@@ -11,6 +11,23 @@ from .reader import _resolve_node_tree
 logger = logging.getLogger(__name__)
 
 
+def _get_node(node_tree, name_or_identifier: str):
+    """Get a node by name, label, or bl_idname (type) fallback.
+
+    In localized Blender environments, default node names may differ from
+    the English names that LLMs typically use.  This helper tries:
+    1. Exact name match  (``nodes.get(name)``).
+    2. Match by ``bl_idname`` (node type identifier, always English).
+    """
+    node = node_tree.nodes.get(name_or_identifier)
+    if node:
+        return node
+    for node in node_tree.nodes:
+        if node.bl_idname == name_or_identifier:
+            return node
+    return None
+
+
 def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
     """Edit a node tree by executing operations in order."""
     available, bpy = check_bpy_available()
@@ -74,7 +91,7 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
 
             elif action == "remove_node":
                 node_name = op.get("name", "")
-                node = node_tree.nodes.get(node_name)
+                node = _get_node(node_tree, node_name)
                 if node:
                     node_tree.nodes.remove(node)
                     results.append({"op": i, "action": "remove_node", "name": node_name, "ok": True})
@@ -82,8 +99,8 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
                     results.append({"op": i, "action": "remove_node", "name": node_name, "ok": False, "error": "not found"})
 
             elif action == "connect":
-                from_node = node_tree.nodes.get(op.get("from_node", ""))
-                to_node = node_tree.nodes.get(op.get("to_node", ""))
+                from_node = _get_node(node_tree, op.get("from_node", ""))
+                to_node = _get_node(node_tree, op.get("to_node", ""))
                 if not from_node or not to_node:
                     results.append({"op": i, "action": "connect", "ok": False, "error": "node not found"})
                     continue
@@ -98,7 +115,7 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
             elif action == "disconnect":
                 node_name = op.get("node", "")
                 input_name = op.get("input", "")
-                node = node_tree.nodes.get(node_name)
+                node = _get_node(node_tree, node_name)
                 if node:
                     inp = node.inputs.get(input_name)
                     if inp and inp.links:
@@ -114,7 +131,7 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
                 node_name = op.get("node", "")
                 input_name = op.get("input", "")
                 value = op.get("value")
-                node = node_tree.nodes.get(node_name)
+                node = _get_node(node_tree, node_name)
                 if node:
                     inp = node.inputs.get(input_name)
                     if inp and hasattr(inp, "default_value"):
@@ -132,7 +149,7 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
                 node_name = op.get("node", "")
                 prop_name = op.get("property", "")
                 value = op.get("value")
-                node = node_tree.nodes.get(node_name)
+                node = _get_node(node_tree, node_name)
                 if node and hasattr(node, prop_name):
                     setattr(node, prop_name, value)
                     results.append({"op": i, "action": "set_property", "ok": True})
