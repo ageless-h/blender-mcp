@@ -30,6 +30,40 @@ def _tool(
 
 
 # ---------------------------------------------------------------------------
+# Shared schema fragments
+# ---------------------------------------------------------------------------
+
+def _vec3(description: str, **kwargs: Any) -> dict[str, Any]:
+    """Schema for a 3-element numeric array (e.g. location, rotation, scale)."""
+    schema: dict[str, Any] = {
+        "type": "array", "items": {"type": "number"},
+        "minItems": 3, "maxItems": 3, "description": description,
+    }
+    schema.update(kwargs)
+    return schema
+
+
+def _rgba4(description: str, **kwargs: Any) -> dict[str, Any]:
+    """Schema for a 4-element RGBA color array."""
+    schema: dict[str, Any] = {
+        "type": "array", "items": {"type": "number"},
+        "minItems": 4, "maxItems": 4, "description": description,
+    }
+    schema.update(kwargs)
+    return schema
+
+
+def _color3_4(description: str, **kwargs: Any) -> dict[str, Any]:
+    """Schema for a 3-or-4-element color array (RGB or RGBA)."""
+    schema: dict[str, Any] = {
+        "type": "array", "items": {"type": "number"},
+        "minItems": 3, "maxItems": 4, "description": description,
+    }
+    schema.update(kwargs)
+    return schema
+
+
+# ---------------------------------------------------------------------------
 # Perception Layer (11 Tools)
 # ---------------------------------------------------------------------------
 
@@ -639,13 +673,7 @@ _DECLARATIVE_TOOLS = [
                 "strip_name": {"type": "string", "description": "Strip name for modify/delete/move operations."},
                 "text": {"type": "string", "description": "Text content for TEXT strips."},
                 "font_size": {"type": "number", "description": "Font size for TEXT strips."},
-                "color": {
-                    "type": "array",
-                    "items": {"type": "number"},
-                    "minItems": 3,
-                    "maxItems": 4,
-                    "description": "Color [r,g,b] or [r,g,b,a] for TEXT/COLOR strips.",
-                },
+                "color": _color3_4("Color [r,g,b] or [r,g,b,a] for TEXT/COLOR strips."),
                 "effect_type": {
                     "type": "string",
                     "enum": ["TRANSFORM", "SPEED", "GLOW", "GAUSSIAN_BLUR", "COLOR_BALANCE",
@@ -712,10 +740,7 @@ _IMPERATIVE_TOOLS = [
                     "description": "Light type. Only for object_type=LIGHT.",
                 },
                 "energy": {"type": "number", "default": 1000, "description": "Light energy in watts. Only for LIGHT."},
-                "color": {
-                    "type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3,
-                    "description": "Light color [r,g,b] range 0-1. Only for LIGHT.",
-                },
+                "color": _vec3("Light color [r,g,b] range 0-1. Only for LIGHT."),
                 "lens": {"type": "number", "default": 50, "description": "Camera focal length in mm. Only for CAMERA."},
                 "clip_start": {"type": "number", "default": 0.1, "description": "Camera near clip. Only for CAMERA."},
                 "clip_end": {"type": "number", "default": 1000, "description": "Camera far clip. Only for CAMERA."},
@@ -726,18 +751,9 @@ _IMPERATIVE_TOOLS = [
                 },
                 "body": {"type": "string", "description": "Text content. Only for TEXT."},
                 "extrude": {"type": "number", "default": 0, "description": "Extrude depth for TEXT."},
-                "location": {
-                    "type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3,
-                    "default": [0, 0, 0], "description": "3D position [x, y, z].",
-                },
-                "rotation": {
-                    "type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3,
-                    "default": [0, 0, 0], "description": "Euler rotation [x, y, z] in radians.",
-                },
-                "scale": {
-                    "type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3,
-                    "default": [1, 1, 1], "description": "Scale [x, y, z].",
-                },
+                "location": _vec3("3D position [x, y, z].", default=[0, 0, 0]),
+                "rotation": _vec3("Euler rotation [x, y, z] in radians.", default=[0, 0, 0]),
+                "scale": _vec3("Scale [x, y, z].", default=[1, 1, 1]),
                 "collection": {"type": "string", "description": "Collection to link to. Uses scene collection if omitted."},
             },
             "required": ["name"],
@@ -766,9 +782,9 @@ _IMPERATIVE_TOOLS = [
             "type": "object",
             "properties": {
                 "name": {"type": "string", "description": "Name of the object to modify."},
-                "location": {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3, "description": "New 3D position [x, y, z]."},
-                "rotation": {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3, "description": "New Euler rotation [x, y, z] in radians."},
-                "scale": {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3, "description": "New scale [x, y, z]."},
+                "location": _vec3("New 3D position [x, y, z]."),
+                "rotation": _vec3("New Euler rotation [x, y, z] in radians."),
+                "scale": _vec3("New scale [x, y, z]."),
                 "parent": {"type": "string", "description": "Parent object name. Set to '' to clear parent."},
                 "visible": {"type": "boolean", "description": "Viewport visibility."},
                 "hide_render": {"type": "boolean", "description": "Hide from render."},
@@ -809,12 +825,12 @@ _IMPERATIVE_TOOLS = [
                     "description": "The material operation.",
                 },
                 "name": {"type": "string", "description": "Material name."},
-                "base_color": {"type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4, "description": "Base color [r,g,b,a] range 0-1."},
+                "base_color": _rgba4("Base color [r,g,b,a] range 0-1."),
                 "metallic": {"type": "number", "minimum": 0, "maximum": 1, "description": "Metallic value 0-1. 0=dielectric, 1=full metal."},
                 "roughness": {"type": "number", "minimum": 0, "maximum": 1, "description": "Roughness value 0-1. 0=mirror, 1=diffuse."},
                 "specular": {"type": "number", "minimum": 0, "maximum": 1, "description": "Specular value 0-1."},
                 "alpha": {"type": "number", "minimum": 0, "maximum": 1, "description": "Alpha value 0-1."},
-                "emission_color": {"type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4, "description": "Emission color [r,g,b,a]."},
+                "emission_color": _rgba4("Emission color [r,g,b,a]."),
                 "emission_strength": {"type": "number", "description": "Emission strength."},
                 "use_fake_user": {"type": "boolean", "description": "Prevent auto-deletion when unused."},
                 "object_name": {"type": "string", "description": "Object name for assign/unassign."},
@@ -1078,7 +1094,7 @@ _IMPERATIVE_TOOLS = [
                 "film_transparent": {"type": "boolean", "description": "Render with transparent background."},
                 "denoising": {"type": "boolean", "description": "Enable render denoising."},
                 "denoiser": {"type": "string", "enum": ["OPTIX", "OPENIMAGEDENOISE"], "description": "Denoiser type."},
-                "background_color": {"type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4, "description": "World background color [r,g,b,a]."},
+                "background_color": _rgba4("World background color [r,g,b,a]."),
                 "background_strength": {"type": "number", "description": "World background strength."},
                 "fps": {"type": "number", "description": "Frames per second."},
                 "frame_start": {"type": "integer", "description": "Scene start frame."},
