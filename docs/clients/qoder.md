@@ -49,6 +49,27 @@ Qoder may store configurations in:
 
 > **Note**: It's recommended to use the Qoder UI to manage MCP servers.
 
+### Qoder CLI
+
+Qoder CLI shares configuration with the IDE. If editing `settings.json` directly:
+
+```json
+{
+  "mcpServers": {
+    "blender": {
+      "transport": "stdio",
+      "command": "uvx",
+      "args": ["ageless-blender-mcp"],
+      "env": {
+        "MCP_ADAPTER": "socket",
+        "MCP_SOCKET_HOST": "127.0.0.1",
+        "MCP_SOCKET_PORT": "9876"
+      }
+    }
+  }
+}
+```
+
 ## Verification
 
 1. Open Qoder
