@@ -9,10 +9,7 @@
 [![License](https://img.shields.io/badge/license-MIT-lightgrey.svg)](LICENSE)
 [![PyPI](https://img.shields.io/pypi/v/ageless-blender-mcp.svg)](https://pypi.org/project/ageless-blender-mcp/)
 
-<!-- One-click install buttons -->
-[<img src="https://cursor.com/deeplink/mcp-install-dark.svg" alt="Install in Cursor" height="32">](https://cursor.com/install-mcp?name=blender&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyJhZ2VsZXNzLWJsZW5kZXItbWNwIl0sImVudiI6eyJNQ1BfQURBUFRFUiI6InNvY2tldCIsIk1DUF9TT0NLRVRfSE9TVCI6IjEyNy4wLjAuMSIsIk1DUF9TT0NLRVRfUE9SVCI6Ijk4NzYifX0=)
-&nbsp;
-[<img src="https://img.shields.io/badge/VS_Code-Install_MCP_Server-0098FF?style=for-the-badge&logo=visualstudiocode&logoColor=white" alt="Install in VS Code" height="32">](https://insiders.vscode.dev/redirect?url=vscode%3Amcp%2Finstall%3F%7B%22name%22%3A%22blender%22%2C%22command%22%3A%22uvx%22%2C%22args%22%3A%5B%22ageless-blender-mcp%22%5D%2C%22env%22%3A%7B%22MCP_ADAPTER%22%3A%22socket%22%2C%22MCP_SOCKET_HOST%22%3A%22127.0.0.1%22%2C%22MCP_SOCKET_PORT%22%3A%229876%22%7D%7D)
+
 
 ---
 

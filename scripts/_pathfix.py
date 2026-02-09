@@ -1,16 +1,14 @@
-"""Utility to ensure src/ and repo root are on sys.path for scripts."""
+"""Re-export shared path setup for utility scripts."""
 from __future__ import annotations
 
 import sys
 from pathlib import Path
 
+# Import the canonical _pathfix from the repo root.
+_root = str(Path(__file__).resolve().parent.parent)
+if _root not in sys.path:
+    sys.path.insert(0, _root)
 
-ROOT = Path(__file__).resolve().parent.parent
-SRC = ROOT / "src"
-
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-if str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
+from _pathfix import ROOT, SRC  # noqa: E402
 
 __all__ = ["ROOT", "SRC"]

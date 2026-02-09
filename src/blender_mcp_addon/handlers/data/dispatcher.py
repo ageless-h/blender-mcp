@@ -16,23 +16,38 @@ from ..response import (
 logger = logging.getLogger(__name__)
 
 
-def data_create(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
-    """Execute data.create operation."""
+def _resolve_handler(
+    payload: dict[str, Any], started: float
+) -> tuple[Any, str, dict[str, Any] | None]:
+    """Common preamble: check bpy, parse type, look up handler.
+
+    Returns:
+        (handler, type_str, error_response_or_None)
+    """
     available, _ = check_bpy_available()
     if not available:
-        return bpy_unavailable_error(started)
-    
-    type_str = payload.get("type")
+        return None, "", bpy_unavailable_error(started)
+
+    type_str = payload.get("type", "")
     if not type_str:
-        return invalid_params_error("'type' parameter is required", started)
-    
+        return None, "", invalid_params_error("'type' parameter is required", started)
+
     data_type = HandlerRegistry.parse_type(type_str)
     if data_type is None:
-        return unsupported_type_error(type_str, started)
-    
+        return None, type_str, unsupported_type_error(type_str, started)
+
     handler = HandlerRegistry.get(data_type)
     if handler is None:
-        return unsupported_type_error(type_str, started)
+        return None, type_str, unsupported_type_error(type_str, started)
+
+    return handler, type_str, None
+
+
+def data_create(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
+    """Execute data.create operation."""
+    handler, type_str, err = _resolve_handler(payload, started)
+    if err is not None:
+        return err
     
     name = payload.get("name")
     if not name:
@@ -50,21 +65,9 @@ def data_create(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
 
 def data_read(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
     """Execute data.read operation."""
-    available, _ = check_bpy_available()
-    if not available:
-        return bpy_unavailable_error(started)
-    
-    type_str = payload.get("type")
-    if not type_str:
-        return invalid_params_error("'type' parameter is required", started)
-    
-    data_type = HandlerRegistry.parse_type(type_str)
-    if data_type is None:
-        return unsupported_type_error(type_str, started)
-    
-    handler = HandlerRegistry.get(data_type)
-    if handler is None:
-        return unsupported_type_error(type_str, started)
+    handler, type_str, err = _resolve_handler(payload, started)
+    if err is not None:
+        return err
     
     name = payload.get("name", "")
     if name:
@@ -83,21 +86,9 @@ def data_read(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
 
 def data_write(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
     """Execute data.write operation."""
-    available, _ = check_bpy_available()
-    if not available:
-        return bpy_unavailable_error(started)
-    
-    type_str = payload.get("type")
-    if not type_str:
-        return invalid_params_error("'type' parameter is required", started)
-    
-    data_type = HandlerRegistry.parse_type(type_str)
-    if data_type is None:
-        return unsupported_type_error(type_str, started)
-    
-    handler = HandlerRegistry.get(data_type)
-    if handler is None:
-        return unsupported_type_error(type_str, started)
+    handler, type_str, err = _resolve_handler(payload, started)
+    if err is not None:
+        return err
     
     name = payload.get("name", "")
     properties = payload.get("properties", {})
@@ -118,21 +109,9 @@ def data_write(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
 
 def data_delete(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
     """Execute data.delete operation."""
-    available, _ = check_bpy_available()
-    if not available:
-        return bpy_unavailable_error(started)
-    
-    type_str = payload.get("type")
-    if not type_str:
-        return invalid_params_error("'type' parameter is required", started)
-    
-    data_type = HandlerRegistry.parse_type(type_str)
-    if data_type is None:
-        return unsupported_type_error(type_str, started)
-    
-    handler = HandlerRegistry.get(data_type)
-    if handler is None:
-        return unsupported_type_error(type_str, started)
+    handler, type_str, err = _resolve_handler(payload, started)
+    if err is not None:
+        return err
     
     name = payload.get("name")
     if not name:
@@ -152,21 +131,9 @@ def data_delete(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
 
 def data_list(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
     """Execute data.list operation."""
-    available, _ = check_bpy_available()
-    if not available:
-        return bpy_unavailable_error(started)
-    
-    type_str = payload.get("type")
-    if not type_str:
-        return invalid_params_error("'type' parameter is required", started)
-    
-    data_type = HandlerRegistry.parse_type(type_str)
-    if data_type is None:
-        return unsupported_type_error(type_str, started)
-    
-    handler = HandlerRegistry.get(data_type)
-    if handler is None:
-        return unsupported_type_error(type_str, started)
+    handler, type_str, err = _resolve_handler(payload, started)
+    if err is not None:
+        return err
     
     filter_params = payload.get("filter", {})
     

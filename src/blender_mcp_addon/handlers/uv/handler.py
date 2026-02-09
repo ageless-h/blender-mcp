@@ -6,6 +6,7 @@ import logging
 from typing import Any
 
 from ..response import _ok, _error, check_bpy_available, bpy_unavailable_error
+from ..context_utils import get_view3d_override
 
 logger = logging.getLogger(__name__)
 
@@ -58,22 +59,7 @@ def uv_manage(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
         bpy.context.view_layer.objects.active = obj
         obj.select_set(True)
 
-        # Build a context override with window/area/region for operators
-        ctx: dict[str, Any] = {"active_object": obj, "selected_objects": [obj]}
-        try:
-            window = bpy.context.window
-            if window:
-                ctx["window"] = window
-                for area in window.screen.areas:
-                    if area.type == 'VIEW_3D':
-                        ctx["area"] = area
-                        for region in area.regions:
-                            if region.type == 'WINDOW':
-                                ctx["region"] = region
-                                break
-                        break
-        except Exception:
-            pass
+        ctx = get_view3d_override(bpy, obj)
 
         if original_mode != "EDIT":
             with bpy.context.temp_override(**ctx):

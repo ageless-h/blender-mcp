@@ -516,186 +516,113 @@ class CurveHandler(BaseHandler):
         return {"items": items, "count": len(items)}
 
 
+class _FontCurveHandler(BaseHandler):
+    """Shared implementation for FONT curve handlers (FontHandler & TextHandler).
+
+    Both DataType.FONT and DataType.TEXT operate on bpy.data.curves
+    filtered by type == "FONT".  Only the data_type and type label differ.
+    """
+
+    def _type_label(self) -> str:
+        return self.data_type.value.capitalize()
+
+    def create(self, name: str, params: dict[str, Any]) -> dict[str, Any]:
+        import bpy  # type: ignore
+
+        font_curve = bpy.data.curves.new(name=name, type="FONT")
+        if "body" in params:
+            font_curve.body = params["body"]
+        if "extrude" in params:
+            font_curve.extrude = params["extrude"]
+        if "bevel_depth" in params:
+            font_curve.bevel_depth = params["bevel_depth"]
+        if "size" in params:
+            font_curve.size = params["size"]
+
+        result = {"name": font_curve.name, "type": self.data_type.value}
+
+        if params.get("link_object", False):
+            obj_name = params.get("object_name", name)
+            obj = bpy.data.objects.new(obj_name, font_curve)
+            collection_name = params.get("collection")
+            if collection_name and collection_name in bpy.data.collections:
+                bpy.data.collections[collection_name].objects.link(obj)
+            else:
+                bpy.context.scene.collection.objects.link(obj)
+            if "location" in params:
+                obj.location = tuple(params["location"])
+            result["object_name"] = obj.name
+
+        return result
+
+    def read(
+        self, name: str, path: str | None, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        import bpy  # type: ignore
+
+        font_curve = bpy.data.curves.get(name)
+        if font_curve is None or font_curve.type != "FONT":
+            raise KeyError(f"{self._type_label()} '{name}' not found")
+
+        if path:
+            value = self._get_nested_attr(font_curve, path)
+            return {"name": name, "path": path, "value": value}
+
+        return {
+            "name": font_curve.name,
+            "body": font_curve.body,
+            "extrude": font_curve.extrude,
+            "bevel_depth": font_curve.bevel_depth,
+            "size": font_curve.size,
+        }
+
+    def write(
+        self, name: str, properties: dict[str, Any], params: dict[str, Any]
+    ) -> dict[str, Any]:
+        import bpy  # type: ignore
+
+        font_curve = bpy.data.curves.get(name)
+        if font_curve is None or font_curve.type != "FONT":
+            raise KeyError(f"{self._type_label()} '{name}' not found")
+
+        modified = []
+        for prop_path, value in properties.items():
+            self._set_nested_attr(font_curve, prop_path, value)
+            modified.append(prop_path)
+        return {"name": name, "modified": modified}
+
+    def delete(self, name: str, params: dict[str, Any]) -> dict[str, Any]:
+        import bpy  # type: ignore
+
+        font_curve = bpy.data.curves.get(name)
+        if font_curve is None or font_curve.type != "FONT":
+            raise KeyError(f"{self._type_label()} '{name}' not found")
+        bpy.data.curves.remove(font_curve)
+        return {"deleted": name}
+
+    def list_items(self, filter_params: dict[str, Any] | None) -> dict[str, Any]:
+        import bpy  # type: ignore
+
+        items = [
+            {"name": c.name, "body": c.body}
+            for c in bpy.data.curves
+            if c.type == "FONT"
+        ]
+        return {"items": items, "count": len(items)}
+
+
 @HandlerRegistry.register
-class FontHandler(BaseHandler):
-    """Handler for text/font curve data blocks (bpy.data.curves type FONT)."""
+class FontHandler(_FontCurveHandler):
+    """Handler for font curve data blocks (bpy.data.curves type FONT)."""
 
     data_type = DataType.FONT
 
-    def create(self, name: str, params: dict[str, Any]) -> dict[str, Any]:
-        import bpy  # type: ignore
-
-        font_curve = bpy.data.curves.new(name=name, type="FONT")
-        if "body" in params:
-            font_curve.body = params["body"]
-        if "extrude" in params:
-            font_curve.extrude = params["extrude"]
-        if "bevel_depth" in params:
-            font_curve.bevel_depth = params["bevel_depth"]
-        if "size" in params:
-            font_curve.size = params["size"]
-
-        result = {"name": font_curve.name, "type": "font"}
-
-        if params.get("link_object", False):
-            obj_name = params.get("object_name", name)
-            obj = bpy.data.objects.new(obj_name, font_curve)
-            collection_name = params.get("collection")
-            if collection_name and collection_name in bpy.data.collections:
-                bpy.data.collections[collection_name].objects.link(obj)
-            else:
-                bpy.context.scene.collection.objects.link(obj)
-            if "location" in params:
-                obj.location = tuple(params["location"])
-            result["object_name"] = obj.name
-
-        return result
-
-    def read(
-        self, name: str, path: str | None, params: dict[str, Any]
-    ) -> dict[str, Any]:
-        import bpy  # type: ignore
-
-        font_curve = bpy.data.curves.get(name)
-        if font_curve is None or font_curve.type != "FONT":
-            raise KeyError(f"Font '{name}' not found")
-
-        if path:
-            value = self._get_nested_attr(font_curve, path)
-            return {"name": name, "path": path, "value": value}
-
-        return {
-            "name": font_curve.name,
-            "body": font_curve.body,
-            "extrude": font_curve.extrude,
-            "bevel_depth": font_curve.bevel_depth,
-            "size": font_curve.size,
-        }
-
-    def write(
-        self, name: str, properties: dict[str, Any], params: dict[str, Any]
-    ) -> dict[str, Any]:
-        import bpy  # type: ignore
-
-        font_curve = bpy.data.curves.get(name)
-        if font_curve is None or font_curve.type != "FONT":
-            raise KeyError(f"Font '{name}' not found")
-
-        modified = []
-        for prop_path, value in properties.items():
-            self._set_nested_attr(font_curve, prop_path, value)
-            modified.append(prop_path)
-        return {"name": name, "modified": modified}
-
-    def delete(self, name: str, params: dict[str, Any]) -> dict[str, Any]:
-        import bpy  # type: ignore
-
-        font_curve = bpy.data.curves.get(name)
-        if font_curve is None or font_curve.type != "FONT":
-            raise KeyError(f"Font '{name}' not found")
-        bpy.data.curves.remove(font_curve)
-        return {"deleted": name}
-
-    def list_items(self, filter_params: dict[str, Any] | None) -> dict[str, Any]:
-        import bpy  # type: ignore
-
-        items = [
-            {"name": c.name, "body": c.body}
-            for c in bpy.data.curves
-            if c.type == "FONT"
-        ]
-        return {"items": items, "count": len(items)}
-
 
 @HandlerRegistry.register
-class TextHandler(BaseHandler):
-    """Handler for legacy text data type mapping to Blender FONT curves."""
+class TextHandler(_FontCurveHandler):
+    """Handler for text data type mapping to Blender FONT curves."""
 
     data_type = DataType.TEXT
-
-    def create(self, name: str, params: dict[str, Any]) -> dict[str, Any]:
-        import bpy  # type: ignore
-
-        font_curve = bpy.data.curves.new(name=name, type="FONT")
-        if "body" in params:
-            font_curve.body = params["body"]
-        if "extrude" in params:
-            font_curve.extrude = params["extrude"]
-        if "bevel_depth" in params:
-            font_curve.bevel_depth = params["bevel_depth"]
-        if "size" in params:
-            font_curve.size = params["size"]
-
-        result = {"name": font_curve.name, "type": "text"}
-
-        if params.get("link_object", False):
-            obj_name = params.get("object_name", name)
-            obj = bpy.data.objects.new(obj_name, font_curve)
-            collection_name = params.get("collection")
-            if collection_name and collection_name in bpy.data.collections:
-                bpy.data.collections[collection_name].objects.link(obj)
-            else:
-                bpy.context.scene.collection.objects.link(obj)
-            if "location" in params:
-                obj.location = tuple(params["location"])
-            result["object_name"] = obj.name
-
-        return result
-
-    def read(
-        self, name: str, path: str | None, params: dict[str, Any]
-    ) -> dict[str, Any]:
-        import bpy  # type: ignore
-
-        font_curve = bpy.data.curves.get(name)
-        if font_curve is None or font_curve.type != "FONT":
-            raise KeyError(f"Text '{name}' not found")
-
-        if path:
-            value = self._get_nested_attr(font_curve, path)
-            return {"name": name, "path": path, "value": value}
-
-        return {
-            "name": font_curve.name,
-            "body": font_curve.body,
-            "extrude": font_curve.extrude,
-            "bevel_depth": font_curve.bevel_depth,
-            "size": font_curve.size,
-        }
-
-    def write(
-        self, name: str, properties: dict[str, Any], params: dict[str, Any]
-    ) -> dict[str, Any]:
-        import bpy  # type: ignore
-
-        font_curve = bpy.data.curves.get(name)
-        if font_curve is None or font_curve.type != "FONT":
-            raise KeyError(f"Text '{name}' not found")
-
-        modified = []
-        for prop_path, value in properties.items():
-            self._set_nested_attr(font_curve, prop_path, value)
-            modified.append(prop_path)
-        return {"name": name, "modified": modified}
-
-    def delete(self, name: str, params: dict[str, Any]) -> dict[str, Any]:
-        import bpy  # type: ignore
-
-        font_curve = bpy.data.curves.get(name)
-        if font_curve is None or font_curve.type != "FONT":
-            raise KeyError(f"Text '{name}' not found")
-        bpy.data.curves.remove(font_curve)
-        return {"deleted": name}
-
-    def list_items(self, filter_params: dict[str, Any] | None) -> dict[str, Any]:
-        import bpy  # type: ignore
-
-        items = [
-            {"name": c.name, "body": c.body}
-            for c in bpy.data.curves
-            if c.type == "FONT"
-        ]
-        return {"items": items, "count": len(items)}
 
 
 @HandlerRegistry.register

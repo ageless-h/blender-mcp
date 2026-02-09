@@ -6,20 +6,9 @@ import logging
 from typing import Any
 
 from ..response import _ok, _error, check_bpy_available, bpy_unavailable_error
+from ..context_utils import get_view3d_override
 
 logger = logging.getLogger(__name__)
-
-
-_PHYSICS_OPERATOR_MAP = {
-    "RIGID_BODY": "rigidbody.object_add",
-    "RIGID_BODY_PASSIVE": "rigidbody.object_add",
-    "CLOTH": "cloth.preset_add",
-    "SOFT_BODY": "softbody.preset_add",
-    "FLUID_DOMAIN": "fluid.preset_add",
-    "FLUID_FLOW": "fluid.preset_add",
-    "PARTICLE": "particle.new",
-    "FORCE_FIELD": "object.forcefield_toggle",
-}
 
 
 def physics_manage(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
@@ -61,24 +50,6 @@ def physics_manage(payload: dict[str, Any], *, started: float) -> dict[str, Any]
         return _error(code="operation_failed", message=f"Physics {action} failed: {exc}", started=started)
 
 
-def _get_view3d_override(bpy: Any, obj: Any) -> dict[str, Any]:
-    """Build a context override dict with window, area, region, and active object."""
-    override: dict[str, Any] = {"active_object": obj, "selected_objects": [obj]}
-    try:
-        window = bpy.context.window
-        if window:
-            override["window"] = window
-            for area in window.screen.areas:
-                if area.type == 'VIEW_3D':
-                    override["area"] = area
-                    for region in area.regions:
-                        if region.type == 'WINDOW':
-                            override["region"] = region
-                            break
-                    break
-    except Exception:
-        pass
-    return override
 
 
 def _add_physics(bpy: Any, obj: Any, payload: dict[str, Any], started: float) -> dict[str, Any]:
@@ -86,7 +57,7 @@ def _add_physics(bpy: Any, obj: Any, payload: dict[str, Any], started: float) ->
     if not physics_type:
         return _error(code="invalid_params", message="physics_type is required for add", started=started)
 
-    ctx = _get_view3d_override(bpy, obj)
+    ctx = get_view3d_override(bpy, obj)
 
     if physics_type in ("RIGID_BODY", "RIGID_BODY_PASSIVE"):
         # Ensure scene has a Rigid Body World

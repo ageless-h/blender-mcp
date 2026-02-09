@@ -210,3 +210,97 @@ class BaseHandler(ABC):
                 current[int(final_attr)] = value
         else:
             raise AttributeError(f"Cannot set '{final_attr}' on {type(current).__name__}")
+
+
+class GenericCollectionHandler(BaseHandler):
+    """Concrete base class providing default CRUD for simple bpy.data collection handlers.
+
+    Subclasses MUST:
+    - Set the ``data_type`` class attribute
+    - Implement ``create()``
+    - Override ``_read_summary(item)``
+
+    Subclasses MAY override:
+    - ``_list_fields(item)`` — fields returned per item in ``list_items()``
+    - ``_type_label()`` — human-readable name for error messages
+    - ``write()`` / ``delete()`` / ``list_items()`` — for non-standard logic
+    """
+
+    # ── Override hooks ────────────────────────────────────────────
+
+    def _read_summary(self, item: Any) -> dict[str, Any]:
+        """Return the dict of fields for a full read (no path).
+
+        Subclasses MUST override this method.
+        """
+        raise NotImplementedError(
+            f"{type(self).__name__} must override _read_summary()"
+        )
+
+    def _list_fields(self, item: Any) -> dict[str, Any]:
+        """Return the dict of fields for each item in ``list_items()``.
+
+        Default returns ``{"name": item.name}``.  Override to add fields.
+        """
+        return {"name": item.name}
+
+    def _type_label(self) -> str:
+        """Human-readable type name used in error messages.
+
+        Default capitalises ``data_type.value``.
+        """
+        return self.data_type.value.replace("_", " ").capitalize()
+
+    # ── Default CRUD implementations ─────────────────────────────
+
+    def read(self, name: str, path: str | None, params: dict[str, Any]) -> dict[str, Any]:
+        """Read properties from a data block.
+
+        If *path* is given, delegates to ``_get_nested_attr``.
+        Otherwise returns ``_read_summary(item)``.
+        """
+        item = self.get_item(name)
+        if item is None:
+            raise KeyError(f"{self._type_label()} '{name}' not found")
+
+        if path:
+            value = self._get_nested_attr(item, path)
+            if hasattr(value, "__iter__") and not isinstance(value, str):
+                try:
+                    value = list(value)
+                except TypeError:
+                    pass
+            return {"name": name, "path": path, "value": value}
+
+        return self._read_summary(item)
+
+    def write(self, name: str, properties: dict[str, Any], params: dict[str, Any]) -> dict[str, Any]:
+        """Write properties to a data block using ``_set_nested_attr``."""
+        item = self.get_item(name)
+        if item is None:
+            raise KeyError(f"{self._type_label()} '{name}' not found")
+
+        modified: list[str] = []
+        for prop_path, value in properties.items():
+            self._set_nested_attr(item, prop_path, value)
+            modified.append(prop_path)
+        return {"name": name, "modified": modified}
+
+    def delete(self, name: str, params: dict[str, Any]) -> dict[str, Any]:
+        """Delete a data block from the bpy.data collection."""
+        item = self.get_item(name)
+        if item is None:
+            raise KeyError(f"{self._type_label()} '{name}' not found")
+
+        collection = self.get_collection()
+        collection.remove(item)
+        return {"deleted": name}
+
+    def list_items(self, filter_params: dict[str, Any] | None) -> dict[str, Any]:
+        """List all data blocks, using ``_list_fields`` per item."""
+        collection = self.get_collection()
+        if collection is None:
+            return {"items": [], "count": 0}
+
+        items = [self._list_fields(item) for item in collection]
+        return {"items": items, "count": len(items)}
