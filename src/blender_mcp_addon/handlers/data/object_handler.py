@@ -7,6 +7,7 @@ from typing import Any
 from ..base import BaseHandler
 from ..types import DataType
 from ..registry import HandlerRegistry
+from ..shared import create_mesh_primitive as _create_mesh_primitive_shared
 
 
 @HandlerRegistry.register
@@ -445,56 +446,5 @@ class ObjectHandler(BaseHandler):
 
     @staticmethod
     def _create_mesh_primitive(mesh, primitive: str, params: dict[str, Any]) -> None:
-        """Create primitive geometry on a mesh data block using bmesh.
-
-        Args:
-            mesh: The bpy.types.Mesh to fill with geometry
-            primitive: Primitive type (cube, sphere, cylinder, cone, plane, icosphere, torus)
-            params: Additional parameters (size, radius, depth, segments, etc.)
-        """
-        import bmesh  # type: ignore
-
-        bm = bmesh.new()
-        kind = primitive.lower()
-        size = params.get("size", 2.0)
-
-        if kind == "cube":
-            bmesh.ops.create_cube(bm, size=size)
-        elif kind == "sphere":
-            segments = params.get("segments", 32)
-            ring_count = params.get("ring_count", 16)
-            radius = params.get("radius", size / 2)
-            bmesh.ops.create_uvsphere(bm, u_segments=segments, v_segments=ring_count, radius=radius)
-        elif kind == "cylinder":
-            segments = params.get("segments", 32)
-            depth = params.get("depth", 2.0)
-            radius = params.get("radius", size / 2)
-            bmesh.ops.create_cone(bm, cap_ends=True, cap_tris=False,
-                                  segments=segments, radius1=radius, radius2=radius, depth=depth)
-        elif kind == "cone":
-            segments = params.get("segments", 32)
-            depth = params.get("depth", 2.0)
-            radius = params.get("radius", size / 2)
-            bmesh.ops.create_cone(bm, cap_ends=True, cap_tris=False,
-                                  segments=segments, radius1=radius, radius2=0, depth=depth)
-        elif kind == "plane":
-            bmesh.ops.create_grid(bm, x_segments=1, y_segments=1, size=size)
-        elif kind == "icosphere":
-            subdivisions = params.get("subdivisions", 2)
-            radius = params.get("radius", size / 2)
-            bmesh.ops.create_icosphere(bm, subdivisions=subdivisions, radius=radius)
-        elif kind == "torus":
-            major_radius = params.get("major_radius", 1.0)
-            minor_radius = params.get("minor_radius", 0.25)
-            major_segments = params.get("major_segments", 48)
-            minor_segments = params.get("minor_segments", 12)
-            bmesh.ops.create_torus(bm, major_segments=major_segments, minor_segments=minor_segments,
-                                   major_radius=major_radius, minor_radius=minor_radius)
-        else:
-            bm.free()
-            raise ValueError(f"Unknown primitive type: {primitive}")
-
-        bm.to_mesh(mesh)
-        bm.free()
-        mesh.validate()
-        mesh.update(calc_edges=True, calc_edges_loose=True)
+        """Create primitive geometry on a mesh data block using bmesh."""
+        _create_mesh_primitive_shared(mesh, primitive, params)

@@ -222,6 +222,8 @@ class GenericCollectionHandler(BaseHandler):
 
     Subclasses MAY override:
     - ``_list_fields(item)`` — fields returned per item in ``list_items()``
+    - ``_filter_item(item, filter_params)`` — filter items in ``list_items()``
+    - ``_custom_write(item, prop_path, value)`` — handle special properties in ``write()``
     - ``_type_label()`` — human-readable name for error messages
     - ``write()`` / ``delete()`` / ``list_items()`` — for non-standard logic
     """
@@ -243,6 +245,25 @@ class GenericCollectionHandler(BaseHandler):
         Default returns ``{"name": item.name}``.  Override to add fields.
         """
         return {"name": item.name}
+
+    def _filter_item(self, item: Any, filter_params: dict[str, Any]) -> bool:
+        """Return whether *item* should be included in ``list_items()``.
+
+        Default returns ``True`` (include all).  Override to implement
+        type-specific filtering (e.g., by light_type or texture type).
+        """
+        return True
+
+    def _custom_write(self, item: Any, prop_path: str, value: Any) -> bool:
+        """Handle a special property write, returning ``True`` if handled.
+
+        Called by ``write()`` for each property before falling back to
+        ``_set_nested_attr()``.  If this method returns ``True``, the
+        property is considered written and ``_set_nested_attr()`` is skipped.
+
+        Default returns ``False`` (all properties fall through).
+        """
+        return False
 
     def _type_label(self) -> str:
         """Human-readable type name used in error messages.
@@ -282,7 +303,8 @@ class GenericCollectionHandler(BaseHandler):
 
         modified: list[str] = []
         for prop_path, value in properties.items():
-            self._set_nested_attr(item, prop_path, value)
+            if not self._custom_write(item, prop_path, value):
+                self._set_nested_attr(item, prop_path, value)
             modified.append(prop_path)
         return {"name": name, "modified": modified}
 
@@ -302,5 +324,10 @@ class GenericCollectionHandler(BaseHandler):
         if collection is None:
             return {"items": [], "count": 0}
 
-        items = [self._list_fields(item) for item in collection]
+        filter_params = filter_params or {}
+        items = [
+            self._list_fields(item)
+            for item in collection
+            if self._filter_item(item, filter_params)
+        ]
         return {"items": items, "count": len(items)}

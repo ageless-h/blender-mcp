@@ -8,6 +8,7 @@ from typing import Any, Iterable
 from ..base import BaseHandler, GenericCollectionHandler
 from ..types import DataType
 from ..registry import HandlerRegistry
+from ..shared import link_data_to_scene, find_referencing_objects
 
 
 @HandlerRegistry.register
@@ -43,17 +44,7 @@ class CameraHandler(GenericCollectionHandler):
 
         # Optional convenience: create and link an object using this camera data
         if params.get("link_object", True):
-            obj_name = params.get("object_name", name)
-            cam_obj = bpy.data.objects.new(obj_name, camera)
-            collection_name = params.get("collection")
-            if collection_name and collection_name in bpy.data.collections:
-                bpy.data.collections[collection_name].objects.link(cam_obj)
-            else:
-                bpy.context.scene.collection.objects.link(cam_obj)
-            if "location" in params:
-                cam_obj.location = tuple(params["location"])
-            if "rotation" in params:
-                cam_obj.rotation_euler = tuple(params["rotation"])
+            link_data_to_scene(camera, params)
 
         return {
             "name": camera.name,
@@ -66,16 +57,7 @@ class CameraHandler(GenericCollectionHandler):
     def _read_summary(self, item: Any) -> dict[str, Any]:
         import bpy  # type: ignore
 
-        objects = [
-            obj.name
-            for obj in bpy.data.objects
-            if obj.type == "CAMERA" and obj.data == item
-        ]
-        collections = []
-        if objects:
-            for coll in bpy.data.collections:
-                if any(obj_name in coll.objects for obj_name in objects):
-                    collections.append(coll.name)
+        refs = find_referencing_objects(item, "CAMERA")
 
         return {
             "name": item.name,
@@ -89,8 +71,8 @@ class CameraHandler(GenericCollectionHandler):
             "dof_focus_distance": item.dof.focus_distance if item.dof else None,
             "shift_x": item.shift_x,
             "shift_y": item.shift_y,
-            "objects": objects,
-            "collections": collections,
+            "objects": refs["objects"],
+            "collections": refs["collections"],
         }
 
     def _list_fields(self, item: Any) -> dict[str, Any]:
@@ -98,7 +80,7 @@ class CameraHandler(GenericCollectionHandler):
 
 
 @HandlerRegistry.register
-class LightHandler(BaseHandler):
+class LightHandler(GenericCollectionHandler):
     """Handler for Blender light data type (bpy.data.lights)."""
 
     data_type = DataType.LIGHT
@@ -116,17 +98,7 @@ class LightHandler(BaseHandler):
             light.color = tuple(params["color"][:3])
 
         if params.get("link_object", True):
-            obj_name = params.get("object_name", name)
-            light_obj = bpy.data.objects.new(obj_name, light)
-            collection_name = params.get("collection")
-            if collection_name and collection_name in bpy.data.collections:
-                bpy.data.collections[collection_name].objects.link(light_obj)
-            else:
-                bpy.context.scene.collection.objects.link(light_obj)
-            if "location" in params:
-                light_obj.location = tuple(params["location"])
-            if "rotation" in params:
-                light_obj.rotation_euler = tuple(params["rotation"])
+            link_data_to_scene(light, params)
 
         return {
             "name": light.name,
@@ -136,81 +108,33 @@ class LightHandler(BaseHandler):
             "color": list(light.color),
         }
 
-    def read(
-        self, name: str, path: str | None, params: dict[str, Any]
-    ) -> dict[str, Any]:
-        import bpy  # type: ignore
-
-        light = bpy.data.lights.get(name)
-        if light is None:
-            raise KeyError(f"Light '{name}' not found")
-
-        if path:
-            value = self._get_nested_attr(light, path)
-            return {"name": name, "path": path, "value": value}
-
-        objects = [
-            obj.name
-            for obj in bpy.data.objects
-            if obj.type == "LIGHT" and obj.data == light
-        ]
-        collections = []
-        if objects:
-            for coll in bpy.data.collections:
-                if any(obj_name in coll.objects for obj_name in objects):
-                    collections.append(coll.name)
+    def _read_summary(self, item: Any) -> dict[str, Any]:
+        refs = find_referencing_objects(item, "LIGHT")
 
         return {
-            "name": light.name,
-            "type": light.type,
-            "energy": light.energy,
-            "color": list(light.color),
-            "specular_factor": light.specular_factor,
-            "objects": objects,
-            "collections": collections,
+            "name": item.name,
+            "type": item.type,
+            "energy": item.energy,
+            "color": list(item.color),
+            "specular_factor": item.specular_factor,
+            "objects": refs["objects"],
+            "collections": refs["collections"],
         }
 
-    def write(
-        self, name: str, properties: dict[str, Any], params: dict[str, Any]
-    ) -> dict[str, Any]:
-        import bpy  # type: ignore
+    def _list_fields(self, item: Any) -> dict[str, Any]:
+        return {"name": item.name, "type": item.type, "energy": item.energy}
 
-        light = bpy.data.lights.get(name)
-        if light is None:
-            raise KeyError(f"Light '{name}' not found")
-
-        modified = []
-        for prop_path, value in properties.items():
-            if prop_path == "color":
-                light.color = tuple(value[:3])
-            else:
-                self._set_nested_attr(light, prop_path, value)
-            modified.append(prop_path)
-        return {"name": name, "modified": modified}
-
-    def delete(self, name: str, params: dict[str, Any]) -> dict[str, Any]:
-        import bpy  # type: ignore
-
-        light = bpy.data.lights.get(name)
-        if light is None:
-            raise KeyError(f"Light '{name}' not found")
-        bpy.data.lights.remove(light)
-        return {"deleted": name}
-
-    def list_items(self, filter_params: dict[str, Any] | None) -> dict[str, Any]:
-        import bpy  # type: ignore
-
-        filter_params = filter_params or {}
+    def _filter_item(self, item: Any, filter_params: dict[str, Any]) -> bool:
         light_type = filter_params.get("light_type")
+        if light_type and item.type != light_type.upper():
+            return False
+        return True
 
-        items = []
-        for light in bpy.data.lights:
-            if light_type and light.type != light_type.upper():
-                continue
-            items.append(
-                {"name": light.name, "type": light.type, "energy": light.energy}
-            )
-        return {"items": items, "count": len(items)}
+    def _custom_write(self, item: Any, prop_path: str, value: Any) -> bool:
+        if prop_path == "color":
+            item.color = tuple(value[:3])
+            return True
+        return False
 
 
 @HandlerRegistry.register
@@ -383,17 +307,7 @@ class CurveHandler(GenericCollectionHandler):
         result = {"name": curve.name, "type": "curve", "splines_count": len(curve.splines)}
 
         if params.get("link_object", False):
-            obj_name = params.get("object_name", name)
-            obj = bpy.data.objects.new(obj_name, curve)
-            collection_name = params.get("collection")
-            if collection_name and collection_name in bpy.data.collections:
-                bpy.data.collections[collection_name].objects.link(obj)
-            else:
-                bpy.context.scene.collection.objects.link(obj)
-            if "location" in params:
-                obj.location = tuple(params["location"])
-            if "rotation" in params:
-                obj.rotation_euler = tuple(params["rotation"])
+            obj = link_data_to_scene(curve, params)
             result["object_name"] = obj.name
 
         return result
@@ -436,15 +350,7 @@ class _FontCurveHandler(BaseHandler):
         result = {"name": font_curve.name, "type": self.data_type.value}
 
         if params.get("link_object", False):
-            obj_name = params.get("object_name", name)
-            obj = bpy.data.objects.new(obj_name, font_curve)
-            collection_name = params.get("collection")
-            if collection_name and collection_name in bpy.data.collections:
-                bpy.data.collections[collection_name].objects.link(obj)
-            else:
-                bpy.context.scene.collection.objects.link(obj)
-            if "location" in params:
-                obj.location = tuple(params["location"])
+            obj = link_data_to_scene(font_curve, params)
             result["object_name"] = obj.name
 
         return result
@@ -520,7 +426,7 @@ class TextHandler(_FontCurveHandler):
 
 
 @HandlerRegistry.register
-class WorldHandler(BaseHandler):
+class WorldHandler(GenericCollectionHandler):
     """Handler for Blender world data type (bpy.data.worlds)."""
 
     data_type = DataType.WORLD
@@ -535,31 +441,22 @@ class WorldHandler(BaseHandler):
 
         return {"name": world.name, "type": "world"}
 
-    def read(
-        self, name: str, path: str | None, params: dict[str, Any]
-    ) -> dict[str, Any]:
-        import bpy  # type: ignore
-
-        world = bpy.data.worlds.get(name)
-        if world is None:
-            raise KeyError(f"World '{name}' not found")
-
-        if path:
-            value = self._get_nested_attr(world, path)
-            return {"name": name, "path": path, "value": value}
-
-        result = {
-            "name": world.name,
-            "use_nodes": world.use_nodes,
+    def _read_summary(self, item: Any) -> dict[str, Any]:
+        result: dict[str, Any] = {
+            "name": item.name,
+            "use_nodes": item.use_nodes,
         }
 
-        if world.use_nodes and world.node_tree:
-            bg_node = world.node_tree.nodes.get("Background")
+        if item.use_nodes and item.node_tree:
+            bg_node = item.node_tree.nodes.get("Background")
             if bg_node:
                 result["background_color"] = list(bg_node.inputs["Color"].default_value)
                 result["background_strength"] = bg_node.inputs["Strength"].default_value
 
         return result
+
+    def _list_fields(self, item: Any) -> dict[str, Any]:
+        return {"name": item.name, "use_nodes": item.use_nodes}
 
     def write(
         self, name: str, properties: dict[str, Any], params: dict[str, Any]
@@ -591,21 +488,6 @@ class WorldHandler(BaseHandler):
                 modified.append(prop_path)
         return {"name": name, "modified": modified}
 
-    def delete(self, name: str, params: dict[str, Any]) -> dict[str, Any]:
-        import bpy  # type: ignore
-
-        world = bpy.data.worlds.get(name)
-        if world is None:
-            raise KeyError(f"World '{name}' not found")
-        bpy.data.worlds.remove(world)
-        return {"deleted": name}
-
-    def list_items(self, filter_params: dict[str, Any] | None) -> dict[str, Any]:
-        import bpy  # type: ignore
-
-        items = [{"name": w.name, "use_nodes": w.use_nodes} for w in bpy.data.worlds]
-        return {"items": items, "count": len(items)}
-
 
 @HandlerRegistry.register
 class MetaBallHandler(GenericCollectionHandler):
@@ -633,15 +515,7 @@ class MetaBallHandler(GenericCollectionHandler):
         result = {"name": meta.name, "type": "metaball", "elements": len(meta.elements)}
 
         if params.get("link_object", False):
-            obj_name = params.get("object_name", name)
-            obj = bpy.data.objects.new(obj_name, meta)
-            collection_name = params.get("collection")
-            if collection_name and collection_name in bpy.data.collections:
-                bpy.data.collections[collection_name].objects.link(obj)
-            else:
-                bpy.context.scene.collection.objects.link(obj)
-            if "location" in params:
-                obj.location = tuple(params["location"])
+            obj = link_data_to_scene(meta, params)
             result["object_name"] = obj.name
 
         return result
@@ -687,15 +561,7 @@ class GreasePencilHandler(GenericCollectionHandler):
         }
 
         if params.get("link_object", False):
-            obj_name = params.get("object_name", name)
-            obj = bpy.data.objects.new(obj_name, gp)
-            collection_name = params.get("collection")
-            if collection_name and collection_name in bpy.data.collections:
-                bpy.data.collections[collection_name].objects.link(obj)
-            else:
-                bpy.context.scene.collection.objects.link(obj)
-            if "location" in params:
-                obj.location = tuple(params["location"])
+            obj = link_data_to_scene(gp, params)
             result["object_name"] = obj.name
 
         return result

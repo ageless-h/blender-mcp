@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..base import BaseHandler
+from ..base import GenericCollectionHandler
 from ..types import DataType
 from ..registry import HandlerRegistry
 
 
 @HandlerRegistry.register
-class SceneHandler(BaseHandler):
+class SceneHandler(GenericCollectionHandler):
     """Handler for Blender scene data type (bpy.data.scenes)."""
     
     data_type = DataType.SCENE
@@ -34,76 +34,40 @@ class SceneHandler(BaseHandler):
             "type": "scene",
         }
     
-    def read(self, name: str, path: str | None, params: dict[str, Any]) -> dict[str, Any]:
-        """Read scene properties.
-        
-        Args:
-            name: Name of the scene
-            path: Optional property path
-            params: Read parameters
-            
-        Returns:
-            Dict with scene properties
-        """
-        import bpy  # type: ignore
-        
-        scene = bpy.data.scenes.get(name)
-        if scene is None:
-            raise KeyError(f"Scene '{name}' not found")
-        
-        if path:
-            value = self._get_nested_attr(scene, path)
-            if hasattr(value, "__iter__") and not isinstance(value, str):
-                try:
-                    value = list(value)
-                except TypeError:
-                    pass
-            return {"name": name, "path": path, "value": value}
-        
+    def _read_summary(self, item: Any) -> dict[str, Any]:
         return {
-            "name": scene.name,
-            "objects_count": len(scene.objects),
-            "frame_start": scene.frame_start,
-            "frame_end": scene.frame_end,
-            "frame_current": scene.frame_current,
-            "render_engine": scene.render.engine,
-            "resolution_x": scene.render.resolution_x,
-            "resolution_y": scene.render.resolution_y,
-            "fps": scene.render.fps,
-            "world": scene.world.name if scene.world else None,
-            "camera": scene.camera.name if scene.camera else None,
+            "name": item.name,
+            "objects_count": len(item.objects),
+            "frame_start": item.frame_start,
+            "frame_end": item.frame_end,
+            "frame_current": item.frame_current,
+            "render_engine": item.render.engine,
+            "resolution_x": item.render.resolution_x,
+            "resolution_y": item.render.resolution_y,
+            "fps": item.render.fps,
+            "world": item.world.name if item.world else None,
+            "camera": item.camera.name if item.camera else None,
         }
     
-    def write(self, name: str, properties: dict[str, Any], params: dict[str, Any]) -> dict[str, Any]:
-        """Write properties to a scene.
-        
-        Args:
-            name: Name of the scene
-            properties: Dict of property paths to values
-            params: Write parameters
-            
-        Returns:
-            Dict with modified properties list
-        """
-        import bpy  # type: ignore
-        
-        scene = bpy.data.scenes.get(name)
-        if scene is None:
-            raise KeyError(f"Scene '{name}' not found")
-        
-        modified = []
-        for prop_path, value in properties.items():
-            if prop_path == "camera":
-                camera_obj = bpy.data.objects.get(value) if value else None
-                scene.camera = camera_obj
-            elif prop_path == "world":
-                world = bpy.data.worlds.get(value) if value else None
-                scene.world = world
-            else:
-                self._set_nested_attr(scene, prop_path, value)
-            modified.append(prop_path)
-        
-        return {"name": name, "modified": modified}
+    def _list_fields(self, item: Any) -> dict[str, Any]:
+        return {
+            "name": item.name,
+            "objects_count": len(item.objects),
+            "frame_range": [item.frame_start, item.frame_end],
+        }
+    
+    def _custom_write(self, item: Any, prop_path: str, value: Any) -> bool:
+        if prop_path == "camera":
+            import bpy  # type: ignore
+            camera_obj = bpy.data.objects.get(value) if value else None
+            item.camera = camera_obj
+            return True
+        elif prop_path == "world":
+            import bpy  # type: ignore
+            world = bpy.data.worlds.get(value) if value else None
+            item.world = world
+            return True
+        return False
     
     def delete(self, name: str, params: dict[str, Any]) -> dict[str, Any]:
         """Delete a scene.
@@ -126,24 +90,3 @@ class SceneHandler(BaseHandler):
         
         bpy.data.scenes.remove(scene)
         return {"deleted": name}
-    
-    def list_items(self, filter_params: dict[str, Any] | None) -> dict[str, Any]:
-        """List all scenes.
-        
-        Args:
-            filter_params: Optional filter criteria
-            
-        Returns:
-            Dict with items list
-        """
-        import bpy  # type: ignore
-        
-        items = []
-        for scene in bpy.data.scenes:
-            items.append({
-                "name": scene.name,
-                "objects_count": len(scene.objects),
-                "frame_range": [scene.frame_start, scene.frame_end],
-            })
-        
-        return {"items": items, "count": len(items)}

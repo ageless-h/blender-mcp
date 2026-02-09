@@ -207,6 +207,124 @@ class TestGenericCollectionHandlerListItems(unittest.TestCase):
         self.assertEqual(result, {"items": [], "count": 0})
 
 
+class FilterHandler(GenericCollectionHandler):
+    """Subclass with custom _filter_item."""
+
+    data_type = DataType.LIGHT
+
+    def create(self, name: str, params: dict[str, Any]) -> dict[str, Any]:
+        return {"name": name, "type": "light"}
+
+    def _read_summary(self, item: Any) -> dict[str, Any]:
+        return {"name": item.name, "type": getattr(item, "type", "POINT")}
+
+    def _list_fields(self, item: Any) -> dict[str, Any]:
+        return {"name": item.name, "type": getattr(item, "type", "POINT")}
+
+    def _filter_item(self, item: Any, filter_params: dict[str, Any]) -> bool:
+        light_type = filter_params.get("light_type")
+        if light_type and getattr(item, "type", None) != light_type.upper():
+            return False
+        return True
+
+
+class CustomWriteHandler(GenericCollectionHandler):
+    """Subclass with custom _custom_write for color handling."""
+
+    data_type = DataType.PROBE
+
+    def create(self, name: str, params: dict[str, Any]) -> dict[str, Any]:
+        return {"name": name, "type": "probe"}
+
+    def _read_summary(self, item: Any) -> dict[str, Any]:
+        return {"name": item.name}
+
+    def _custom_write(self, item: Any, prop_path: str, value: Any) -> bool:
+        if prop_path == "color":
+            item.color = tuple(value[:3])
+            return True
+        return False
+
+
+class TestGenericCollectionHandlerFilterItem(unittest.TestCase):
+    """Tests for _filter_item() hook in list_items()."""
+
+    def test_default_filter_includes_all(self):
+        """Default _filter_item includes all items."""
+        handler = ConcreteHandler()
+        items = [_MockItem("A"), _MockItem("B")]
+        collection = _MockCollection(items)
+        with patch.object(handler, "get_collection", return_value=collection):
+            result = handler.list_items({"some_filter": "value"})
+        self.assertEqual(result["count"], 2)
+
+    def test_filter_excludes_items(self):
+        """Custom _filter_item excludes non-matching items."""
+        handler = FilterHandler()
+        items = [
+            _MockItem("Point", type="POINT"),
+            _MockItem("Sun", type="SUN"),
+            _MockItem("Point2", type="POINT"),
+        ]
+        collection = _MockCollection(items)
+        with patch.object(handler, "get_collection", return_value=collection):
+            result = handler.list_items({"light_type": "POINT"})
+        self.assertEqual(result["count"], 2)
+        self.assertTrue(all(i["type"] == "POINT" for i in result["items"]))
+
+    def test_filter_with_none_params(self):
+        """list_items(None) still works with _filter_item."""
+        handler = FilterHandler()
+        items = [_MockItem("A", type="POINT"), _MockItem("B", type="SUN")]
+        collection = _MockCollection(items)
+        with patch.object(handler, "get_collection", return_value=collection):
+            result = handler.list_items(None)
+        self.assertEqual(result["count"], 2)
+
+    def test_filter_count_matches_items(self):
+        """Returned count matches length of items list."""
+        handler = FilterHandler()
+        items = [_MockItem("A", type="POINT"), _MockItem("B", type="SUN")]
+        collection = _MockCollection(items)
+        with patch.object(handler, "get_collection", return_value=collection):
+            result = handler.list_items({"light_type": "POINT"})
+        self.assertEqual(result["count"], len(result["items"]))
+
+
+class TestGenericCollectionHandlerCustomWrite(unittest.TestCase):
+    """Tests for _custom_write() hook in write()."""
+
+    def test_default_custom_write_falls_through(self):
+        """Default _custom_write returns False, so _set_nested_attr is used."""
+        handler = ConcreteHandler()
+        item = _MockItem("Vol1", filepath="/old")
+        with patch.object(handler, "get_item", return_value=item):
+            result = handler.write("Vol1", {"filepath": "/new"}, {})
+        self.assertEqual(item.filepath, "/new")
+        self.assertEqual(result, {"name": "Vol1", "modified": ["filepath"]})
+
+    def test_custom_write_handles_property(self):
+        """Custom _custom_write handles color, skips _set_nested_attr."""
+        handler = CustomWriteHandler()
+        item = _MockItem("P1", color=(0, 0, 0))
+        with patch.object(handler, "get_item", return_value=item):
+            result = handler.write("P1", {"color": [1.0, 0.5, 0.0, 1.0]}, {})
+        self.assertEqual(item.color, (1.0, 0.5, 0.0))
+        self.assertIn("color", result["modified"])
+
+    def test_mixed_custom_and_standard_write(self):
+        """Mix of custom-handled and standard properties in one write."""
+        handler = CustomWriteHandler()
+        item = _MockItem("P1", color=(0, 0, 0), energy=100)
+        with patch.object(handler, "get_item", return_value=item):
+            result = handler.write("P1", {"color": [1, 0, 0], "energy": 500}, {})
+        self.assertEqual(item.color, (1, 0, 0))
+        self.assertEqual(item.energy, 500)
+        self.assertEqual(len(result["modified"]), 2)
+        self.assertIn("color", result["modified"])
+        self.assertIn("energy", result["modified"])
+
+
 class TestGenericCollectionHandlerTypeLabel(unittest.TestCase):
     """Tests for _type_label()."""
 

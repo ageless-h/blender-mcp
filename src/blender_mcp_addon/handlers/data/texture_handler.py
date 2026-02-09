@@ -5,13 +5,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..base import BaseHandler
+from ..base import GenericCollectionHandler
 from ..types import DataType
 from ..registry import HandlerRegistry
 
 
 @HandlerRegistry.register
-class TextureHandler(BaseHandler):
+class TextureHandler(GenericCollectionHandler):
     """Handler for Blender texture data type (bpy.data.textures)."""
 
     data_type = DataType.TEXTURE
@@ -46,38 +46,16 @@ class TextureHandler(BaseHandler):
 
         return {"name": texture.name, "type": texture.type}
 
-    def read(
-        self, name: str, path: str | None, params: dict[str, Any]
-    ) -> dict[str, Any]:
-        """Read texture properties.
-
-        Args:
-            name: Name of texture
-            path: Optional property path
-            params: Read parameters
-
-        Returns:
-            Dict with texture properties
-        """
-        import bpy  # type: ignore
-
-        texture = bpy.data.textures.get(name)
-        if texture is None:
-            raise KeyError(f"Texture '{name}' not found")
-
-        if path:
-            value = self._get_nested_attr(texture, path)
-            return {"name": name, "path": path, "value": value}
-
-        result = {
-            "name": texture.name,
-            "type": texture.type,
-            "use_color_ramp": texture.use_color_ramp,
+    def _read_summary(self, item: Any) -> dict[str, Any]:
+        result: dict[str, Any] = {
+            "name": item.name,
+            "type": item.type,
+            "use_color_ramp": item.use_color_ramp,
         }
 
-        if texture.type == "IMAGE" and texture.image:
-            result["image"] = texture.image.name
-        elif texture.type in [
+        if item.type == "IMAGE" and item.image:
+            result["image"] = item.image.name
+        elif item.type in [
             "BLEND",
             "CLOUDS",
             "WOOD",
@@ -88,77 +66,16 @@ class TextureHandler(BaseHandler):
             "VORONOI",
             "MUSGRAVE",
         ]:
-            if texture.use_color_ramp and texture.color_ramp:
-                result["color_ramp_elements"] = len(texture.color_ramp.elements)
+            if item.use_color_ramp and item.color_ramp:
+                result["color_ramp_elements"] = len(item.color_ramp.elements)
 
         return result
 
-    def write(
-        self, name: str, properties: dict[str, Any], params: dict[str, Any]
-    ) -> dict[str, Any]:
-        """Write properties to a texture.
+    def _list_fields(self, item: Any) -> dict[str, Any]:
+        return {"name": item.name, "type": item.type}
 
-        Args:
-            name: Name of texture
-            properties: Dict of property paths to values
-            params: Write parameters
-
-        Returns:
-            Dict with modified properties list
-        """
-        import bpy  # type: ignore
-
-        texture = bpy.data.textures.get(name)
-        if texture is None:
-            raise KeyError(f"Texture '{name}' not found")
-
-        modified = []
-        for prop_path, value in properties.items():
-            self._set_nested_attr(texture, prop_path, value)
-            modified.append(prop_path)
-        return {"name": name, "modified": modified}
-
-    def delete(self, name: str, params: dict[str, Any]) -> dict[str, Any]:
-        """Delete a texture.
-
-        Args:
-            name: Name of texture to delete
-            params: Deletion parameters
-
-        Returns:
-            Dict with deleted texture name
-        """
-        import bpy  # type: ignore
-
-        texture = bpy.data.textures.get(name)
-        if texture is None:
-            raise KeyError(f"Texture '{name}' not found")
-
-        bpy.data.textures.remove(texture)
-        return {"deleted": name}
-
-    def list_items(self, filter_params: dict[str, Any] | None) -> dict[str, Any]:
-        """List all textures.
-
-        Args:
-            filter_params: Optional filter criteria
-
-        Returns:
-            Dict with items list
-        """
-        import bpy  # type: ignore
-
-        filter_params = filter_params or {}
+    def _filter_item(self, item: Any, filter_params: dict[str, Any]) -> bool:
         texture_type = filter_params.get("type")
-
-        items = []
-        for texture in bpy.data.textures:
-            if texture_type and texture.type != texture_type.upper():
-                continue
-            items.append(
-                {
-                    "name": texture.name,
-                    "type": texture.type,
-                }
-            )
-        return {"items": items, "count": len(items)}
+        if texture_type and item.type != texture_type.upper():
+            return False
+        return True
