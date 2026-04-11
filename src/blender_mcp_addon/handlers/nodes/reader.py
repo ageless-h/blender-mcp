@@ -138,24 +138,7 @@ def node_tree_read(payload: dict[str, Any], *, started: float) -> dict[str, Any]
             started=started,
         )
 
-    try:
-        node_tree = _resolve_node_tree(bpy, payload)
-    except Exception as exc:
-        import traceback as _tb
-
-        diag = f"ERR:{type(exc).__name__}:{exc}"[:63]
-        try:
-            for o in bpy.data.objects:
-                if o.name.startswith("Diag"):
-                    o.name = diag
-                    break
-        except Exception:
-            pass
-        return _error(
-            code="operation_failed",
-            message=f"_resolve_node_tree raised {type(exc).__name__}: {exc}",
-            started=started,
-        )
+    node_tree = _resolve_node_tree(bpy, payload)
     if node_tree is None:
         return _error(
             code="not_found",
@@ -164,23 +147,8 @@ def node_tree_read(payload: dict[str, Any], *, started: float) -> dict[str, Any]
         )
 
     depth = payload.get("depth", "summary")
-    try:
-        node_tree = _resolve_node_tree(bpy, payload)
-    except Exception as exc:
-        import traceback as _tb
-
-        diag = f"{type(exc).__name__}: {exc}"
-        try:
-            for s in bpy.data.scenes:
-                s["mcp_diag"] = diag
-                break
-        except Exception:
-            pass
-        return _error(
-            code="operation_failed",
-            message=f"_resolve_node_tree raised {type(exc).__name__}: {exc}",
-            started=started,
-        )
+    nodes = [_read_node(n, depth) for n in node_tree.nodes]
+    links = [_read_link(l) for l in node_tree.links] if depth == "full" else []
 
     return _ok(
         result={
