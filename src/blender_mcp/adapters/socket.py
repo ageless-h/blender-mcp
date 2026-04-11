@@ -79,10 +79,13 @@ class SocketAdapter:
                 break
 
             if attempt < self.max_retries - 1:
-                delay = self.retry_base_delay * (2 ** attempt)
+                delay = self.retry_base_delay * (2**attempt)
                 logger.debug(
                     "Retry %d/%d after %.1fs (error: %s)",
-                    attempt + 1, self.max_retries, delay, error_code,
+                    attempt + 1,
+                    self.max_retries,
+                    delay,
+                    error_code,
                 )
                 time.sleep(delay)
 
@@ -93,14 +96,18 @@ class SocketAdapter:
     def _execute_once(self, capability: str, payload: Dict[str, Any]) -> AdapterResult:
         """Execute a single attempt via socket connection to Blender addon."""
         started = time.perf_counter()
-        logger.debug("Connecting to %s:%d for capability=%s", self.host, self.port, capability)
+        logger.debug(
+            "Connecting to %s:%d for capability=%s", self.host, self.port, capability
+        )
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 sock.settimeout(self.timeout)
                 sock.connect((self.host, self.port))
                 logger.debug("Connected to %s:%d", self.host, self.port)
 
-                request = json.dumps({"capability": capability, "payload": payload}, ensure_ascii=False)
+                request = json.dumps(
+                    {"capability": capability, "payload": payload}, ensure_ascii=False
+                )
                 sock.sendall((request + "\n").encode("utf-8"))
 
                 response_data = b""
@@ -123,10 +130,12 @@ class SocketAdapter:
                     )
 
                 response = json.loads(response_data.decode("utf-8").strip())
+                err_obj = response.get("error")
                 return AdapterResult(
                     ok=response.get("ok", False),
                     result=response.get("result"),
-                    error=response.get("error", {}).get("code") if response.get("error") else None,
+                    error=err_obj.get("code") if err_obj else None,
+                    error_message=err_obj.get("message") if err_obj else None,
                     timing_ms=elapsed_ms,
                 )
 

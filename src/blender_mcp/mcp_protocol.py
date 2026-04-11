@@ -5,6 +5,7 @@ Implements the MCP JSON-RPC protocol with:
 - 26 tools with flat parameters, hand-written schemas, and annotations
 - 10 prompts (7 workflow + 3 strategy) for LLM guidance
 """
+
 from __future__ import annotations
 
 import json
@@ -28,6 +29,7 @@ def _configure_logging() -> None:
         stream=sys.stderr,
     )
 
+
 from blender_mcp.adapters.mock import MockAdapter
 from blender_mcp.adapters.socket import SocketAdapter
 from blender_mcp import __version__ as pkg_version
@@ -37,11 +39,14 @@ from blender_mcp.prompts.registry import (
     get_prompt_messages,
 )
 from blender_mcp.security.allowlist import Allowlist
-from blender_mcp.security.audit import AuditEvent, JsonFileAuditLogger, MemoryAuditLogger
+from blender_mcp.security.audit import (
+    AuditEvent,
+    JsonFileAuditLogger,
+    MemoryAuditLogger,
+)
 from blender_mcp.security.guardrails import Guardrails
 from blender_mcp.security.rate_limit import RateLimiter
 from blender_mcp.telemetry import telemetry_tool
-
 
 
 @dataclass
@@ -70,11 +75,14 @@ class MCPServer:
         # Security modules — all configurable via environment variables
         audit_path = os.environ.get("MCP_AUDIT_LOG")
         self._audit = (
-            JsonFileAuditLogger(audit_path) if audit_path
-            else MemoryAuditLogger()
+            JsonFileAuditLogger(audit_path) if audit_path else MemoryAuditLogger()
         )
         self._allowlist = Allowlist(audit_logger=self._audit)
-        if os.environ.get("MCP_ENABLE_SCRIPT_EXECUTE", "").lower() in ("1", "true", "yes"):
+        if os.environ.get("MCP_ENABLE_SCRIPT_EXECUTE", "").lower() in (
+            "1",
+            "true",
+            "yes",
+        ):
             self._allowlist.enable_script_execute()
         self._guardrails = Guardrails.from_env()
 
@@ -113,7 +121,12 @@ class MCPServer:
 
         if not name or not isinstance(name, str):
             return {
-                "content": [{"type": "text", "text": "Error: 'name' is required and must be a string"}],
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "Error: 'name' is required and must be a string",
+                    }
+                ],
                 "isError": True,
             }
         if not isinstance(arguments, dict):
@@ -136,33 +149,54 @@ class MCPServer:
         # 1. Allowlist
         if not self._allowlist.is_allowed(internal_capability):
             logger.warning("tools/call %s BLOCKED by allowlist", name)
-            self._audit.record(AuditEvent(
-                capability=internal_capability, ok=False, error="capability_not_allowed",
-            ))
+            self._audit.record(
+                AuditEvent(
+                    capability=internal_capability,
+                    ok=False,
+                    error="capability_not_allowed",
+                )
+            )
             return {
-                "content": [{"type": "text", "text": f"Error: tool '{name}' is not allowed"}],
+                "content": [
+                    {"type": "text", "text": f"Error: tool '{name}' is not allowed"}
+                ],
                 "isError": True,
             }
 
         # 2. Guardrails (payload size / depth / blocked-list)
         if not self._guardrails.allow(internal_capability, payload):
             logger.warning("tools/call %s BLOCKED by guardrails", name)
-            self._audit.record(AuditEvent(
-                capability=internal_capability, ok=False, error="guardrails_blocked",
-            ))
+            self._audit.record(
+                AuditEvent(
+                    capability=internal_capability,
+                    ok=False,
+                    error="guardrails_blocked",
+                )
+            )
             return {
-                "content": [{"type": "text", "text": "Error: request blocked by guardrails (payload too large or nested)"}],
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "Error: request blocked by guardrails (payload too large or nested)",
+                    }
+                ],
                 "isError": True,
             }
 
         # 3. Rate limit
         if not self._rate_limiter.allow(internal_capability):
             logger.warning("tools/call %s BLOCKED by rate limiter", name)
-            self._audit.record(AuditEvent(
-                capability=internal_capability, ok=False, error="rate_limited",
-            ))
+            self._audit.record(
+                AuditEvent(
+                    capability=internal_capability,
+                    ok=False,
+                    error="rate_limited",
+                )
+            )
             return {
-                "content": [{"type": "text", "text": f"Error: rate limit exceeded for '{name}'"}],
+                "content": [
+                    {"type": "text", "text": f"Error: rate limit exceeded for '{name}'"}
+                ],
                 "isError": True,
             }
         # ── End security checks ───────────────────────────────
@@ -172,27 +206,41 @@ class MCPServer:
 
         if result.ok:
             logger.info("tools/call %s succeeded in %.0fms", name, elapsed_ms)
-            self._audit.record(AuditEvent(
-                capability=internal_capability, ok=True,
-                data={"elapsed_ms": round(elapsed_ms)},
-            ))
+            self._audit.record(
+                AuditEvent(
+                    capability=internal_capability,
+                    ok=True,
+                    data={"elapsed_ms": round(elapsed_ms)},
+                )
+            )
             return {
-                "content": [{
-                    "type": "text",
-                    "text": json.dumps(result.result, indent=2),
-                }]
+                "content": [
+                    {
+                        "type": "text",
+                        "text": json.dumps(result.result, indent=2),
+                    }
+                ]
             }
         else:
-            logger.warning("tools/call %s failed in %.0fms: %s", name, elapsed_ms, result.error)
-            self._audit.record(AuditEvent(
-                capability=internal_capability, ok=False, error=result.error,
-                data={"elapsed_ms": round(elapsed_ms)},
-            ))
+            logger.warning(
+                "tools/call %s failed in %.0fms: %s", name, elapsed_ms, result.error
+            )
+            self._audit.record(
+                AuditEvent(
+                    capability=internal_capability,
+                    ok=False,
+                    error=result.error,
+                    data={"elapsed_ms": round(elapsed_ms)},
+                )
+            )
+            error_detail = result.error_message or result.error or "unknown"
             return {
-                "content": [{
-                    "type": "text",
-                    "text": f"Error: {result.error}",
-                }],
+                "content": [
+                    {
+                        "type": "text",
+                        "text": f"Error: {error_detail}",
+                    }
+                ],
                 "isError": True,
             }
 
@@ -200,18 +248,25 @@ class MCPServer:
         """List all available workflow prompts."""
         prompts = []
         for prompt_def in BLENDER_PROMPTS.values():
-            prompts.append({
-                "name": prompt_def["name"],
-                "description": prompt_def.get("description", ""),
-                "arguments": prompt_def.get("arguments", []),
-            })
+            prompts.append(
+                {
+                    "name": prompt_def["name"],
+                    "description": prompt_def.get("description", ""),
+                    "arguments": prompt_def.get("arguments", []),
+                }
+            )
         return {"prompts": prompts}
 
-    def prompts_get(self, name: str, arguments: dict[str, str] | None = None) -> dict[str, Any]:
+    def prompts_get(
+        self, name: str, arguments: dict[str, str] | None = None
+    ) -> dict[str, Any]:
         """Get a specific prompt with generated messages."""
         if not name or not isinstance(name, str):
             return {
-                "error": {"code": -32602, "message": "'name' is required and must be a string"},
+                "error": {
+                    "code": -32602,
+                    "message": "'name' is required and must be a string",
+                },
             }
         result = get_prompt_messages(name, arguments)
         if result is None:
@@ -287,7 +342,11 @@ def run_mcp_server() -> int:
     log_level = os.environ.get("MCP_LOG_LEVEL", "WARNING")
     logger.info(
         "Blender MCP server v%s starting (adapter=%s, host=%s, port=%s, log_level=%s)",
-        pkg_version, adapter_mode, host, port, log_level,
+        pkg_version,
+        adapter_mode,
+        host,
+        port,
+        log_level,
     )
 
     server = MCPServer()

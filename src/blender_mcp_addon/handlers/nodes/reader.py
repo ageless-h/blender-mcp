@@ -91,11 +91,8 @@ def _resolve_node_tree(bpy: Any, payload: dict[str, Any]) -> Any:
                 scene = bpy.context.scene
             except Exception:
                 pass
-        if scene:
-            if not scene.use_nodes:
-                scene.use_nodes = True
-            if scene.use_nodes and scene.node_tree:
-                return scene.node_tree
+        if scene and scene.use_nodes and scene.node_tree:
+            return scene.node_tree
         return None
 
     elif tree_type == "GEOMETRY":
@@ -129,9 +126,16 @@ def node_tree_read(payload: dict[str, Any], *, started: float) -> dict[str, Any]
     try:
         node_tree = _resolve_node_tree(bpy, payload)
     except Exception as exc:
+        import traceback as _tb
+
         return _error(
             code="operation_failed",
             message=f"_resolve_node_tree raised {type(exc).__name__}: {exc}",
+            data={
+                "tb": _tb.format_exc(),
+                "target": payload.get("target"),
+                "tree_type": tree_type,
+            },
             started=started,
         )
     if node_tree is None:
