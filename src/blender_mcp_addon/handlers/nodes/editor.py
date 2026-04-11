@@ -238,7 +238,7 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
                     if inp and hasattr(inp, "default_value"):
                         try:
                             if isinstance(value, (list, tuple)):
-                                inp.default_value = type(inp.default_value)(value)
+                                inp.default_value = tuple(value)
                             else:
                                 inp.default_value = value
                             results.append({"op": i, "action": "set_value", "ok": True})
