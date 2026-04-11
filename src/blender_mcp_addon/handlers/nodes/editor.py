@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Node tree editor — add/remove nodes, connect/disconnect, set values."""
+
 from __future__ import annotations
 
 import logging
@@ -28,6 +29,38 @@ def _get_node(node_tree, name_or_identifier: str):
     return None
 
 
+_SOCKET_TYPE_FOR_VALUE = {
+    1: "VALUE",
+    3: "VECTOR",
+    4: "RGBA",
+}
+
+
+def _find_input_by_name_and_type(node, input_name: str, value: Any):
+    """Find an input socket by name, preferring the one whose type matches *value*.
+
+    Nodes like ShaderNodeMix have duplicate socket names (e.g. "A" appears as
+    VALUE, VECTOR, RGBA, ROTATION).  ``inputs.get(name)`` always returns the
+    first match which may be the wrong type.  This helper picks the socket
+    whose Blender type aligns with the Python value being assigned.
+    """
+    candidates = [inp for inp in node.inputs if inp.name == input_name]
+    if not candidates:
+        return node.inputs.get(input_name)
+    if len(candidates) == 1:
+        return candidates[0]
+
+    preferred_type = _SOCKET_TYPE_FOR_VALUE.get(
+        len(value) if isinstance(value, (list, tuple)) else 1, None
+    )
+    if preferred_type:
+        for inp in candidates:
+            if inp.type == preferred_type:
+                return inp
+
+    return candidates[0]
+
+
 def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
     """Edit a node tree by executing operations in order."""
     available, bpy = check_bpy_available()
@@ -39,9 +72,17 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
     operations = payload.get("operations", [])
 
     if not tree_type or not context:
-        return _error(code="invalid_params", message="tree_type and context are required", started=started)
+        return _error(
+            code="invalid_params",
+            message="tree_type and context are required",
+            started=started,
+        )
     if not operations:
-        return _error(code="invalid_params", message="operations array is required", started=started)
+        return _error(
+            code="invalid_params",
+            message="operations array is required",
+            started=started,
+        )
 
     node_tree = _resolve_node_tree(bpy, payload)
     if node_tree is None:
@@ -57,13 +98,28 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
             if scene:
                 scene.use_nodes = True
                 node_tree = scene.node_tree
-        if tree_type == "GEOMETRY" and context == "MODIFIER" and target and "/" in target:
+        if (
+            tree_type == "GEOMETRY"
+            and context == "MODIFIER"
+            and target
+            and "/" in target
+        ):
             obj_name, mod_name = target.split("/", 1)
             obj = bpy.data.objects.get(obj_name)
             if obj:
                 mod = obj.modifiers.get(mod_name)
                 if mod and mod.type == "NODES" and not mod.node_group:
                     node_group = bpy.data.node_groups.new(mod_name, "GeometryNodeTree")
+                    node_group.interface.new_socket(
+                        name="Geometry",
+                        in_out="INPUT",
+                        socket_type="NodeSocketGeometry",
+                    )
+                    node_group.interface.new_socket(
+                        name="Geometry",
+                        in_out="OUTPUT",
+                        socket_type="NodeSocketGeometry",
+                    )
                     node_group.nodes.new("NodeGroupInput")
                     node_group.nodes.new("NodeGroupOutput")
                     mod.node_group = node_group
@@ -87,27 +143,58 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
                     node.label = op["name"]
                 if op.get("location"):
                     node.location = tuple(op["location"])
-                results.append({"op": i, "action": "add_node", "name": node.name, "ok": True})
+                results.append(
+                    {"op": i, "action": "add_node", "name": node.name, "ok": True}
+                )
 
             elif action == "remove_node":
                 node_name = op.get("name", "")
                 node = _get_node(node_tree, node_name)
                 if node:
                     node_tree.nodes.remove(node)
-                    results.append({"op": i, "action": "remove_node", "name": node_name, "ok": True})
+                    results.append(
+                        {
+                            "op": i,
+                            "action": "remove_node",
+                            "name": node_name,
+                            "ok": True,
+                        }
+                    )
                 else:
-                    results.append({"op": i, "action": "remove_node", "name": node_name, "ok": False, "error": "not found"})
+                    results.append(
+                        {
+                            "op": i,
+                            "action": "remove_node",
+                            "name": node_name,
+                            "ok": False,
+                            "error": "not found",
+                        }
+                    )
 
             elif action == "connect":
                 from_node = _get_node(node_tree, op.get("from_node", ""))
                 to_node = _get_node(node_tree, op.get("to_node", ""))
                 if not from_node or not to_node:
-                    results.append({"op": i, "action": "connect", "ok": False, "error": "node not found"})
+                    results.append(
+                        {
+                            "op": i,
+                            "action": "connect",
+                            "ok": False,
+                            "error": "node not found",
+                        }
+                    )
                     continue
                 from_socket = from_node.outputs.get(op.get("from_socket", ""))
                 to_socket = to_node.inputs.get(op.get("to_socket", ""))
                 if not from_socket or not to_socket:
-                    results.append({"op": i, "action": "connect", "ok": False, "error": "socket not found"})
+                    results.append(
+                        {
+                            "op": i,
+                            "action": "connect",
+                            "ok": False,
+                            "error": "socket not found",
+                        }
+                    )
                     continue
                 node_tree.links.new(from_socket, to_socket)
                 results.append({"op": i, "action": "connect", "ok": True})
@@ -123,9 +210,23 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
                             node_tree.links.remove(link)
                         results.append({"op": i, "action": "disconnect", "ok": True})
                     else:
-                        results.append({"op": i, "action": "disconnect", "ok": False, "error": "no link found"})
+                        results.append(
+                            {
+                                "op": i,
+                                "action": "disconnect",
+                                "ok": False,
+                                "error": "no link found",
+                            }
+                        )
                 else:
-                    results.append({"op": i, "action": "disconnect", "ok": False, "error": "node not found"})
+                    results.append(
+                        {
+                            "op": i,
+                            "action": "disconnect",
+                            "ok": False,
+                            "error": "node not found",
+                        }
+                    )
 
             elif action == "set_value":
                 node_name = op.get("node", "")
@@ -133,17 +234,41 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
                 value = op.get("value")
                 node = _get_node(node_tree, node_name)
                 if node:
-                    inp = node.inputs.get(input_name)
+                    inp = _find_input_by_name_and_type(node, input_name, value)
                     if inp and hasattr(inp, "default_value"):
-                        if isinstance(value, list):
-                            inp.default_value = type(inp.default_value)(value)
-                        else:
-                            inp.default_value = value
-                        results.append({"op": i, "action": "set_value", "ok": True})
+                        try:
+                            if isinstance(value, (list, tuple)):
+                                inp.default_value = type(inp.default_value)(value)
+                            else:
+                                inp.default_value = value
+                            results.append({"op": i, "action": "set_value", "ok": True})
+                        except (TypeError, ValueError) as exc:
+                            results.append(
+                                {
+                                    "op": i,
+                                    "action": "set_value",
+                                    "ok": False,
+                                    "error": str(exc),
+                                }
+                            )
                     else:
-                        results.append({"op": i, "action": "set_value", "ok": False, "error": "input not found"})
+                        results.append(
+                            {
+                                "op": i,
+                                "action": "set_value",
+                                "ok": False,
+                                "error": "input not found",
+                            }
+                        )
                 else:
-                    results.append({"op": i, "action": "set_value", "ok": False, "error": "node not found"})
+                    results.append(
+                        {
+                            "op": i,
+                            "action": "set_value",
+                            "ok": False,
+                            "error": "node not found",
+                        }
+                    )
 
             elif action == "set_property":
                 node_name = op.get("node", "")
@@ -154,19 +279,36 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
                     setattr(node, prop_name, value)
                     results.append({"op": i, "action": "set_property", "ok": True})
                 else:
-                    results.append({"op": i, "action": "set_property", "ok": False, "error": "node or property not found"})
+                    results.append(
+                        {
+                            "op": i,
+                            "action": "set_property",
+                            "ok": False,
+                            "error": "node or property not found",
+                        }
+                    )
 
             else:
-                results.append({"op": i, "action": action, "ok": False, "error": f"unknown action: {action}"})
+                results.append(
+                    {
+                        "op": i,
+                        "action": action,
+                        "ok": False,
+                        "error": f"unknown action: {action}",
+                    }
+                )
 
         except Exception as exc:
             results.append({"op": i, "action": action, "ok": False, "error": str(exc)})
 
     success_count = sum(1 for r in results if r.get("ok"))
-    return _ok(result={
-        "tree_name": node_tree.name,
-        "operations_total": len(operations),
-        "operations_succeeded": success_count,
-        "operations_failed": len(operations) - success_count,
-        "details": results,
-    }, started=started)
+    return _ok(
+        result={
+            "tree_name": node_tree.name,
+            "operations_total": len(operations),
+            "operations_succeeded": success_count,
+            "operations_failed": len(operations) - success_count,
+            "details": results,
+        },
+        started=started,
+    )

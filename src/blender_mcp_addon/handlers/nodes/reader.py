@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Node tree reader — reads shader, compositor, and geometry node trees."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -34,7 +35,9 @@ def _read_node(node: Any, depth: str) -> dict[str, Any]:
 
         outputs = []
         for out in node.outputs:
-            outputs.append({"name": out.name, "type": out.type, "is_linked": out.is_linked})
+            outputs.append(
+                {"name": out.name, "type": out.type, "is_linked": out.is_linked}
+            )
         data["outputs"] = outputs
     return data
 
@@ -81,8 +84,11 @@ def _resolve_node_tree(bpy: Any, payload: dict[str, Any]) -> Any:
 
     elif tree_type == "COMPOSITOR":
         scene = bpy.data.scenes.get(target) if target else bpy.context.scene
-        if scene and scene.use_nodes:
-            return scene.node_tree
+        if scene:
+            if not scene.use_nodes:
+                scene.use_nodes = True
+            if scene.use_nodes and scene.node_tree:
+                return scene.node_tree
         return None
 
     elif tree_type == "GEOMETRY":
@@ -107,7 +113,11 @@ def node_tree_read(payload: dict[str, Any], *, started: float) -> dict[str, Any]
     tree_type = payload.get("tree_type")
     context = payload.get("context")
     if not tree_type or not context:
-        return _error(code="invalid_params", message="tree_type and context are required", started=started)
+        return _error(
+            code="invalid_params",
+            message="tree_type and context are required",
+            started=started,
+        )
 
     node_tree = _resolve_node_tree(bpy, payload)
     if node_tree is None:
@@ -121,12 +131,15 @@ def node_tree_read(payload: dict[str, Any], *, started: float) -> dict[str, Any]
     nodes = [_read_node(n, depth) for n in node_tree.nodes]
     links = [_read_link(l) for l in node_tree.links] if depth == "full" else []
 
-    return _ok(result={
-        "tree_name": node_tree.name,
-        "tree_type": tree_type,
-        "context": context,
-        "node_count": len(node_tree.nodes),
-        "link_count": len(node_tree.links),
-        "nodes": nodes,
-        "links": links,
-    }, started=started)
+    return _ok(
+        result={
+            "tree_name": node_tree.name,
+            "tree_type": tree_type,
+            "context": context,
+            "node_count": len(node_tree.nodes),
+            "link_count": len(node_tree.links),
+            "nodes": nodes,
+            "links": links,
+        },
+        started=started,
+    )
