@@ -10,4 +10,5 @@ class AdapterResult:
     ok: bool
     result: Dict[str, Any] | None = None
     error: str | None = None
+    error_message: str | None = None
     timing_ms: float | None = None

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Video Sequence Editor (VSE) handler — add/modify/delete strips, effects, transitions."""
+
 from __future__ import annotations
 
 import logging
@@ -18,9 +19,18 @@ def sequencer_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
 
     action = payload.get("action", "")
     if not action:
-        return _error(code="invalid_params", message="action is required", started=started)
+        return _error(
+            code="invalid_params", message="action is required", started=started
+        )
 
-    scene = bpy.context.scene
+    try:
+        scene = bpy.context.scene
+    except Exception:
+        scene = next(iter(bpy.data.scenes), None)
+    if scene is None:
+        return _error(
+            code="operation_failed", message="No scene available", started=started
+        )
     if not scene.sequence_editor:
         scene.sequence_editor_create()
     sed = scene.sequence_editor
@@ -39,12 +49,37 @@ def sequencer_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
         elif action == "move_strip":
             return _move_strip(sed, payload, started)
         else:
-            return _error(code="invalid_params", message=f"Unknown action: {action}", started=started)
+            return _error(
+                code="invalid_params",
+                message=f"Unknown action: {action}",
+                started=started,
+            )
     except Exception as exc:
-        return _error(code="operation_failed", message=f"{action} failed: {exc}", started=started)
+        import traceback
+
+        tb = traceback.format_exc()
+        logger.error("Sequencer %s failed: %s\n%s", action, exc, tb)
+        try:
+            import bpy
+
+            txt = bpy.data.texts.get("__mcp_diag__") or bpy.data.texts.new(
+                "__mcp_diag__"
+            )
+            txt.clear()
+            txt.write(f"VSE {action}: {type(exc).__name__}: {exc}\n\n{tb}")
+        except Exception:
+            pass
+        return _error(
+            code="operation_failed",
+            message=f"{action} failed: {exc}",
+            data={"traceback": tb},
+            started=started,
+        )
 
 
-def _add_strip(bpy: Any, sed: Any, payload: dict[str, Any], started: float) -> dict[str, Any]:
+def _add_strip(
+    bpy: Any, sed: Any, payload: dict[str, Any], started: float
+) -> dict[str, Any]:
     strip_type = payload.get("strip_type", "")
     channel = payload.get("channel", 1)
     frame_start = payload.get("frame_start", 1)
@@ -59,7 +94,7 @@ def _add_strip(bpy: Any, sed: Any, payload: dict[str, Any], started: float) -> d
             frame_start=frame_start,
             frame_end=frame_end,
         )
-        if payload.get("color"):
+        if strip and payload.get("color"):
             strip.color = tuple(payload["color"][:3])
     elif strip_type == "TEXT":
         frame_end = payload.get("frame_end", frame_start + 100)
@@ -70,12 +105,13 @@ def _add_strip(bpy: Any, sed: Any, payload: dict[str, Any], started: float) -> d
             frame_start=frame_start,
             frame_end=frame_end,
         )
-        if payload.get("text"):
-            strip.text = payload["text"]
-        if payload.get("font_size"):
-            strip.font_size = payload["font_size"]
-        if payload.get("color"):
-            strip.color = tuple(payload["color"][:3])
+        if strip:
+            if payload.get("text"):
+                strip.text = payload["text"]
+            if payload.get("font_size"):
+                strip.font_size = payload["font_size"]
+            if payload.get("color"):
+                strip.color = tuple(payload["color"][:3])
     elif strip_type == "ADJUSTMENT":
         frame_end = payload.get("frame_end", frame_start + 100)
         strip = sed.sequences.new_effect(
@@ -88,7 +124,11 @@ def _add_strip(bpy: Any, sed: Any, payload: dict[str, Any], started: float) -> d
     elif strip_type in ("VIDEO", "IMAGE", "AUDIO"):
         filepath = payload.get("filepath", "")
         if not filepath:
-            return _error(code="invalid_params", message="filepath is required for VIDEO/IMAGE/AUDIO strips", started=started)
+            return _error(
+                code="invalid_params",
+                message="filepath is required for VIDEO/IMAGE/AUDIO strips",
+                started=started,
+            )
         if strip_type == "VIDEO":
             strip = sed.sequences.new_movie(
                 name=payload.get("strip_name", "Movie"),
@@ -103,7 +143,7 @@ def _add_strip(bpy: Any, sed: Any, payload: dict[str, Any], started: float) -> d
                 channel=channel,
                 frame_start=frame_start,
             )
-        else:  # AUDIO
+        else:
             strip = sed.sequences.new_sound(
                 name=payload.get("strip_name", "Sound"),
                 filepath=filepath,
@@ -111,17 +151,44 @@ def _add_strip(bpy: Any, sed: Any, payload: dict[str, Any], started: float) -> d
                 frame_start=frame_start,
             )
     else:
-        return _error(code="invalid_params", message=f"Unknown strip_type: {strip_type}", started=started)
+        return _error(
+            code="invalid_params",
+            message=f"Unknown strip_type: {strip_type}",
+            started=started,
+        )
 
-    return _ok(result={"action": "add_strip", "name": strip.name, "type": strip_type,
-                       "channel": strip.channel, "frame_start": strip.frame_start}, started=started)
+    if strip is None:
+        logger.error(
+            "new_effect returned None for strip_type=%s channel=%d frame_start=%d",
+            strip_type,
+            channel,
+            frame_start,
+        )
+        return _error(
+            code="operation_failed",
+            message=f"Failed to create {strip_type} strip — Blender returned null (channel {channel}, frame {frame_start})",
+            started=started,
+        )
+
+    return _ok(
+        result={
+            "action": "add_strip",
+            "name": strip.name,
+            "type": strip_type,
+            "channel": strip.channel,
+            "frame_start": strip.frame_start,
+        },
+        started=started,
+    )
 
 
 def _modify_strip(sed: Any, payload: dict[str, Any], started: float) -> dict[str, Any]:
     strip_name = payload.get("strip_name", "")
     strip = sed.sequences.get(strip_name)
     if not strip:
-        return _error(code="not_found", message=f"Strip '{strip_name}' not found", started=started)
+        return _error(
+            code="not_found", message=f"Strip '{strip_name}' not found", started=started
+        )
 
     settings = payload.get("settings", {})
     for key, value in settings.items():
@@ -135,9 +202,13 @@ def _delete_strip(sed: Any, payload: dict[str, Any], started: float) -> dict[str
     strip_name = payload.get("strip_name", "")
     strip = sed.sequences.get(strip_name)
     if not strip:
-        return _error(code="not_found", message=f"Strip '{strip_name}' not found", started=started)
+        return _error(
+            code="not_found", message=f"Strip '{strip_name}' not found", started=started
+        )
     sed.sequences.remove(strip)
-    return _ok(result={"action": "delete_strip", "removed": strip_name}, started=started)
+    return _ok(
+        result={"action": "delete_strip", "removed": strip_name}, started=started
+    )
 
 
 def _add_effect(sed: Any, payload: dict[str, Any], started: float) -> dict[str, Any]:
@@ -160,25 +231,51 @@ def _add_effect(sed: Any, payload: dict[str, Any], started: float) -> dict[str, 
         kwargs["seq1"] = input_strip
 
     strip = sed.sequences.new_effect(**kwargs)
-    return _ok(result={"action": "add_effect", "name": strip.name, "type": effect_type}, started=started)
+    if strip is None:
+        return _error(
+            code="operation_failed",
+            message=f"Failed to create {effect_type} effect — Blender returned null",
+            started=started,
+        )
+    return _ok(
+        result={"action": "add_effect", "name": strip.name, "type": effect_type},
+        started=started,
+    )
 
 
-def _add_transition(sed: Any, payload: dict[str, Any], started: float) -> dict[str, Any]:
+def _add_transition(
+    sed: Any, payload: dict[str, Any], started: float
+) -> dict[str, Any]:
     transition_type = payload.get("transition_type", "CROSS")
-    return _ok(result={"action": "add_transition", "type": transition_type,
-                       "note": "Transition requires two adjacent strips to be selected in Blender UI"}, started=started)
+    return _ok(
+        result={
+            "action": "add_transition",
+            "type": transition_type,
+            "note": "Transition requires two adjacent strips to be selected in Blender UI",
+        },
+        started=started,
+    )
 
 
 def _move_strip(sed: Any, payload: dict[str, Any], started: float) -> dict[str, Any]:
     strip_name = payload.get("strip_name", "")
     strip = sed.sequences.get(strip_name)
     if not strip:
-        return _error(code="not_found", message=f"Strip '{strip_name}' not found", started=started)
+        return _error(
+            code="not_found", message=f"Strip '{strip_name}' not found", started=started
+        )
 
     if "channel" in payload:
         strip.channel = payload["channel"]
     if "frame_start" in payload:
         strip.frame_start = payload["frame_start"]
 
-    return _ok(result={"action": "move_strip", "name": strip.name,
-                       "channel": strip.channel, "frame_start": strip.frame_start}, started=started)
+    return _ok(
+        result={
+            "action": "move_strip",
+            "name": strip.name,
+            "channel": strip.channel,
+            "frame_start": strip.frame_start,
+        },
+        started=started,
+    )

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Node tree editor — add/remove nodes, connect/disconnect, set values."""
+
 from __future__ import annotations
 
 import logging
@@ -11,6 +12,139 @@ from .reader import _resolve_node_tree
 logger = logging.getLogger(__name__)
 
 
+# English display names that LLMs commonly use → bl_idname identifiers.
+# In localized Blender, default nodes get renamed (e.g. "Principled BSDF"
+# becomes "原理化 BSDF" in Chinese), but bl_idname is always stable.
+_ENGLISH_NODE_NAMES: dict[str, str] = {
+    # --- Shader ---
+    "Principled BSDF": "ShaderNodeBsdfPrincipled",
+    "Material Output": "ShaderNodeOutputMaterial",
+    "Diffuse BSDF": "ShaderNodeBsdfDiffuse",
+    "Glossy BSDF": "ShaderNodeBsdfGlossy",
+    "Glass BSDF": "ShaderNodeBsdfGlass",
+    "Emission": "ShaderNodeEmission",
+    "Mix Shader": "ShaderNodeMixShader",
+    "Add Shader": "ShaderNodeAddShader",
+    "Transparent BSDF": "ShaderNodeBsdfTransparent",
+    "Refraction BSDF": "ShaderNodeBsdfRefraction",
+    "Subsurface Scattering": "ShaderNodeSubsurfaceScattering",
+    "Holdout": "ShaderNodeHoldout",
+    "Ambient Occlusion": "ShaderNodeAmbientOcclusion",
+    "Volume Scatter": "ShaderNodeVolumeScatter",
+    "Volume Absorption": "ShaderNodeVolumeAbsorption",
+    "Principled Volume": "ShaderNodeVolumePrincipled",
+    # --- Shader Inputs ---
+    "Texture Coordinate": "ShaderNodeTexCoord",
+    "Mapping": "ShaderNodeMapping",
+    "Attribute": "ShaderNodeAttribute",
+    "Fresnel": "ShaderNodeFresnel",
+    "Layer Weight": "ShaderNodeLayerWeight",
+    "Light Path": "ShaderNodeLightPath",
+    "Object Info": "ShaderNodeObjectInfo",
+    "Particle Info": "ShaderNodeParticleInfo",
+    "Camera Data": "ShaderNodeCameraData",
+    "New Geometry": "ShaderNodeNewGeometry",
+    "Wireframe": "ShaderNodeWireframe",
+    "UV Map": "ShaderNodeUVMap",
+    "Value": "ShaderNodeValue",
+    "RGB": "ShaderNodeRGB",
+    "Color Ramp": "ShaderNodeValToRGB",
+    "Curve Time": "ShaderNodeCurveTime",
+    # --- Shader Textures ---
+    "Image Texture": "ShaderNodeTexImage",
+    "Environment Texture": "ShaderNodeTexEnvironment",
+    "Noise Texture": "ShaderNodeTexNoise",
+    "Musgrave Texture": "ShaderNodeTexMusgrave",
+    "Voronoi Texture": "ShaderNodeTexVoronoi",
+    "Brick Texture": "ShaderNodeTexBrick",
+    "Checker Texture": "ShaderNodeTexChecker",
+    "Gradient Texture": "ShaderNodeTexGradient",
+    "Magic Texture": "ShaderNodeTexMagic",
+    "Wave Texture": "ShaderNodeTexWave",
+    "Color Attribute": "ShaderNodeColorAttribute",
+    # --- Shader Vector ---
+    "Bump": "ShaderNodeBump",
+    "Normal Map": "ShaderNodeNormalMap",
+    "Normal": "ShaderNodeNormal",
+    "Vector Math": "ShaderNodeVectorMath",
+    "Vector Rotate": "ShaderNodeVectorRotate",
+    "Curves": "ShaderNodeVectorCurve",
+    "Displacement": "ShaderNodeDisplacement",
+    "Mix": "ShaderNodeMix",
+    "Math": "ShaderNodeMath",
+    "Separate Color": "ShaderNodeSeparateColor",
+    "Combine Color": "ShaderNodeCombineColor",
+    "Separate XYZ": "ShaderNodeSeparateXYZ",
+    "Combine XYZ": "ShaderNodeCombineXYZ",
+    "Hue/Saturation": "ShaderNodeHueSaturation",
+    "Bright/Contrast": "ShaderNodeBrightContrast",
+    "Gamma": "ShaderNodeGamma",
+    "Invert Color": "ShaderNodeInvert",
+    "Color Balance": "ShaderNodeColorBalance",
+    # --- Compositor ---
+    "Composite": "CompositorNodeComposite",
+    "Render Layers": "CompositorNodeRLayers",
+    "Viewer": "CompositorNodeViewer",
+    "Split Viewer": "CompositorNodeSplitViewer",
+    "File Output": "CompositorNodeOutputFile",
+    "Glare": "CompositorNodeGlare",
+    "Blur": "CompositorNodeBlur",
+    "Denoise": "CompositorNodeDenoise",
+    "Alpha Over": "CompositorNodeAlphaOver",
+    "Hue Correct": "CompositorNodeHueCorrect",
+    "Curve RGB": "CompositorNodeCurveRGB",
+    "Levels": "CompositorNodeLevels",
+    "Color Correction": "CompositorNodeColorCorrection",
+    "Lens Distortion": "CompositorNodeLensdist",
+    "Map UV": "CompositorNodeMapUV",
+    "Defocus": "CompositorNodeDefocus",
+    "Double Edge Mask": "CompositorNodeDoubleEdgeMask",
+    "Cryptomatte": "CompositorNodeCryptomatte",
+    "Keying": "CompositorNodeKeying",
+    # --- Geometry Nodes ---
+    "Group Input": "NodeGroupInput",
+    "Group Output": "NodeGroupOutput",
+    "Transform Geometry": "GeometryNodeTransform",
+    "Set Position": "GeometryNodeSetPosition",
+    "Subdivision Surface": "GeometryNodeSubdivisionSurface",
+    "Mesh to Points": "GeometryNodeMeshToPoints",
+    "Instance on Points": "GeometryNodeInstanceOnPoints",
+    "Realize Instances": "GeometryNodeRealizeInstances",
+    "Join Geometry": "GeometryNodeJoinGeometry",
+    "Separate Geometry": "GeometryNodeSeparateGeometry",
+    "Delete Geometry": "GeometryNodeDeleteGeometry",
+    "Extrude Mesh": "GeometryNodeExtrudeMesh",
+    "Scale Elements": "GeometryNodeScaleElements",
+    "Mesh Boolean": "GeometryNodeMeshBoolean",
+    "Sample Nearest Surface": "GeometryNodeSampleNearestSurface",
+    "Sample Index": "GeometryNodeSampleIndex",
+    "Field at Index": "GeometryNodeFieldAtIndex",
+    "Random Value": "GeometryNodeInputRandom",
+    "Position": "GeometryNodeInputPosition",
+    "Normal": "GeometryNodeInputNormal",
+    "Index": "GeometryNodeInputIndex",
+    "ID": "GeometryNodeInputID",
+    "Collection Info": "GeometryNodeCollectionInfo",
+    "Object Info": "GeometryNodeObjectInfo",
+    "Material Selection": "GeometryNodeMaterialSelection",
+    "Set Material": "GeometryNodeSetMaterial",
+    "Set Material Index": "GeometryNodeSetMaterialIndex",
+    "Proximity": "GeometryNodeProximity",
+    "Raycast": "GeometryNodeRaycast",
+    "Distribute Points on Faces": "GeometryNodeDistributePointsOnFaces",
+    "Merge by Distance": "GeometryNodeMergeByDistance",
+    "Mesh to Curve": "GeometryNodeMeshToCurve",
+    "Curve to Mesh": "GeometryNodeCurveToMesh",
+    "Trim Curve": "GeometryNodeTrimCurve",
+    "Curve Length": "GeometryNodeCurveLength",
+    "Resample Curve": "GeometryNodeResampleCurve",
+    "Named Attribute": "GeometryNodeInputNamedAttribute",
+    "Store Named Attribute": "GeometryNodeStoreNamedAttribute",
+    "Switch": "GeometryNodeSwitch",
+    "BoundingBox": "GeometryNodeBoundBox",
+}
+
+
 def _get_node(node_tree, name_or_identifier: str):
     """Get a node by name, label, or bl_idname (type) fallback.
 
@@ -18,6 +152,7 @@ def _get_node(node_tree, name_or_identifier: str):
     the English names that LLMs typically use.  This helper tries:
     1. Exact name match  (``nodes.get(name)``).
     2. Match by ``bl_idname`` (node type identifier, always English).
+    3. English display-name lookup via ``_ENGLISH_NODE_NAMES`` mapping.
     """
     node = node_tree.nodes.get(name_or_identifier)
     if node:
@@ -25,7 +160,44 @@ def _get_node(node_tree, name_or_identifier: str):
     for node in node_tree.nodes:
         if node.bl_idname == name_or_identifier:
             return node
+    bl_idname = _ENGLISH_NODE_NAMES.get(name_or_identifier)
+    if bl_idname:
+        for node in node_tree.nodes:
+            if node.bl_idname == bl_idname:
+                return node
     return None
+
+
+_SOCKET_TYPE_FOR_VALUE = {
+    1: "VALUE",
+    3: "VECTOR",
+    4: "RGBA",
+}
+
+
+def _find_input_by_name_and_type(node, input_name: str, value: Any):
+    """Find an input socket by name, preferring the one whose type matches *value*.
+
+    Nodes like ShaderNodeMix have duplicate socket names (e.g. "A" appears as
+    VALUE, VECTOR, RGBA, ROTATION).  ``inputs.get(name)`` always returns the
+    first match which may be the wrong type.  This helper picks the socket
+    whose Blender type aligns with the Python value being assigned.
+    """
+    candidates = [inp for inp in node.inputs if inp.name == input_name]
+    if not candidates:
+        return node.inputs.get(input_name)
+    if len(candidates) == 1:
+        return candidates[0]
+
+    preferred_type = _SOCKET_TYPE_FOR_VALUE.get(
+        len(value) if isinstance(value, (list, tuple)) else 1, None
+    )
+    if preferred_type:
+        for inp in candidates:
+            if inp.type == preferred_type:
+                return inp
+
+    return candidates[0]
 
 
 def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
@@ -39,9 +211,17 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
     operations = payload.get("operations", [])
 
     if not tree_type or not context:
-        return _error(code="invalid_params", message="tree_type and context are required", started=started)
+        return _error(
+            code="invalid_params",
+            message="tree_type and context are required",
+            started=started,
+        )
     if not operations:
-        return _error(code="invalid_params", message="operations array is required", started=started)
+        return _error(
+            code="invalid_params",
+            message="operations array is required",
+            started=started,
+        )
 
     node_tree = _resolve_node_tree(bpy, payload)
     if node_tree is None:
@@ -53,17 +233,40 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
                 mat.use_nodes = True
                 node_tree = mat.node_tree
         if tree_type == "COMPOSITOR" and context == "SCENE":
-            scene = bpy.data.scenes.get(target) if target else bpy.context.scene
+            scene = None
+            if target:
+                scene = bpy.data.scenes.get(target)
+            if scene is None:
+                try:
+                    scene = bpy.context.scene
+                except Exception:
+                    pass
             if scene:
-                scene.use_nodes = True
+                if not scene.use_nodes:
+                    scene.use_nodes = True
                 node_tree = scene.node_tree
-        if tree_type == "GEOMETRY" and context == "MODIFIER" and target and "/" in target:
+        if (
+            tree_type == "GEOMETRY"
+            and context == "MODIFIER"
+            and target
+            and "/" in target
+        ):
             obj_name, mod_name = target.split("/", 1)
             obj = bpy.data.objects.get(obj_name)
             if obj:
                 mod = obj.modifiers.get(mod_name)
                 if mod and mod.type == "NODES" and not mod.node_group:
                     node_group = bpy.data.node_groups.new(mod_name, "GeometryNodeTree")
+                    node_group.interface.new_socket(
+                        name="Geometry",
+                        in_out="INPUT",
+                        socket_type="NodeSocketGeometry",
+                    )
+                    node_group.interface.new_socket(
+                        name="Geometry",
+                        in_out="OUTPUT",
+                        socket_type="NodeSocketGeometry",
+                    )
                     node_group.nodes.new("NodeGroupInput")
                     node_group.nodes.new("NodeGroupOutput")
                     mod.node_group = node_group
@@ -87,27 +290,58 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
                     node.label = op["name"]
                 if op.get("location"):
                     node.location = tuple(op["location"])
-                results.append({"op": i, "action": "add_node", "name": node.name, "ok": True})
+                results.append(
+                    {"op": i, "action": "add_node", "name": node.name, "ok": True}
+                )
 
             elif action == "remove_node":
                 node_name = op.get("name", "")
                 node = _get_node(node_tree, node_name)
                 if node:
                     node_tree.nodes.remove(node)
-                    results.append({"op": i, "action": "remove_node", "name": node_name, "ok": True})
+                    results.append(
+                        {
+                            "op": i,
+                            "action": "remove_node",
+                            "name": node_name,
+                            "ok": True,
+                        }
+                    )
                 else:
-                    results.append({"op": i, "action": "remove_node", "name": node_name, "ok": False, "error": "not found"})
+                    results.append(
+                        {
+                            "op": i,
+                            "action": "remove_node",
+                            "name": node_name,
+                            "ok": False,
+                            "error": "not found",
+                        }
+                    )
 
             elif action == "connect":
                 from_node = _get_node(node_tree, op.get("from_node", ""))
                 to_node = _get_node(node_tree, op.get("to_node", ""))
                 if not from_node or not to_node:
-                    results.append({"op": i, "action": "connect", "ok": False, "error": "node not found"})
+                    results.append(
+                        {
+                            "op": i,
+                            "action": "connect",
+                            "ok": False,
+                            "error": "node not found",
+                        }
+                    )
                     continue
                 from_socket = from_node.outputs.get(op.get("from_socket", ""))
                 to_socket = to_node.inputs.get(op.get("to_socket", ""))
                 if not from_socket or not to_socket:
-                    results.append({"op": i, "action": "connect", "ok": False, "error": "socket not found"})
+                    results.append(
+                        {
+                            "op": i,
+                            "action": "connect",
+                            "ok": False,
+                            "error": "socket not found",
+                        }
+                    )
                     continue
                 node_tree.links.new(from_socket, to_socket)
                 results.append({"op": i, "action": "connect", "ok": True})
@@ -123,9 +357,23 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
                             node_tree.links.remove(link)
                         results.append({"op": i, "action": "disconnect", "ok": True})
                     else:
-                        results.append({"op": i, "action": "disconnect", "ok": False, "error": "no link found"})
+                        results.append(
+                            {
+                                "op": i,
+                                "action": "disconnect",
+                                "ok": False,
+                                "error": "no link found",
+                            }
+                        )
                 else:
-                    results.append({"op": i, "action": "disconnect", "ok": False, "error": "node not found"})
+                    results.append(
+                        {
+                            "op": i,
+                            "action": "disconnect",
+                            "ok": False,
+                            "error": "node not found",
+                        }
+                    )
 
             elif action == "set_value":
                 node_name = op.get("node", "")
@@ -133,17 +381,41 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
                 value = op.get("value")
                 node = _get_node(node_tree, node_name)
                 if node:
-                    inp = node.inputs.get(input_name)
+                    inp = _find_input_by_name_and_type(node, input_name, value)
                     if inp and hasattr(inp, "default_value"):
-                        if isinstance(value, list):
-                            inp.default_value = type(inp.default_value)(value)
-                        else:
-                            inp.default_value = value
-                        results.append({"op": i, "action": "set_value", "ok": True})
+                        try:
+                            if isinstance(value, (list, tuple)):
+                                inp.default_value = tuple(value)
+                            else:
+                                inp.default_value = value
+                            results.append({"op": i, "action": "set_value", "ok": True})
+                        except (TypeError, ValueError) as exc:
+                            results.append(
+                                {
+                                    "op": i,
+                                    "action": "set_value",
+                                    "ok": False,
+                                    "error": str(exc),
+                                }
+                            )
                     else:
-                        results.append({"op": i, "action": "set_value", "ok": False, "error": "input not found"})
+                        results.append(
+                            {
+                                "op": i,
+                                "action": "set_value",
+                                "ok": False,
+                                "error": "input not found",
+                            }
+                        )
                 else:
-                    results.append({"op": i, "action": "set_value", "ok": False, "error": "node not found"})
+                    results.append(
+                        {
+                            "op": i,
+                            "action": "set_value",
+                            "ok": False,
+                            "error": "node not found",
+                        }
+                    )
 
             elif action == "set_property":
                 node_name = op.get("node", "")
@@ -154,19 +426,36 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
                     setattr(node, prop_name, value)
                     results.append({"op": i, "action": "set_property", "ok": True})
                 else:
-                    results.append({"op": i, "action": "set_property", "ok": False, "error": "node or property not found"})
+                    results.append(
+                        {
+                            "op": i,
+                            "action": "set_property",
+                            "ok": False,
+                            "error": "node or property not found",
+                        }
+                    )
 
             else:
-                results.append({"op": i, "action": action, "ok": False, "error": f"unknown action: {action}"})
+                results.append(
+                    {
+                        "op": i,
+                        "action": action,
+                        "ok": False,
+                        "error": f"unknown action: {action}",
+                    }
+                )
 
         except Exception as exc:
             results.append({"op": i, "action": action, "ok": False, "error": str(exc)})
 
     success_count = sum(1 for r in results if r.get("ok"))
-    return _ok(result={
-        "tree_name": node_tree.name,
-        "operations_total": len(operations),
-        "operations_succeeded": success_count,
-        "operations_failed": len(operations) - success_count,
-        "details": results,
-    }, started=started)
+    return _ok(
+        result={
+            "tree_name": node_tree.name,
+            "operations_total": len(operations),
+            "operations_succeeded": success_count,
+            "operations_failed": len(operations) - success_count,
+            "details": results,
+        },
+        started=started,
+    )
