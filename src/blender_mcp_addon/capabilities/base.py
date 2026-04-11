@@ -611,14 +611,23 @@ def execute_capability(request: dict[str, Any]) -> dict[str, Any]:
         )
     except Exception as exc:
         import traceback
-
         tb = traceback.format_exc()
         try:
             import bpy
-
-            txt = bpy.data.texts.get("__mcp_diag__") or bpy.data.texts.new(
-                "__mcp_diag__"
-            )
+            txt = bpy.data.texts.get("__mcp_diag__") or bpy.data.texts.new("__mcp_diag__")
+            txt.clear()
+            txt.write(f"{type(exc).__name__}: {exc}\n\n{tb}")
+            obj = bpy.context.view_layer.objects.active
+            if obj:
+                obj["mcp_diag"] = f"{type(exc).__name__}: {exc}\n{tb[:500]}"
+        except Exception:
+            pass
+        return _error(
+            code="addon_exception",
+            message=f"unhandled: {type(exc).__name__}: {exc}",
+            data={"traceback": tb},
+            started=started,
+        )
             txt.clear()
             txt.write(f"{type(exc).__name__}: {exc}\n\n{tb}")
         except Exception:
