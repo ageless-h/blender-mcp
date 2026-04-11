@@ -613,6 +613,7 @@ def execute_capability(request: dict[str, Any]) -> dict[str, Any]:
         import traceback
 
         tb = traceback.format_exc()
+        print(f"[MCP-ERROR] {type(exc).__name__}: {exc}\n{tb}")
         return _error(
             code="addon_exception",
             message=f"unhandled: {type(exc).__name__}: {exc}",
