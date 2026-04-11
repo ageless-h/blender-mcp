@@ -91,8 +91,11 @@ def _resolve_node_tree(bpy: Any, payload: dict[str, Any]) -> Any:
                 scene = bpy.context.scene
             except Exception:
                 pass
-        if scene and scene.use_nodes and scene.node_tree:
-            return scene.node_tree
+        if scene and hasattr(scene, "use_nodes"):
+            if not scene.use_nodes:
+                scene.use_nodes = True
+            if scene.use_nodes and scene.node_tree:
+                return scene.node_tree
         return None
 
     elif tree_type == "GEOMETRY":
