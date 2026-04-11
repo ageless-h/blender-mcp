@@ -58,8 +58,16 @@ def _handle_get_object_data(payload: dict[str, Any], started: float) -> dict[str
 
 def _handle_get_node_tree(payload: dict[str, Any], started: float) -> dict[str, Any]:
     from ..handlers.nodes.reader import node_tree_read
-
-    return node_tree_read(payload, started=started)
+    try:
+        return node_tree_read(payload, started=started)
+    except Exception as exc:
+        import traceback
+        return _error(
+            code="node_tree_read_crash",
+            message=f"CRASH: {type(exc).__name__}: {exc}",
+            data={"tb": traceback.format_exc()},
+            started=started,
+        )
 
 
 def _handle_get_animation_data(
