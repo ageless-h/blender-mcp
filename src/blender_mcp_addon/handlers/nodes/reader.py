@@ -119,7 +119,14 @@ def node_tree_read(payload: dict[str, Any], *, started: float) -> dict[str, Any]
             started=started,
         )
 
-    node_tree = _resolve_node_tree(bpy, payload)
+    try:
+        node_tree = _resolve_node_tree(bpy, payload)
+    except Exception as exc:
+        return _error(
+            code="operation_failed",
+            message=f"_resolve_node_tree raised {type(exc).__name__}: {exc}",
+            started=started,
+        )
     if node_tree is None:
         return _error(
             code="not_found",
@@ -128,8 +135,15 @@ def node_tree_read(payload: dict[str, Any], *, started: float) -> dict[str, Any]
         )
 
     depth = payload.get("depth", "summary")
-    nodes = [_read_node(n, depth) for n in node_tree.nodes]
-    links = [_read_link(l) for l in node_tree.links] if depth == "full" else []
+    try:
+        nodes = [_read_node(n, depth) for n in node_tree.nodes]
+        links = [_read_link(l) for l in node_tree.links] if depth == "full" else []
+    except Exception as exc:
+        return _error(
+            code="operation_failed",
+            message=f"node tree read failed: {type(exc).__name__}: {exc}",
+            started=started,
+        )
 
     return _ok(
         result={

@@ -53,7 +53,10 @@ def sequencer_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
         tb = traceback.format_exc()
         logger.error("Sequencer %s failed: %s\n%s", action, exc, tb)
         return _error(
-            code="operation_failed", message=f"{action} failed: {exc}", started=started
+            code="operation_failed",
+            message=f"{action} failed: {exc}",
+            data={"traceback": tb},
+            started=started,
         )
 
 
