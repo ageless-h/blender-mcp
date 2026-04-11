@@ -94,8 +94,17 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
                 mat.use_nodes = True
                 node_tree = mat.node_tree
         if tree_type == "COMPOSITOR" and context == "SCENE":
-            scene = bpy.data.scenes.get(target) if target else bpy.context.scene
-            if scene and scene.use_nodes and scene.node_tree:
+            scene = None
+            if target:
+                scene = bpy.data.scenes.get(target)
+            if scene is None:
+                try:
+                    scene = bpy.context.scene
+                except Exception:
+                    pass
+            if scene:
+                if not scene.use_nodes:
+                    scene.use_nodes = True
                 node_tree = scene.node_tree
         if (
             tree_type == "GEOMETRY"

@@ -83,9 +83,19 @@ def _resolve_node_tree(bpy: Any, payload: dict[str, Any]) -> Any:
             return None
 
     elif tree_type == "COMPOSITOR":
-        scene = bpy.data.scenes.get(target) if target else bpy.context.scene
-        if scene and scene.use_nodes and scene.node_tree:
-            return scene.node_tree
+        scene = None
+        if target:
+            scene = bpy.data.scenes.get(target)
+        if scene is None:
+            try:
+                scene = bpy.context.scene
+            except Exception:
+                pass
+        if scene:
+            if not scene.use_nodes:
+                scene.use_nodes = True
+            if scene.use_nodes and scene.node_tree:
+                return scene.node_tree
         return None
 
     elif tree_type == "GEOMETRY":

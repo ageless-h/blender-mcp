@@ -23,7 +23,14 @@ def sequencer_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
             code="invalid_params", message="action is required", started=started
         )
 
-    scene = bpy.context.scene
+    try:
+        scene = bpy.context.scene
+    except Exception:
+        scene = next(iter(bpy.data.scenes), None)
+    if scene is None:
+        return _error(
+            code="operation_failed", message="No scene available", started=started
+        )
     if not scene.sequence_editor:
         scene.sequence_editor_create()
     sed = scene.sequence_editor
