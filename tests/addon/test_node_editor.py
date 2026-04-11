@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Unit tests for node editor helpers, including localization fallback."""
+
 from __future__ import annotations
 
 import unittest
@@ -39,6 +40,7 @@ class TestGetNode(unittest.TestCase):
 
     def _get_node(self, node_tree, name_or_identifier):
         from blender_mcp_addon.handlers.nodes.editor import _get_node
+
         return _get_node(node_tree, name_or_identifier)
 
     def test_exact_name_match(self):
@@ -94,6 +96,83 @@ class TestGetNode(unittest.TestCase):
         result = self._get_node(tree, "ShaderNodeOutputMaterial")
         # Should get one of them (first encountered)
         self.assertIn(result, [node_a, node_b])
+
+
+class TestGetNodeEnglishFallback(unittest.TestCase):
+    """Tests for English display-name fallback in _get_node."""
+
+    def _get_node(self, node_tree, name_or_identifier):
+        from blender_mcp_addon.handlers.nodes.editor import _get_node
+
+        return _get_node(node_tree, name_or_identifier)
+
+    def test_principled_bsdf_english_name_in_chinese_blender(self):
+        """LLM passes 'Principled BSDF' → finds localized node."""
+        node = _MockNode("原理化 BSDF", "ShaderNodeBsdfPrincipled")
+        tree = _MockNodeTree([node])
+        self.assertIs(self._get_node(tree, "Principled BSDF"), node)
+
+    def test_material_output_english_name_in_chinese_blender(self):
+        """LLM passes 'Material Output' → finds localized node."""
+        node = _MockNode("材质输出", "ShaderNodeOutputMaterial")
+        tree = _MockNodeTree([node])
+        self.assertIs(self._get_node(tree, "Material Output"), node)
+
+    def test_group_input_english_name_in_chinese_blender(self):
+        """LLM passes 'Group Input' → finds localized node."""
+        node = _MockNode("组输入", "NodeGroupInput")
+        tree = _MockNodeTree([node])
+        self.assertIs(self._get_node(tree, "Group Input"), node)
+
+    def test_group_output_english_name_in_chinese_blender(self):
+        """LLM passes 'Group Output' → finds localized node."""
+        node = _MockNode("组输出", "NodeGroupOutput")
+        tree = _MockNodeTree([node])
+        self.assertIs(self._get_node(tree, "Group Output"), node)
+
+    def test_noise_texture_english_name_in_chinese_blender(self):
+        """LLM passes 'Noise Texture' → finds localized node."""
+        node = _MockNode("噪波纹理", "ShaderNodeTexNoise")
+        tree = _MockNodeTree([node])
+        self.assertIs(self._get_node(tree, "Noise Texture"), node)
+
+    def test_image_texture_english_name_in_japanese_blender(self):
+        """LLM passes 'Image Texture' → finds Japanese-localized node."""
+        node = _MockNode("画像テクスチャ", "ShaderNodeTexImage")
+        tree = _MockNodeTree([node])
+        self.assertIs(self._get_node(tree, "Image Texture"), node)
+
+    def test_subdivision_surface_english_name_in_chinese_blender(self):
+        """LLM passes 'Subdivision Surface' → finds localized geo node."""
+        node = _MockNode("细分表面", "GeometryNodeSubdivisionSurface")
+        tree = _MockNodeTree([node])
+        self.assertIs(self._get_node(tree, "Subdivision Surface"), node)
+
+    def test_render_layers_english_name_in_chinese_blender(self):
+        """LLM passes 'Render Layers' → finds localized compositor node."""
+        node = _MockNode("渲染层", "CompositorNodeRLayers")
+        tree = _MockNodeTree([node])
+        self.assertIs(self._get_node(tree, "Render Layers"), node)
+
+    def test_exact_name_still_takes_priority(self):
+        """If a custom node is literally named 'Principled BSDF', it wins."""
+        custom = _MockNode("Principled BSDF", "ShaderNodeCustomType")
+        localized = _MockNode("原理化 BSDF", "ShaderNodeBsdfPrincipled")
+        tree = _MockNodeTree([custom, localized])
+        self.assertIs(self._get_node(tree, "Principled BSDF"), custom)
+
+    def test_bl_idname_still_takes_priority_over_english_name(self):
+        """bl_idname match is preferred over English name mapping."""
+        node = _MockNode("SomeOtherName", "ShaderNodeBsdfPrincipled")
+        tree = _MockNodeTree([node])
+        # "ShaderNodeBsdfPrincipled" matches by bl_idname directly
+        self.assertIs(self._get_node(tree, "ShaderNodeBsdfPrincipled"), node)
+
+    def test_unknown_english_name_returns_none(self):
+        """English name not in mapping still returns None."""
+        node = _MockNode("SomeNode", "SomeType")
+        tree = _MockNodeTree([node])
+        self.assertIsNone(self._get_node(tree, "Nonexistent Display Name"))
 
 
 if __name__ == "__main__":

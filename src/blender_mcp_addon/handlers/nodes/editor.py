@@ -12,6 +12,139 @@ from .reader import _resolve_node_tree
 logger = logging.getLogger(__name__)
 
 
+# English display names that LLMs commonly use → bl_idname identifiers.
+# In localized Blender, default nodes get renamed (e.g. "Principled BSDF"
+# becomes "原理化 BSDF" in Chinese), but bl_idname is always stable.
+_ENGLISH_NODE_NAMES: dict[str, str] = {
+    # --- Shader ---
+    "Principled BSDF": "ShaderNodeBsdfPrincipled",
+    "Material Output": "ShaderNodeOutputMaterial",
+    "Diffuse BSDF": "ShaderNodeBsdfDiffuse",
+    "Glossy BSDF": "ShaderNodeBsdfGlossy",
+    "Glass BSDF": "ShaderNodeBsdfGlass",
+    "Emission": "ShaderNodeEmission",
+    "Mix Shader": "ShaderNodeMixShader",
+    "Add Shader": "ShaderNodeAddShader",
+    "Transparent BSDF": "ShaderNodeBsdfTransparent",
+    "Refraction BSDF": "ShaderNodeBsdfRefraction",
+    "Subsurface Scattering": "ShaderNodeSubsurfaceScattering",
+    "Holdout": "ShaderNodeHoldout",
+    "Ambient Occlusion": "ShaderNodeAmbientOcclusion",
+    "Volume Scatter": "ShaderNodeVolumeScatter",
+    "Volume Absorption": "ShaderNodeVolumeAbsorption",
+    "Principled Volume": "ShaderNodeVolumePrincipled",
+    # --- Shader Inputs ---
+    "Texture Coordinate": "ShaderNodeTexCoord",
+    "Mapping": "ShaderNodeMapping",
+    "Attribute": "ShaderNodeAttribute",
+    "Fresnel": "ShaderNodeFresnel",
+    "Layer Weight": "ShaderNodeLayerWeight",
+    "Light Path": "ShaderNodeLightPath",
+    "Object Info": "ShaderNodeObjectInfo",
+    "Particle Info": "ShaderNodeParticleInfo",
+    "Camera Data": "ShaderNodeCameraData",
+    "New Geometry": "ShaderNodeNewGeometry",
+    "Wireframe": "ShaderNodeWireframe",
+    "UV Map": "ShaderNodeUVMap",
+    "Value": "ShaderNodeValue",
+    "RGB": "ShaderNodeRGB",
+    "Color Ramp": "ShaderNodeValToRGB",
+    "Curve Time": "ShaderNodeCurveTime",
+    # --- Shader Textures ---
+    "Image Texture": "ShaderNodeTexImage",
+    "Environment Texture": "ShaderNodeTexEnvironment",
+    "Noise Texture": "ShaderNodeTexNoise",
+    "Musgrave Texture": "ShaderNodeTexMusgrave",
+    "Voronoi Texture": "ShaderNodeTexVoronoi",
+    "Brick Texture": "ShaderNodeTexBrick",
+    "Checker Texture": "ShaderNodeTexChecker",
+    "Gradient Texture": "ShaderNodeTexGradient",
+    "Magic Texture": "ShaderNodeTexMagic",
+    "Wave Texture": "ShaderNodeTexWave",
+    "Color Attribute": "ShaderNodeColorAttribute",
+    # --- Shader Vector ---
+    "Bump": "ShaderNodeBump",
+    "Normal Map": "ShaderNodeNormalMap",
+    "Normal": "ShaderNodeNormal",
+    "Vector Math": "ShaderNodeVectorMath",
+    "Vector Rotate": "ShaderNodeVectorRotate",
+    "Curves": "ShaderNodeVectorCurve",
+    "Displacement": "ShaderNodeDisplacement",
+    "Mix": "ShaderNodeMix",
+    "Math": "ShaderNodeMath",
+    "Separate Color": "ShaderNodeSeparateColor",
+    "Combine Color": "ShaderNodeCombineColor",
+    "Separate XYZ": "ShaderNodeSeparateXYZ",
+    "Combine XYZ": "ShaderNodeCombineXYZ",
+    "Hue/Saturation": "ShaderNodeHueSaturation",
+    "Bright/Contrast": "ShaderNodeBrightContrast",
+    "Gamma": "ShaderNodeGamma",
+    "Invert Color": "ShaderNodeInvert",
+    "Color Balance": "ShaderNodeColorBalance",
+    # --- Compositor ---
+    "Composite": "CompositorNodeComposite",
+    "Render Layers": "CompositorNodeRLayers",
+    "Viewer": "CompositorNodeViewer",
+    "Split Viewer": "CompositorNodeSplitViewer",
+    "File Output": "CompositorNodeOutputFile",
+    "Glare": "CompositorNodeGlare",
+    "Blur": "CompositorNodeBlur",
+    "Denoise": "CompositorNodeDenoise",
+    "Alpha Over": "CompositorNodeAlphaOver",
+    "Hue Correct": "CompositorNodeHueCorrect",
+    "Curve RGB": "CompositorNodeCurveRGB",
+    "Levels": "CompositorNodeLevels",
+    "Color Correction": "CompositorNodeColorCorrection",
+    "Lens Distortion": "CompositorNodeLensdist",
+    "Map UV": "CompositorNodeMapUV",
+    "Defocus": "CompositorNodeDefocus",
+    "Double Edge Mask": "CompositorNodeDoubleEdgeMask",
+    "Cryptomatte": "CompositorNodeCryptomatte",
+    "Keying": "CompositorNodeKeying",
+    # --- Geometry Nodes ---
+    "Group Input": "NodeGroupInput",
+    "Group Output": "NodeGroupOutput",
+    "Transform Geometry": "GeometryNodeTransform",
+    "Set Position": "GeometryNodeSetPosition",
+    "Subdivision Surface": "GeometryNodeSubdivisionSurface",
+    "Mesh to Points": "GeometryNodeMeshToPoints",
+    "Instance on Points": "GeometryNodeInstanceOnPoints",
+    "Realize Instances": "GeometryNodeRealizeInstances",
+    "Join Geometry": "GeometryNodeJoinGeometry",
+    "Separate Geometry": "GeometryNodeSeparateGeometry",
+    "Delete Geometry": "GeometryNodeDeleteGeometry",
+    "Extrude Mesh": "GeometryNodeExtrudeMesh",
+    "Scale Elements": "GeometryNodeScaleElements",
+    "Mesh Boolean": "GeometryNodeMeshBoolean",
+    "Sample Nearest Surface": "GeometryNodeSampleNearestSurface",
+    "Sample Index": "GeometryNodeSampleIndex",
+    "Field at Index": "GeometryNodeFieldAtIndex",
+    "Random Value": "GeometryNodeInputRandom",
+    "Position": "GeometryNodeInputPosition",
+    "Normal": "GeometryNodeInputNormal",
+    "Index": "GeometryNodeInputIndex",
+    "ID": "GeometryNodeInputID",
+    "Collection Info": "GeometryNodeCollectionInfo",
+    "Object Info": "GeometryNodeObjectInfo",
+    "Material Selection": "GeometryNodeMaterialSelection",
+    "Set Material": "GeometryNodeSetMaterial",
+    "Set Material Index": "GeometryNodeSetMaterialIndex",
+    "Proximity": "GeometryNodeProximity",
+    "Raycast": "GeometryNodeRaycast",
+    "Distribute Points on Faces": "GeometryNodeDistributePointsOnFaces",
+    "Merge by Distance": "GeometryNodeMergeByDistance",
+    "Mesh to Curve": "GeometryNodeMeshToCurve",
+    "Curve to Mesh": "GeometryNodeCurveToMesh",
+    "Trim Curve": "GeometryNodeTrimCurve",
+    "Curve Length": "GeometryNodeCurveLength",
+    "Resample Curve": "GeometryNodeResampleCurve",
+    "Named Attribute": "GeometryNodeInputNamedAttribute",
+    "Store Named Attribute": "GeometryNodeStoreNamedAttribute",
+    "Switch": "GeometryNodeSwitch",
+    "BoundingBox": "GeometryNodeBoundBox",
+}
+
+
 def _get_node(node_tree, name_or_identifier: str):
     """Get a node by name, label, or bl_idname (type) fallback.
 
@@ -19,6 +152,7 @@ def _get_node(node_tree, name_or_identifier: str):
     the English names that LLMs typically use.  This helper tries:
     1. Exact name match  (``nodes.get(name)``).
     2. Match by ``bl_idname`` (node type identifier, always English).
+    3. English display-name lookup via ``_ENGLISH_NODE_NAMES`` mapping.
     """
     node = node_tree.nodes.get(name_or_identifier)
     if node:
@@ -26,6 +160,11 @@ def _get_node(node_tree, name_or_identifier: str):
     for node in node_tree.nodes:
         if node.bl_idname == name_or_identifier:
             return node
+    bl_idname = _ENGLISH_NODE_NAMES.get(name_or_identifier)
+    if bl_idname:
+        for node in node_tree.nodes:
+            if node.bl_idname == bl_idname:
+                return node
     return None
 
 
