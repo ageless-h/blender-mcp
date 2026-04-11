@@ -610,9 +610,12 @@ def execute_capability(request: dict[str, Any]) -> dict[str, Any]:
             started=started,
         )
     except Exception as exc:
+        import traceback
+
+        tb = traceback.format_exc()
         return _error(
             code="addon_exception",
-            message="unhandled addon exception",
-            data={"type": type(exc).__name__, "message": str(exc)},
+            message=f"unhandled: {type(exc).__name__}: {exc}",
+            data={"traceback": tb},
             started=started,
         )
