@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Info query implementation for retrieving Blender state and metadata."""
+
 from __future__ import annotations
 
 import base64
@@ -11,8 +12,11 @@ from enum import Enum
 from typing import Any
 
 from ..response import (
-    _ok, check_bpy_available, bpy_unavailable_error,
-    invalid_params_error, operation_failed_error,
+    _ok,
+    check_bpy_available,
+    bpy_unavailable_error,
+    invalid_params_error,
+    operation_failed_error,
 )
 
 logger = logging.getLogger(__name__)
@@ -20,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 class InfoType(str, Enum):
     """Supported info query types."""
+
     REPORTS = "reports"
     LAST_OP = "last_op"
     UNDO_HISTORY = "undo_history"
@@ -40,7 +45,14 @@ _change_tracking: dict[str, set[str]] = {
 }
 
 
-def record_last_op(operator: str, success: bool, result: str, reports: list[dict[str, Any]], duration_ms: float, params: dict[str, Any]) -> None:
+def record_last_op(
+    operator: str,
+    success: bool,
+    result: str,
+    reports: list[dict[str, Any]],
+    duration_ms: float,
+    params: dict[str, Any],
+) -> None:
     """Record last operation info for later query."""
     global _last_op_info
     _last_op_info = {
@@ -55,24 +67,24 @@ def record_last_op(operator: str, success: bool, result: str, reports: list[dict
 
 def info_query(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
     """Execute an info.query operation.
-    
+
     Args:
         payload: Query parameters:
             - type: Query type (reports, last_op, undo_history, etc.)
             - params: Type-specific parameters
         started: Start time for timing
-        
+
     Returns:
         Response dict with query result
     """
     available, bpy = check_bpy_available()
     if not available:
         return bpy_unavailable_error(started)
-    
+
     query_type = payload.get("type")
     if not query_type:
         return invalid_params_error("'type' parameter is required", started)
-    
+
     try:
         info_type = InfoType(query_type.lower())
     except ValueError:
@@ -81,9 +93,9 @@ def info_query(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
             f"Invalid query type: {query_type}. Valid types: {valid_types}",
             started,
         )
-    
+
     params = payload.get("params", {})
-    
+
     try:
         if info_type == InfoType.REPORTS:
             result = _query_reports(bpy, params)
@@ -106,8 +118,10 @@ def info_query(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
         elif info_type == InfoType.MEMORY:
             result = _query_memory(bpy, params)
         else:
-            return invalid_params_error(f"Query type not implemented: {query_type}", started)
-        
+            return invalid_params_error(
+                f"Query type not implemented: {query_type}", started
+            )
+
         return _ok(result=result, started=started)
     except Exception as exc:
         return operation_failed_error("info.query", exc, started)
@@ -116,19 +130,21 @@ def info_query(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
 def _query_reports(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
     """Query recent operation reports."""
     limit = params.get("limit", 50)
-    
+
     reports = []
     try:
         wm = bpy.context.window_manager
         if hasattr(wm, "reports"):
             for report in list(wm.reports)[-limit:]:
-                reports.append({
-                    "type": report.type,
-                    "message": report.message,
-                })
+                reports.append(
+                    {
+                        "type": report.type,
+                        "message": report.message,
+                    }
+                )
     except Exception as exc:
         logger.debug("Failed to query reports: %s", exc)
-    
+
     return {"reports": reports, "count": len(reports)}
 
 
@@ -136,7 +152,7 @@ def _query_last_op(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
     """Query last executed operation info."""
     if _last_op_info:
         return dict(_last_op_info)
-    
+
     return {
         "operator": None,
         "success": None,
@@ -151,20 +167,22 @@ def _query_undo_history(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
     """Query undo history."""
     history = []
     current_step = 0
-    
+
     try:
         wm = bpy.context.window_manager
         if hasattr(wm, "undo_stack"):
             for i, step in enumerate(wm.undo_stack):
-                history.append({
-                    "index": i,
-                    "name": step.name if hasattr(step, "name") else f"Step {i}",
-                })
+                history.append(
+                    {
+                        "index": i,
+                        "name": step.name if hasattr(step, "name") else f"Step {i}",
+                    }
+                )
                 if hasattr(step, "is_current") and step.is_current:
                     current_step = i
     except Exception as exc:
         logger.debug("Failed to query undo history: %s", exc)
-    
+
     return {
         "history": history,
         "current_step": current_step,
@@ -177,14 +195,14 @@ def _query_scene_stats(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
     """Query scene statistics."""
     scene = bpy.context.scene
     depsgraph = bpy.context.evaluated_depsgraph_get()
-    
+
     total_verts = 0
     total_edges = 0
     total_faces = 0
     mesh_objects = 0
-    
+
     for obj in scene.objects:
-        if obj.type == 'MESH':
+        if obj.type == "MESH":
             mesh_objects += 1
             try:
                 obj_eval = obj.evaluated_get(depsgraph)
@@ -196,16 +214,17 @@ def _query_scene_stats(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
                     obj_eval.to_mesh_clear()
             except Exception as exc:
                 logger.debug("Failed to evaluate mesh for '%s': %s", obj.name, exc)
-    
+
     memory_stats = {}
     try:
         if hasattr(bpy.utils, "resource_path"):
             import resource
+
             mem_info = resource.getrusage(resource.RUSAGE_SELF)
             memory_stats["peak_mb"] = mem_info.ru_maxrss / 1024.0
     except Exception as exc:
         logger.debug("Failed to query memory stats: %s", exc)
-    
+
     return {
         "scene_name": scene.name,
         "object_count": len(scene.objects),
@@ -256,8 +275,9 @@ def _query_selection(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
     if mode == "EDIT_MESH" and active_name:
         try:
             obj = bpy.context.view_layer.objects.active
-            if obj is not None and obj.type == 'MESH' and obj.data is not None:
+            if obj is not None and obj.type == "MESH" and obj.data is not None:
                 import bmesh
+
                 bm = bmesh.from_edit_mesh(obj.data)
                 result["edit_mesh"] = {
                     "selected_verts": sum(1 for v in bm.verts if v.select),
@@ -276,7 +296,7 @@ def _query_selection(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
 def _query_mode(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
     """Query current editing mode."""
     ctx = bpy.context
-    
+
     mode_string = ctx.mode
     mode_map = {
         "OBJECT": "Object Mode",
@@ -298,7 +318,7 @@ def _query_mode(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
         "SCULPT_GPENCIL": "Sculpt (Grease Pencil)",
         "WEIGHT_GPENCIL": "Weight (Grease Pencil)",
     }
-    
+
     active_tool = None
     try:
         if ctx.workspace and ctx.workspace.tools:
@@ -308,7 +328,7 @@ def _query_mode(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
                     break
     except Exception:
         pass
-    
+
     return {
         "mode": mode_string,
         "mode_string": mode_map.get(mode_string, mode_string),
@@ -322,84 +342,87 @@ def _query_mode(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
 def _query_changes(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
     """Query changes since last query (basic implementation)."""
     global _change_tracking
-    
+
     result = {
         "modified_objects": list(_change_tracking["modified_objects"]),
         "added_objects": list(_change_tracking["added_objects"]),
         "deleted_objects": list(_change_tracking["deleted_objects"]),
     }
-    
+
     if params.get("clear", True):
         _change_tracking = {
             "modified_objects": set(),
             "added_objects": set(),
             "deleted_objects": set(),
         }
-    
+
     return result
 
 
 def _query_viewport_capture(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
-    """Capture viewport image."""
+    """Capture viewport image with optional thumbnail compression."""
     output_format = params.get("format", "base64")
     resolution = params.get("resolution")
     shading = params.get("shading")
-    
+    thumbnail = params.get("thumbnail", True)
+    max_size = params.get("max_size", 320)
+
     screen = getattr(bpy.context, "screen", None)
     if screen is None:
         raise RuntimeError(
             "No screen context available. Viewport capture requires a GUI "
             "window and cannot run in headless or background mode."
         )
-    
+
     with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
         tmp_path = tmp.name
-    
+
     try:
         for area in screen.areas:
-            if area.type == 'VIEW_3D':
+            if area.type == "VIEW_3D":
                 for space in area.spaces:
-                    if space.type == 'VIEW_3D':
+                    if space.type == "VIEW_3D":
                         original_shading = space.shading.type
                         if shading:
                             space.shading.type = shading.upper()
-                        
+
                         try:
                             override = {
                                 "area": area,
-                                "region": [r for r in area.regions if r.type == 'WINDOW'][0],
+                                "region": [
+                                    r for r in area.regions if r.type == "WINDOW"
+                                ][0],
                             }
-                            
+
                             if resolution:
                                 with bpy.context.temp_override(**override):
                                     bpy.ops.render.opengl(write_still=True)
-                                    bpy.data.images["Render Result"].save_render(tmp_path)
+                                    bpy.data.images["Render Result"].save_render(
+                                        tmp_path
+                                    )
                             else:
                                 with bpy.context.temp_override(**override):
                                     bpy.ops.screen.screenshot(filepath=tmp_path)
                         finally:
                             if shading:
                                 space.shading.type = original_shading
-                        
+
                         break
                 break
-        
+
         if output_format == "base64":
-            with open(tmp_path, "rb") as f:
-                data = f.read()
-            
-            import struct
-            width, height = 0, 0
-            if len(data) > 24:
-                w, h = struct.unpack(">II", data[16:24])
-                width, height = w, h
-            
+            image_data, width, height, mime_type = _encode_image(
+                bpy,
+                tmp_path,
+                thumbnail=thumbnail,
+                max_size=max_size,
+            )
             return {
                 "format": "base64",
-                "data": base64.b64encode(data).decode("utf-8"),
+                "data": image_data,
                 "width": width,
                 "height": height,
-                "mime_type": "image/png",
+                "mime_type": mime_type,
             }
         else:
             return {
@@ -412,6 +435,57 @@ def _query_viewport_capture(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
         raise
 
 
+def _encode_image(
+    bpy: Any,
+    filepath: str,
+    *,
+    thumbnail: bool = True,
+    max_size: int = 320,
+) -> tuple[str, int, int, str]:
+    """Load image from *filepath*, optionally resize, return (base64, w, h, mime)."""
+    with open(filepath, "rb") as f:
+        raw_data = f.read()
+
+    import struct
+
+    width, height = 0, 0
+    if len(raw_data) > 24:
+        width, height = struct.unpack(">II", raw_data[16:24])
+
+    if not thumbnail or width == 0 or height == 0:
+        return base64.b64encode(raw_data).decode("utf-8"), width, height, "image/png"
+
+    if width <= max_size and height <= max_size:
+        return base64.b64encode(raw_data).decode("utf-8"), width, height, "image/png"
+
+    img = bpy.data.images.load(filepath, check_existing=False)
+    try:
+        scale = max_size / max(width, height)
+        new_w = max(1, int(width * scale))
+        new_h = max(1, int(height * scale))
+        img.scale(new_w, new_h)
+
+        thumb_path = filepath + "_thumb.jpg"
+        img.filepath_raw = thumb_path
+        img.file_format = "JPEG"
+        bpy.context.scene.render.image_settings.quality = 50
+        img.save()
+
+        with open(thumb_path, "rb") as f:
+            thumb_data = f.read()
+        if os.path.exists(thumb_path):
+            os.remove(thumb_path)
+
+        return (
+            base64.b64encode(thumb_data).decode("utf-8"),
+            new_w,
+            new_h,
+            "image/jpeg",
+        )
+    finally:
+        bpy.data.images.remove(img)
+
+
 def _query_version(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
     """Query Blender version information."""
     return {
@@ -420,8 +494,12 @@ def _query_version(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
         "api_version": list(bpy.app.version) if hasattr(bpy.app, "version") else None,
         "python_version": sys.version,
         "python_version_info": list(sys.version_info[:3]),
-        "build_date": bpy.app.build_date.decode() if hasattr(bpy.app, "build_date") else None,
-        "build_hash": bpy.app.build_hash.decode() if hasattr(bpy.app, "build_hash") else None,
+        "build_date": bpy.app.build_date.decode()
+        if hasattr(bpy.app, "build_date")
+        else None,
+        "build_hash": bpy.app.build_hash.decode()
+        if hasattr(bpy.app, "build_hash")
+        else None,
     }
 
 
@@ -432,34 +510,42 @@ def _query_memory(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
         "used_mb": None,
         "peak_mb": None,
     }
-    
+
     try:
         import psutil
+
         process = psutil.Process()
         mem_info = process.memory_info()
         result["used_mb"] = mem_info.rss / (1024 * 1024)
-        result["peak_mb"] = mem_info.peak_wset / (1024 * 1024) if hasattr(mem_info, "peak_wset") else None
-        
+        result["peak_mb"] = (
+            mem_info.peak_wset / (1024 * 1024)
+            if hasattr(mem_info, "peak_wset")
+            else None
+        )
+
         vm = psutil.virtual_memory()
         result["total_mb"] = vm.total / (1024 * 1024)
     except ImportError:
         pass
     except Exception:
         pass
-    
+
     categories = {}
     try:
         categories["meshes"] = sum(
-            m.calc_loop_triangles_count() * 12 if hasattr(m, "calc_loop_triangles_count") else 0
+            m.calc_loop_triangles_count() * 12
+            if hasattr(m, "calc_loop_triangles_count")
+            else 0
             for m in bpy.data.meshes
         ) / (1024 * 1024)
         categories["images"] = sum(
             img.size[0] * img.size[1] * img.channels * (4 if img.is_float else 1)
-            for img in bpy.data.images if img.size[0] > 0
+            for img in bpy.data.images
+            if img.size[0] > 0
         ) / (1024 * 1024)
     except Exception:
         pass
-    
+
     result["categories"] = categories
-    
+
     return result
