@@ -234,11 +234,14 @@ class MCPServer:
                 )
             )
             error_detail = result.error_message or result.error or "unknown"
+            error_text = f"Error: {error_detail}"
+            if result.error_suggestion:
+                error_text += f"\nSuggestion: {result.error_suggestion}"
             return {
                 "content": [
                     {
                         "type": "text",
-                        "text": f"Error: {error_detail}",
+                        "text": error_text,
                     }
                 ],
                 "isError": True,
