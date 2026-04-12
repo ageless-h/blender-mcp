@@ -4,13 +4,14 @@
 Provides a VIEW3D N-panel with connection status, start/stop controls,
 and host/port configuration.
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
 try:
     import bpy  # type: ignore
-    from bpy.props import BoolProperty  # type: ignore
+    from bpy.props import BoolProperty, IntProperty  # type: ignore
     from bpy.types import Panel, PropertyGroup  # type: ignore
 except ImportError:  # pragma: no cover - allow imports outside Blender
     bpy = None  # type: ignore
@@ -19,6 +20,7 @@ if TYPE_CHECKING:
     import bpy  # type: ignore
     from bpy.types import Panel, PropertyGroup  # type: ignore
 
+from .server.op_log import operation_log
 from .server.socket_server import is_server_running
 
 if bpy is not None:
@@ -30,6 +32,18 @@ if bpy is not None:
             name="Show Advanced",
             description="Show advanced connection settings",
             default=False,
+        )  # type: ignore
+
+        show_log: BoolProperty(
+            name="Show Activity Log",
+            default=True,
+        )  # type: ignore
+
+        log_lines: IntProperty(
+            name="Log Lines",
+            default=10,
+            min=5,
+            max=50,
         )  # type: ignore
 
     class VIEW3D_PT_blender_mcp(Panel):
@@ -73,6 +87,29 @@ if bpy is not None:
                 settings_box.prop(prefs, "host")
                 settings_box.prop(prefs, "port")
                 settings_box.prop(prefs, "auto_start")
+
+            # --- Activity Log ---
+            layout.separator()
+            stats = operation_log.stats
+            stats_row = layout.row()
+            stats_row.label(
+                text=f"Requests: {stats['total']}  Errors: {stats['error']}",
+                icon="TEXT",
+            )
+            layout.prop(props, "show_log", text="Activity Log", icon="CONSOLE")
+            if props.show_log and running:
+                log_box = layout.box()
+                entries = operation_log.recent(count=props.log_lines)
+                if not entries:
+                    log_box.label(text="No activity yet", icon="INFO")
+                else:
+                    for entry in reversed(entries):
+                        icon = "CHECKMARK" if entry.ok else "ERROR"
+                        cap_short = entry.capability.replace("blender.", "")
+                        log_box.label(
+                            text=f"{cap_short}  {entry.duration_ms:.0f}ms",
+                            icon=icon,
+                        )
 
     classes = (
         BlenderMCPProperties,
