@@ -13,6 +13,50 @@ from .reader import _resolve_node_tree
 logger = logging.getLogger(__name__)
 
 
+_NODE_TYPE_CACHE: list[dict[str, str]] | None = None
+
+
+def _discover_node_types() -> list[dict[str, str]]:
+    """Dynamically discover all registered node types from bpy.types.
+
+    Returns a list of {bl_idname, name, category} dicts.  Falls back to
+    _ENGLISH_NODE_NAMES if bpy is unavailable.
+    """
+    global _NODE_TYPE_CACHE
+    if _NODE_TYPE_CACHE is not None:
+        return _NODE_TYPE_CACHE
+
+    try:
+        import bpy  # type: ignore
+
+        result: list[dict[str, str]] = []
+        seen: set[str] = set()
+        for typename in dir(bpy.types):
+            cls = getattr(bpy.types, typename)
+            if not isinstance(cls, type):
+                continue
+            if not issubclass(cls, getattr(bpy.types, "Node", type(None))):
+                continue
+            if cls is bpy.types.Node:
+                continue
+            bl_id = getattr(cls, "bl_idname", None)
+            if bl_id and bl_id not in seen:
+                seen.add(bl_id)
+                name = getattr(cls, "bl_label", bl_id)
+                category = getattr(cls, "bl_icon", "")
+                result.append({"bl_idname": bl_id, "name": name, "category": category})
+
+        if result:
+            _NODE_TYPE_CACHE = result
+            return result
+    except (ImportError, AttributeError):
+        pass
+
+    fallback = [{"bl_idname": v, "name": k, "category": "static"} for k, v in _ENGLISH_NODE_NAMES.items()]
+    _NODE_TYPE_CACHE = fallback
+    return fallback
+
+
 # English display names that LLMs commonly use → bl_idname identifiers.
 # In localized Blender, default nodes get renamed (e.g. "Principled BSDF"
 # becomes "原理化 BSDF" in Chinese), but bl_idname is always stable.
@@ -167,6 +211,7 @@ def _resolve_node_type(type_str: str) -> str:
     1. Pass through as-is (works for exact bl_idname like ShaderNodeTexNoise)
     2. Look up in _ENGLISH_NODE_NAMES keys (friendly name -> bl_idname)
     3. Correct commonly-mistyped bl_idnames via _WRONG_BL_IDNAMES
+    4. Search dynamically discovered node types by name
     """
     if not type_str:
         return type_str
@@ -176,6 +221,9 @@ def _resolve_node_type(type_str: str) -> str:
         return _ENGLISH_NODE_NAMES[type_str]
     if type_str in _WRONG_BL_IDNAMES:
         return _WRONG_BL_IDNAMES[type_str]
+    for entry in _discover_node_types():
+        if entry["name"].lower() == type_str.lower():
+            return entry["bl_idname"]
     return type_str
 
 

@@ -35,6 +35,7 @@ class InfoType(str, Enum):
     VIEWPORT_CAPTURE = "viewport_capture"
     VERSION = "version"
     MEMORY = "memory"
+    NODE_TYPES = "node_types"
 
 
 _last_op_info: dict[str, Any] = {}
@@ -117,6 +118,8 @@ def info_query(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
             result = _query_version(bpy, params)
         elif info_type == InfoType.MEMORY:
             result = _query_memory(bpy, params)
+        elif info_type == InfoType.NODE_TYPES:
+            result = _query_node_types(bpy, params)
         else:
             return invalid_params_error(f"Query type not implemented: {query_type}", started)
 
@@ -539,3 +542,18 @@ def _query_memory(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
     result["categories"] = categories
 
     return result
+
+
+def _query_node_types(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
+    """Query available node types — dynamically discovered from bpy.types."""
+    from ..nodes.editor import _discover_node_types
+
+    filter_prefix = params.get("prefix", "")
+    types = _discover_node_types()
+    if filter_prefix:
+        prefix = filter_prefix.lower()
+        types = [t for t in types if t["bl_idname"].lower().startswith(prefix) or t["name"].lower().startswith(prefix)]
+    return {
+        "count": len(types),
+        "types": types,
+    }
