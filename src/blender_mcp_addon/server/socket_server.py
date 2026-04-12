@@ -11,6 +11,7 @@ import threading
 from typing import Any
 
 from ..capabilities.base import execute_capability
+from .op_log import operation_log
 from .timeouts import get_timeout
 
 logger = logging.getLogger(__name__)
@@ -208,8 +209,12 @@ def _main_thread_poll() -> float | None:
         except queue.Empty:
             break
         try:
+            capability = request.get("capability", "unknown")
+            started = _time.perf_counter()
             result = execute_capability(request)
+            elapsed_ms = (_time.perf_counter() - started) * 1000.0
             response_holder.append(result)
+            operation_log.record(capability, result.get("ok", False), elapsed_ms, result)
         except (AttributeError, RuntimeError, TypeError) as exc:
             logger.error("Main-thread execution error: %s", exc)
             response_holder.append(
