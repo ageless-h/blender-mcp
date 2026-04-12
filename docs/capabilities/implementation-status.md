@@ -1,6 +1,6 @@
 # Implementation Status
 
-> Status Snapshot: v0.1.0 (2026-02-08)
+> Status Snapshot: v1.1.0 (2026-04-12)
 >
 > This document tracks the implementation status of all 26 tools across the four-layer architecture.
 
@@ -39,9 +39,9 @@
 
 | Tool | Schema | Handler | Parameter Conversion | Tests | Documentation |
 |------|--------|---------|----------------------|-------|---------------|
-| `blender_edit_nodes` | ✅ | ✅ | N/A | ✅ | ✅ |
-| `blender_edit_animation` | ✅ | ✅ | N/A | ✅ | ✅ |
-| `blender_edit_sequencer` | ✅ | ✅ | N/A | ✅ | ✅ |
+| `blender_edit_nodes` | ✅ | ✅ | N/A | ✅ | ✅ | Undo ✅, Localization ✅ |
+| `blender_edit_animation` | ✅ | ✅ | N/A | ✅ | ✅ | Undo ✅ |
+| `blender_edit_sequencer` | ✅ | ⚠️ | N/A | ✅ | ✅ | Timer context limitation (5.1) |
 
 **Completion**: 3/3 (100%)
 
@@ -120,7 +120,7 @@
 
 ### Tests
 - **Status**: ✅ Complete
-- **Description**: 255 total tests across multiple test files
+- **Description**: 312 total tests across multiple test files
 - **Coverage**:
   - Perception tools: 11 tests
   - Declarative write tools: 3 tests
@@ -128,6 +128,8 @@
   - Fallback tools: 3 tests
   - Schema validation: 16 tests
   - End-to-end integration: 11 tests
+  - Node editor localization: 18 tests (including 11 English display-name fallback tests)
+  - Advanced real-Blender testing: 10 benchmarks + 10 advanced scenarios
 
 ### Documentation
 - **Status**: ✅ Complete
@@ -143,6 +145,13 @@
 
 ## Known Limitations & Future Work
 
+### Current Limitations (Blender 5.1)
+- **VSE strip creation**: Fails due to Blender 5.1 timer context API restriction
+- **Compositor node editing**: Fails due to same timer context restriction
+- **Object pointer properties**: Cannot be set via MCP `set_property` (e.g. `GeometryNodeObjectInfo.object`)
+- **Multi-material slot assignment**: `manage_material assign` only replaces slot 0
+
+### Planned Enhancements
 See [Roadmap](./roadmap.md) for planned enhancements including:
 - batch_execute for bulk operations
 - MCP Resources for asset directory exposure

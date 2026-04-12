@@ -74,6 +74,21 @@ Blender MCP uses a **four-layer tool architecture** with **26 specialized tools*
 
 **Tool Naming**: All tools use the `blender_` prefix to avoid conflicts in multi-server environments.
 
+### Features
+
+- **Undo Support**: All write operations push to Blender's undo stack — Ctrl+Z works correctly.
+- **Localized Blender Support**: Works in any Blender language. Uses English display names like `"Principled BSDF"` and they resolve to localized names automatically.
+- **Error Reporting**: Detailed error messages from the addon are surfaced in MCP tool responses.
+
+### Known Limitations (Blender 5.1)
+
+| Limitation | Cause |
+|-----------|-------|
+| VSE strip creation fails | Blender 5.1 timer context API restriction |
+| Compositor node editing fails | Blender 5.1 timer context API restriction |
+| Object pointer properties can't be set | MCP `set_property` limitation |
+| Multi-material slot creation | MCP `assign` only replaces slot 0 |
+
 ### Quick Start
 
 > **New to Blender MCP?** See the [5-Minute Quick Start Guide](docs/quick-start.md) for step-by-step setup instructions.
@@ -178,6 +193,7 @@ python -m blender_mcp.mcp_protocol
 | 4.2 LTS | ✅ Supported |
 | 4.5 LTS | ✅ Supported |
 | 5.0+ | ✅ Supported |
+| 5.1 | ✅ Supported (some API limitations, see above) |
 | < 4.2 | ❌ Not Supported |
 
 See [docs/versioning/support-matrix.md](docs/versioning/support-matrix.md) for details.
@@ -245,6 +261,21 @@ Blender MCP 采用**四层工具架构**，**26 个专用工具**按意图组织
 > **注意**: 所有工具使用 `blender_` 前缀以避免多服务器环境下的命名冲突。工具名称符合 MCP 规范使用下划线。Payload 包装层已移除 - 所有参数直接暴露为顶层 inputSchema 属性。
 
 **工具命名**: 所有工具使用 `blender_` 前缀以避免多服务器环境下的命名冲突。
+
+### 特性
+
+- **撤销支持**：所有写入操作自动推入 Blender 撤销栈 — Ctrl+Z 正确回退。
+- **本地化支持**：支持任何语言的 Blender。使用英文显示名如 `"Principled BSDF"` 会自动解析为本地化名称。
+- **错误报告**：插件详细错误信息在 MCP 工具响应中可见。
+
+### 已知限制（Blender 5.1）
+
+| 限制 | 原因 |
+|------|------|
+| VSE 片段创建失败 | Blender 5.1 定时器上下文 API 限制 |
+| 合成器节点编辑失败 | Blender 5.1 定时器上下文 API 限制 |
+| 对象指针属性无法设置 | MCP `set_property` 限制 |
+| 多材质槽创建 | MCP `assign` 仅替换槽 0 |
 
 ### 快速开始
 
@@ -350,6 +381,7 @@ python -m blender_mcp.mcp_protocol
 | 4.2 LTS | ✅ 支持 |
 | 4.5 LTS | ✅ 支持 |
 | 5.0+ | ✅ 支持 |
+| 5.1 | ✅ 支持（部分 API 限制，见上方说明） |
 | < 4.2 | ❌ 不支持 |
 
 详见 [docs/versioning/support-matrix.md](docs/versioning/support-matrix.md)。
