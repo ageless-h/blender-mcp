@@ -144,12 +144,29 @@ _ENGLISH_NODE_NAMES: dict[str, str] = {
 }
 
 
+# Commonly-mistyped bl_idnames that differ from the actual Blender identifier.
+_WRONG_BL_IDNAMES: dict[str, str] = {
+    "ShaderNodeNoiseTexture": "ShaderNodeTexNoise",
+    "ShaderNodeMusgraveTexture": "ShaderNodeTexMusgrave",
+    "ShaderNodeVoronoiTexture": "ShaderNodeTexVoronoi",
+    "ShaderNodeBrickTexture": "ShaderNodeTexBrick",
+    "ShaderNodeCheckerTexture": "ShaderNodeTexChecker",
+    "ShaderNodeGradientTexture": "ShaderNodeTexGradient",
+    "ShaderNodeMagicTexture": "ShaderNodeTexMagic",
+    "ShaderNodeWaveTexture": "ShaderNodeTexWave",
+    "ShaderNodeEnvironmentTexture": "ShaderNodeTexEnvironment",
+    "ShaderNodeImageTexture": "ShaderNodeTexImage",
+    "ShaderNodeColorAttribute": "ShaderNodeColorAttribute",
+}
+
+
 def _resolve_node_type(type_str: str) -> str:
     """Resolve a node type string to a valid bl_idname.
 
     Tries in order:
     1. Pass through as-is (works for exact bl_idname like ShaderNodeTexNoise)
     2. Look up in _ENGLISH_NODE_NAMES keys (friendly name -> bl_idname)
+    3. Correct commonly-mistyped bl_idnames via _WRONG_BL_IDNAMES
     """
     if not type_str:
         return type_str
@@ -157,6 +174,8 @@ def _resolve_node_type(type_str: str) -> str:
         return type_str
     if type_str in _ENGLISH_NODE_NAMES:
         return _ENGLISH_NODE_NAMES[type_str]
+    if type_str in _WRONG_BL_IDNAMES:
+        return _WRONG_BL_IDNAMES[type_str]
     return type_str
 
 
