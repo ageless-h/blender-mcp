@@ -8,7 +8,6 @@ etc.) often need conversion.  This module centralises that logic.
 
 from __future__ import annotations
 
-import math
 import re
 from typing import Any
 
