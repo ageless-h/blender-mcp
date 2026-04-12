@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Shared utility functions for handler implementations."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -29,19 +30,35 @@ def create_mesh_primitive(mesh: Any, primitive: str, params: dict[str, Any]) -> 
             segments = params.get("segments", 32)
             ring_count = params.get("ring_count", 16)
             radius = params.get("radius", size / 2)
-            bmesh.ops.create_uvsphere(bm, u_segments=segments, v_segments=ring_count, radius=radius)
+            bmesh.ops.create_uvsphere(
+                bm, u_segments=segments, v_segments=ring_count, radius=radius
+            )
         elif kind == "cylinder":
             segments = params.get("segments", 32)
             depth = params.get("depth", 2.0)
             radius = params.get("radius", size / 2)
-            bmesh.ops.create_cone(bm, cap_ends=True, cap_tris=False,
-                                  segments=segments, radius1=radius, radius2=radius, depth=depth)
+            bmesh.ops.create_cone(
+                bm,
+                cap_ends=True,
+                cap_tris=False,
+                segments=segments,
+                radius1=radius,
+                radius2=radius,
+                depth=depth,
+            )
         elif kind == "cone":
             segments = params.get("segments", 32)
             depth = params.get("depth", 2.0)
             radius = params.get("radius", size / 2)
-            bmesh.ops.create_cone(bm, cap_ends=True, cap_tris=False,
-                                  segments=segments, radius1=radius, radius2=0, depth=depth)
+            bmesh.ops.create_cone(
+                bm,
+                cap_ends=True,
+                cap_tris=False,
+                segments=segments,
+                radius1=radius,
+                radius2=0,
+                depth=depth,
+            )
         elif kind == "plane":
             bmesh.ops.create_grid(bm, x_segments=1, y_segments=1, size=size)
         elif kind == "icosphere":
@@ -49,12 +66,42 @@ def create_mesh_primitive(mesh: Any, primitive: str, params: dict[str, Any]) -> 
             radius = params.get("radius", size / 2)
             bmesh.ops.create_icosphere(bm, subdivisions=subdivisions, radius=radius)
         elif kind == "torus":
+            import bpy  # type: ignore
+
             major_radius = params.get("major_radius", 1.0)
             minor_radius = params.get("minor_radius", 0.25)
             major_segments = params.get("major_segments", 48)
             minor_segments = params.get("minor_segments", 12)
-            bmesh.ops.create_torus(bm, major_segments=major_segments, minor_segments=minor_segments,
-                                   major_radius=major_radius, minor_radius=minor_radius)
+            location = params.get("_location", (0, 0, 0))
+            try:
+                bmesh.ops.create_torus(
+                    bm,
+                    major_segments=major_segments,
+                    minor_segments=minor_segments,
+                    major_radius=major_radius,
+                    minor_radius=minor_radius,
+                )
+            except AttributeError:
+                bm.free()
+                result = bpy.ops.mesh.primitive_torus_add(
+                    major_segments=major_segments,
+                    minor_segments=minor_segments,
+                    major_radius=major_radius,
+                    minor_radius=minor_radius,
+                    location=location,
+                )
+                if result == {"FINISHED"} and bpy.context.active_object:
+                    obj = bpy.context.active_object
+                    if obj.data and obj.data != mesh:
+                        bm2 = bmesh.new()
+                        bm2.from_mesh(obj.data)
+                        bm2.to_mesh(mesh)
+                        bm2.free()
+                        mesh.validate()
+                        mesh.update(calc_edges=True, calc_edges_loose=True)
+                        bpy.data.objects.remove(obj, do_unlink=True)
+                    return
+                raise
         else:
             raise ValueError(f"Unknown primitive type: {primitive}")
 
