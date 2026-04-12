@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Socket server for MCP communication with the addon."""
+
 from __future__ import annotations
 
 import json
@@ -23,6 +24,8 @@ _dispatch_queue: queue.Queue[tuple[dict, list, threading.Event]] = queue.Queue()
 _timer_registered = False
 
 _TIMER_INTERVAL = 0.05  # seconds between main-thread polls
+_WATCHDOG_INTERVAL = 2.0  # seconds between watchdog checks
+_last_poll_time: float = 0.0
 
 
 def is_server_running() -> bool:
@@ -35,13 +38,16 @@ def get_server_address() -> tuple[str, int]:
     """Get the server address from addon preferences."""
     try:
         import bpy  # type: ignore
+
         prefs = bpy.context.preferences.addons["blender_mcp_addon"].preferences
         return prefs.host, prefs.port
     except Exception:
         return "127.0.0.1", 9876
 
 
-def start_socket_server(host: str | None = None, port: int | None = None) -> dict[str, Any]:
+def start_socket_server(
+    host: str | None = None, port: int | None = None
+) -> dict[str, Any]:
     """Start the socket server for receiving capability requests."""
     global _server_socket, _server_thread
 
@@ -69,6 +75,7 @@ def start_socket_server(host: str | None = None, port: int | None = None) -> dic
             )
             _server_thread.start()
             _ensure_timer_registered()
+            _ensure_watchdog_registered()
 
             logger.info("Socket server started on %s:%s", host, port)
             return {"ok": True, "host": host, "port": port}
@@ -157,7 +164,9 @@ def _handle_client(client_socket: socket.socket) -> None:
             return
 
         response = _dispatch_to_main_thread(request)
-        client_socket.sendall((json.dumps(response, ensure_ascii=False) + "\n").encode("utf-8"))
+        client_socket.sendall(
+            (json.dumps(response, ensure_ascii=False) + "\n").encode("utf-8")
+        )
 
     except Exception as exc:
         logger.error("Error handling client: %s", exc)
@@ -170,6 +179,7 @@ def _handle_client(client_socket: socket.socket) -> None:
 
 def _dispatch_to_main_thread(request: dict) -> dict:
     """Queue a request for main-thread execution and block until done."""
+    _kick_timer_if_dead()
     response_holder: list[dict] = []
     done_event = threading.Event()
     _dispatch_queue.put((request, response_holder, done_event))
@@ -185,6 +195,11 @@ def _dispatch_to_main_thread(request: dict) -> dict:
 
 def _main_thread_poll() -> float | None:
     """Timer callback — runs on Blender's main thread, drains the queue."""
+    global _last_poll_time
+    import time as _time
+
+    _last_poll_time = _time.monotonic()
+
     while not _dispatch_queue.empty():
         try:
             request, response_holder, done_event = _dispatch_queue.get_nowait()
@@ -195,11 +210,13 @@ def _main_thread_poll() -> float | None:
             response_holder.append(result)
         except Exception as exc:
             logger.error("Main-thread execution error: %s", exc)
-            response_holder.append({
-                "ok": False,
-                "result": None,
-                "error": {"code": "main_thread_error", "message": str(exc)},
-            })
+            response_holder.append(
+                {
+                    "ok": False,
+                    "result": None,
+                    "error": {"code": "main_thread_error", "message": str(exc)},
+                }
+            )
         finally:
             done_event.set()
 
@@ -215,11 +232,27 @@ def _ensure_timer_registered() -> None:
         return
     try:
         import bpy  # type: ignore
-        bpy.app.timers.register(_main_thread_poll, first_interval=_TIMER_INTERVAL, persistent=True)
+
+        bpy.app.timers.register(
+            _main_thread_poll, first_interval=_TIMER_INTERVAL, persistent=True
+        )
         _timer_registered = True
         logger.debug("Main-thread dispatch timer registered")
     except Exception as exc:
         logger.error("Failed to register dispatch timer: %s", exc)
+
+
+def _ensure_watchdog_registered() -> None:
+    try:
+        import bpy  # type: ignore
+
+        if not bpy.app.timers.is_registered(_watchdog_poll):
+            bpy.app.timers.register(
+                _watchdog_poll, first_interval=_WATCHDOG_INTERVAL, persistent=True
+            )
+            logger.debug("Watchdog timer registered")
+    except Exception as exc:
+        logger.error("Failed to register watchdog timer: %s", exc)
 
 
 def _unregister_timer() -> None:
@@ -229,9 +262,71 @@ def _unregister_timer() -> None:
         return
     try:
         import bpy  # type: ignore
+
         if bpy.app.timers.is_registered(_main_thread_poll):
             bpy.app.timers.unregister(_main_thread_poll)
+        if bpy.app.timers.is_registered(_watchdog_poll):
+            bpy.app.timers.unregister(_watchdog_poll)
         _timer_registered = False
         logger.debug("Main-thread dispatch timer unregistered")
     except Exception as exc:
         logger.debug("Error unregistering dispatch timer: %s", exc)
+
+
+def _watchdog_poll() -> float | None:
+    """Periodically verify _main_thread_poll is still registered.
+
+    Blender can silently unregister timers on file-load or undo operations.
+    This watchdog re-registers the poll timer if it detects it has died.
+    """
+    if _shutdown_flag.is_set():
+        return None
+    try:
+        import bpy  # type: ignore
+
+        if not bpy.app.timers.is_registered(_main_thread_poll):
+            logger.warning("Watchdog: _main_thread_poll died — re-registering")
+            bpy.app.timers.register(
+                _main_thread_poll,
+                first_interval=0.0,
+                persistent=True,
+            )
+    except Exception as exc:
+        logger.error("Watchdog: failed to re-register poll timer: %s", exc)
+    return _WATCHDOG_INTERVAL
+
+
+def _kick_timer_if_dead() -> None:
+    """Called from connection threads to revive the poll timer if it died.
+
+    Uses bpy.app.timers.register (not bpy.app.handlers) to schedule a
+    one-shot restart from the main thread, which is thread-safe.
+    """
+    import time as _time
+
+    if _shutdown_flag.is_set():
+        return
+    elapsed = (
+        _time.monotonic() - _last_poll_time
+        if _last_poll_time
+        else _WATCHDOG_INTERVAL + 1
+    )
+    if elapsed > _WATCHDOG_INTERVAL and _last_poll_time > 0:
+        logger.warning(
+            "Timer appears dead (no tick for %.1fs), scheduling restart",
+            elapsed,
+        )
+        try:
+            import bpy  # type: ignore
+
+            def _restart() -> None:
+                if not bpy.app.timers.is_registered(_main_thread_poll):
+                    bpy.app.timers.register(
+                        _main_thread_poll,
+                        first_interval=0.0,
+                        persistent=True,
+                    )
+
+            bpy.app.timers.register(_restart, first_interval=0.0)
+        except Exception as exc:
+            logger.error("Failed to schedule timer restart: %s", exc)
