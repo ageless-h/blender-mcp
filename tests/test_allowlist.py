@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import unittest
 
-from blender_mcp.security.allowlist import Allowlist, DEFAULT_ALLOWED_TOOLS
+from blender_mcp.security.allowlist import DEFAULT_ALLOWED_TOOLS, Allowlist
 
 
 class TestAllowlist(unittest.TestCase):

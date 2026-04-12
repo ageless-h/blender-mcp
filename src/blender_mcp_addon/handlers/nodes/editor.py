@@ -6,9 +6,9 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from ..response import _ok, _error, check_bpy_available, bpy_unavailable_error
-from .reader import _resolve_node_tree
+from ..response import _error, _ok, bpy_unavailable_error, check_bpy_available
 from ..utils.property_parser import coerce_value
+from .reader import _resolve_node_tree
 
 logger = logging.getLogger(__name__)
 

@@ -22,7 +22,7 @@ class MCPRegistrationTest(unittest.TestCase):
     def _send_request(self, request: dict) -> dict:
         """Send a JSON-RPC request to the MCP server and return the response."""
         request_line = json.dumps(request) + "\n"
-        
+
         proc = subprocess.Popen(
             [sys.executable, "-m", "blender_mcp.mcp_protocol"],
             stdin=subprocess.PIPE,
@@ -31,14 +31,14 @@ class MCPRegistrationTest(unittest.TestCase):
             env=self.env,
             text=True,
         )
-        
+
         stdout, stderr = proc.communicate(input=request_line, timeout=10)
-        
+
         # Parse the first line of output as JSON response
         lines = stdout.strip().split("\n")
         if not lines or not lines[0]:
             raise RuntimeError(f"No response received. stderr: {stderr}")
-        
+
         return json.loads(lines[0])
 
     def _initialize(self) -> dict:
@@ -70,13 +70,13 @@ class MCPRegistrationTest(unittest.TestCase):
     def test_initialize_returns_server_info(self):
         """Test that initialize response contains serverInfo with name and version."""
         response = self._initialize()
-        
+
         self.assertIn("result", response, "Response should have result field")
         result = response["result"]
-        
+
         self.assertIn("serverInfo", result, "Result should contain serverInfo")
         server_info = result["serverInfo"]
-        
+
         self.assertIn("name", server_info, "serverInfo should have name")
         self.assertIn("version", server_info, "serverInfo should have version")
         self.assertTrue(server_info["name"], "serverInfo.name should not be empty")
@@ -85,23 +85,23 @@ class MCPRegistrationTest(unittest.TestCase):
     def test_initialize_returns_capabilities(self):
         """Test that initialize response contains capabilities object."""
         response = self._initialize()
-        
+
         self.assertIn("result", response, "Response should have result field")
         result = response["result"]
-        
+
         self.assertIn("capabilities", result, "Result should contain capabilities")
         self.assertIsInstance(result["capabilities"], dict, "capabilities should be an object")
 
     def test_tools_list_returns_non_empty_array(self):
         """Test that tools/list returns a non-empty tools array."""
         response = self._tools_list()
-        
+
         self.assertIn("result", response, "Response should have result field")
         result = response["result"]
-        
+
         self.assertIn("tools", result, "Result should contain tools")
         tools = result["tools"]
-        
+
         self.assertIsInstance(tools, list, "tools should be an array")
         self.assertGreater(len(tools), 0, "tools array should not be empty")
 
@@ -110,9 +110,9 @@ class MCPRegistrationTest(unittest.TestCase):
         response = self._tools_list()
         result = response["result"]
         tools = result["tools"]
-        
+
         tool_names = {tool["name"] for tool in tools}
-        
+
         # All 26 tools in the new architecture
         expected_tools = [
             # Perception (11)
@@ -129,26 +129,26 @@ class MCPRegistrationTest(unittest.TestCase):
             # Fallback (3)
             "blender_execute_operator", "blender_execute_script", "blender_import_export",
         ]
-        
+
         for tool in expected_tools:
             self.assertIn(
                 tool, tool_names, f"Tool '{tool}' should be present"
             )
-        
+
         self.assertEqual(len(tools), 26, "Should have exactly 26 tools")
 
     def test_jsonrpc_compliance(self):
         """Test that responses conform to JSON-RPC 2.0 specification."""
         # Test initialize response
         init_response = self._initialize()
-        
+
         self.assertEqual(
             init_response.get("jsonrpc"), "2.0", "Response should have jsonrpc: 2.0"
         )
         self.assertEqual(
             init_response.get("id"), 1, "Response id should match request id"
         )
-        
+
         # Response should have either result or error, not both
         has_result = "result" in init_response
         has_error = "error" in init_response
@@ -156,10 +156,10 @@ class MCPRegistrationTest(unittest.TestCase):
             has_result != has_error,
             "Response should have either result or error, not both",
         )
-        
+
         # Test tools/list response
         tools_response = self._tools_list()
-        
+
         self.assertEqual(
             tools_response.get("jsonrpc"), "2.0", "Response should have jsonrpc: 2.0"
         )

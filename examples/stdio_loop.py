@@ -10,9 +10,9 @@ Usage:
 """
 from __future__ import annotations
 
-from . import _pathfix  # noqa: F401 — ensure src/ is on sys.path
-
 from blender_mcp.mcp_protocol import run_mcp_server
+
+from . import _pathfix  # noqa: F401 — ensure src/ is on sys.path
 
 
 def run_stdio_loop() -> int:

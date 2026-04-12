@@ -10,6 +10,7 @@ from __future__ import annotations
 import time
 from typing import Any, Callable
 
+from ..handlers import data as _data_handlers  # noqa: F401 - Import to register handlers
 from ..handlers.data.dispatcher import (
     data_create,
     data_delete,
@@ -22,9 +23,6 @@ from ..handlers.info import info_query
 from ..handlers.operator import operator_execute
 from ..handlers.response import _error, _ok
 from ..handlers.script import script_execute
-
-from ..handlers import data as _data_handlers  # noqa: F401 - Import to register handlers
-
 
 # ---------------------------------------------------------------
 # Individual capability handlers

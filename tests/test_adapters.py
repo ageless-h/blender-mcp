@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
-from blender_mcp.adapters.types import AdapterResult
 from blender_mcp.adapters.base import BlenderAdapter
 from blender_mcp.adapters.mock import MockAdapter
-from blender_mcp.adapters.socket import SocketAdapter, _friendly_error, _FRIENDLY_ERRORS
+from blender_mcp.adapters.socket import _FRIENDLY_ERRORS, SocketAdapter, _friendly_error
+from blender_mcp.adapters.types import AdapterResult
 
 
 class TestAdapterResult(unittest.TestCase):
@@ -49,7 +49,7 @@ class TestMockAdapter(unittest.TestCase):
         adapter = MockAdapter()
         expected = AdapterResult(ok=True, result={"scene_name": "Test"})
         adapter.set_response("blender.get_scene", expected)
-        
+
         result = adapter.execute("blender.get_scene", {})
         self.assertEqual(result, expected)
 
@@ -57,7 +57,7 @@ class TestMockAdapter(unittest.TestCase):
         adapter = MockAdapter()
         expected = AdapterResult(ok=False, error="test_error")
         adapter.set_response("blender.get_scene", expected)
-        
+
         result = adapter.execute("blender.get_scene", {})
         self.assertFalse(result.ok)
         self.assertEqual(result.error, "test_error")
@@ -66,7 +66,7 @@ class TestMockAdapter(unittest.TestCase):
         adapter = MockAdapter()
         adapter.set_response("blender.get_scene", AdapterResult(ok=True, result={"a": 1}))
         adapter.set_response("blender.modify_object", AdapterResult(ok=True, result={"b": 2}))
-        
+
         self.assertEqual(adapter.execute("blender.get_scene", {}).result, {"a": 1})
         self.assertEqual(adapter.execute("blender.modify_object", {}).result, {"b": 2})
 
@@ -98,7 +98,7 @@ class TestSocketAdapter(unittest.TestCase):
         mock_sock.connect.side_effect = socket.timeout("timed out")
         mock_socket_class.return_value.__enter__ = MagicMock(return_value=mock_sock)
         mock_socket_class.return_value.__exit__ = MagicMock(return_value=False)
-        
+
         adapter = SocketAdapter(max_retries=1)
         result = adapter.execute("blender.get_scene", {})
         self.assertFalse(result.ok)

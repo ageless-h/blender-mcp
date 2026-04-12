@@ -6,9 +6,9 @@ from __future__ import annotations
 from typing import Any, Iterable
 
 from ..base import BaseHandler, GenericCollectionHandler
-from ..types import DataType
 from ..registry import HandlerRegistry
-from ..shared import link_data_to_scene, find_referencing_objects
+from ..shared import find_referencing_objects, link_data_to_scene
+from ..types import DataType
 
 
 @HandlerRegistry.register
@@ -150,8 +150,9 @@ class ArmatureHandler(GenericCollectionHandler):
     def read(
         self, name: str, path: str | None, params: dict[str, Any]
     ) -> dict[str, Any]:
-        import bpy  # type: ignore
         import fnmatch
+
+        import bpy  # type: ignore
 
         armature = bpy.data.armatures.get(name)
         if armature is None:

@@ -137,7 +137,7 @@ def minimal_capability_set() -> list[CapabilityMeta]:
 
 def new_tool_scope_map() -> dict[str, set[str]]:
     """Return scope mappings for the 26-tool architecture.
-    
+
     Maps internal capability names to required scopes.
     """
     return {
@@ -172,14 +172,14 @@ def new_tool_scope_map() -> dict[str, set[str]]:
 
 def get_dynamic_scopes(capability: str, payload: dict) -> set[str]:
     """Get dynamic scopes based on capability and payload.
-    
+
     For blender.execute_operator, the scope depends on the operator category.
     For other capabilities, falls back to the static scope map.
-    
+
     Args:
         capability: The capability name (blender.* format)
         payload: The request payload
-        
+
     Returns:
         Set of required scope strings
     """
@@ -189,10 +189,10 @@ def get_dynamic_scopes(capability: str, payload: dict) -> set[str]:
             category = operator_id.split(".")[0]
             return {f"{category}:execute"}
         return {"operator:execute"}
-    
+
     if capability == "blender.execute_script":
         return {"script:execute"}
-    
+
     # Fall back to static scope map
     scope_map = new_tool_scope_map()
     return scope_map.get(capability, set())

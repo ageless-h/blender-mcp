@@ -20,7 +20,6 @@ except ImportError:
 from ._blender_harness import BlenderProcessHarness
 from ._config import load_blender_configs
 
-
 # Skip the entire module if pytest is not available
 if pytest is None:
     import unittest

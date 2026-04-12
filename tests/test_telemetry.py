@@ -9,9 +9,9 @@ from unittest.mock import patch
 from blender_mcp.telemetry import (
     TelemetryCollector,
     ToolMetrics,
+    _is_telemetry_enabled,
     get_collector,
     telemetry_tool,
-    _is_telemetry_enabled,
 )
 
 

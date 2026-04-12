@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import os
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 # Must set before importing addon modules
 os.environ.setdefault("MCP_ADAPTER", "mock")

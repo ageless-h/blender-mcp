@@ -20,7 +20,7 @@ except ImportError:  # pragma: no cover - executed only outside Blender
 if TYPE_CHECKING:
     import bpy  # type: ignore
 
-from .server.socket_server import start_socket_server, stop_socket_server, is_server_running
+from .server.socket_server import is_server_running, start_socket_server, stop_socket_server
 
 bl_info = {
     "name": "Blender MCP",
@@ -40,8 +40,10 @@ def register() -> None:
         raise ImportError("bpy is not available. register() must be called inside Blender.")
     _logger.info("Registering Blender MCP addon")
 
-    from . import operators  # Local import to avoid bpy dependency at module import time
-    from . import ui  # Local import; sidebar panel requires bpy
+    from . import (
+        operators,  # Local import to avoid bpy dependency at module import time
+        ui,  # Local import; sidebar panel requires bpy
+    )
     from .preferences import BlenderMCPPreferences  # Local import; requires bpy
 
     bpy.utils.register_class(BlenderMCPPreferences)
@@ -66,8 +68,10 @@ def unregister() -> None:
         raise ImportError("bpy is not available. unregister() must be called inside Blender.")
     _logger.info("Unregistering Blender MCP addon")
 
-    from . import operators  # Local import to avoid bpy dependency at module import time
-    from . import ui  # Local import; sidebar panel requires bpy
+    from . import (
+        operators,  # Local import to avoid bpy dependency at module import time
+        ui,  # Local import; sidebar panel requires bpy
+    )
     from .preferences import BlenderMCPPreferences  # Local import; requires bpy
 
     if is_server_running():

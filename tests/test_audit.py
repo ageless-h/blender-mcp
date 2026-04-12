@@ -6,7 +6,7 @@ import os
 import tempfile
 import unittest
 
-from blender_mcp.security.audit import AuditEvent, MemoryAuditLogger, JsonFileAuditLogger
+from blender_mcp.security.audit import AuditEvent, JsonFileAuditLogger, MemoryAuditLogger
 
 
 class TestAuditEvent(unittest.TestCase):

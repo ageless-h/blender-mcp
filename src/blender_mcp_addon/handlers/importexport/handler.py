@@ -4,9 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..response import _ok, _error, check_bpy_available, bpy_unavailable_error
 from ..context_utils import get_view3d_override
-
+from ..response import _error, _ok, bpy_unavailable_error, check_bpy_available
 
 _IMPORT_OPERATORS = {
     "FBX": "import_scene.fbx",
@@ -43,18 +42,18 @@ _EXPORT_OPERATORS = {
 
 def _validate_filepath(filepath: str) -> str | None:
     """Validate and normalize a file path, rejecting path traversal attempts.
-    
+
     Returns the resolved absolute path, or None if the path is invalid.
     """
     import os
-    
+
     if not filepath or not isinstance(filepath, str):
         return None
-    
+
     # Reject null bytes
     if "\x00" in filepath:
         return None
-    
+
     # Resolve to absolute path
     resolved = os.path.realpath(filepath)
     return resolved
