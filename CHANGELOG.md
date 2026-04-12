@@ -19,6 +19,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.0] - 2026-04-12
+
+### Added
+- **Undo support**: All MCP write operations now push to Blender's undo stack via `bpy.ops.ed.undo_push()`. Ctrl+Z in Blender correctly reverses MCP operations.
+- **Localized node name fallback**: 140+ English display-name → bl_idname mapping so `edit_nodes` works in non-English Blender environments (Chinese, Japanese, etc.). LLMs can use names like `"Principled BSDF"`, `"Material Output"`, `"Group Input"` regardless of Blender's UI language.
+- **Error message propagation**: Addon error details (e.g. `operation_failed`, `addon_exception`) are now exposed in MCP tool responses for easier debugging.
+- **Advanced test suite**: 10 test scenarios with ≥10 steps each covering PBR materials, modifier stacks, armature rigging, animation, geometry nodes, physics, UV/multi-material, render pipeline, collection management, and complex shaders.
+
+### Fixed
+- **RGBA socket assignment**: `set_value` on RGBA/color sockets now uses `tuple(value)` instead of list assignment, fixing `bpy_prop` type errors in Blender 5.1.
+- **GeoNodes I/O initialization**: New geometry nodes modifiers auto-create `NodeGroupInput`/`NodeGroupOutput` with proper `interface.new_socket()` calls.
+- **Duplicate except block**: Removed duplicate `except` clause in `base.py` that caused `IndentationError`.
+- **Compositor safe access**: Added `scene.use_nodes = True` auto-enable with safe `bpy.context` fallback for timer-dispatched handlers.
+- **VSE null checks**: Added null checks and detailed error logging for VSE strip creation failures.
+- **Timer context guards**: All `bpy.context` accesses in timer-dispatched handlers now use `try/except` fallbacks to prevent crashes in Blender 5.1's timer dispatch.
+
+### Changed
+- **Test coverage**: 312 tests (up from 255), including 18 node editor tests with localization fallback coverage.
+- **Development status**: Updated from Beta to Production/Stable in `pyproject.toml`.
+
+### Known Limitations
+- **VSE strip creation** fails in Blender 5.1 timer context (API limitation, not a bug).
+- **Compositor node editing** fails in Blender 5.1 timer context (API limitation, not a bug).
+- **Object reference pointers** (e.g. `GeometryNodeObjectInfo.object`) cannot be set via MCP `set_property` — requires `execute_script`.
+- **Multi-material slot assignment** always replaces slot 0 — creating multiple slots requires `execute_script`.
+
+---
+
 ## [1.0.0] - 2026-02-09
 
 ### Changed
@@ -90,6 +118,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Fixed**: Bug fixes
 - **Improved**: Non-breaking improvements
 
-[Unreleased]: https://github.com/ageless-h/blender-mcp/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/ageless-h/blender-mcp/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/ageless-h/blender-mcp/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/ageless-h/blender-mcp/compare/v0.1.0...v1.0.0
 [0.1.0]: https://github.com/ageless-h/blender-mcp/releases/tag/v0.1.0
