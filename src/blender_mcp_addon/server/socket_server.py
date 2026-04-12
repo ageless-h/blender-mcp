@@ -36,6 +36,12 @@ def is_server_running() -> bool:
         return _server_socket is not None
 
 
+def get_active_client_count() -> int:
+    """Return the number of currently connected MCP clients."""
+    with _active_clients_lock:
+        return len(_active_clients)
+
+
 def get_server_address() -> tuple[str, int]:
     """Get the server address from addon preferences."""
     try:
@@ -95,6 +101,14 @@ def stop_socket_server() -> dict[str, Any]:
 
         _shutdown_flag.set()
 
+        with _active_clients_lock:
+            for cid, sock in list(_active_clients.items()):
+                try:
+                    sock.close()
+                except (OSError, RuntimeError):
+                    pass
+            _active_clients.clear()
+
         try:
             _server_socket.close()
         except (OSError, RuntimeError) as exc:
@@ -134,41 +148,61 @@ def _server_loop() -> None:
             break
 
 
+_active_clients: dict[int, socket.socket] = {}
+_active_clients_lock = threading.Lock()
+
+
 def _handle_client(client_socket: socket.socket) -> None:
-    """Handle a single client connection."""
+    """Handle a persistent client connection — process multiple requests."""
+    client_id = id(client_socket)
+    with _active_clients_lock:
+        _active_clients[client_id] = client_socket
+    logger.info("Client connected (id=%d, total=%d)", client_id, len(_active_clients))
+
     try:
-        client_socket.settimeout(30.0)
-        data = b""
+        client_socket.settimeout(300.0)
 
-        while True:
-            chunk = client_socket.recv(4096)
-            if not chunk:
-                break
-            data += chunk
-            if b"\n" in data:
-                break
+        while not _shutdown_flag.is_set():
+            data = b""
+            while True:
+                try:
+                    chunk = client_socket.recv(4096)
+                except (socket.timeout, OSError):
+                    chunk = b""
+                if not chunk:
+                    return
+                data += chunk
+                if b"\n" in data:
+                    break
 
-        if not data:
-            return
+            request_str = data.decode("utf-8").strip()
+            if not request_str:
+                continue
 
-        request_str = data.decode("utf-8").strip()
-        try:
-            request = json.loads(request_str)
-        except json.JSONDecodeError:
-            response = {
-                "ok": False,
-                "result": None,
-                "error": {"code": "parse_error", "message": "Invalid JSON"},
-            }
-            client_socket.sendall((json.dumps(response) + "\n").encode("utf-8"))
-            return
+            try:
+                request = json.loads(request_str)
+            except json.JSONDecodeError:
+                response = {
+                    "ok": False,
+                    "result": None,
+                    "error": {"code": "parse_error", "message": "Invalid JSON"},
+                }
+                client_socket.sendall((json.dumps(response) + "\n").encode("utf-8"))
+                continue
 
-        response = _dispatch_to_main_thread(request)
-        client_socket.sendall((json.dumps(response, ensure_ascii=False) + "\n").encode("utf-8"))
+            response = _dispatch_to_main_thread(request)
+            client_socket.sendall((json.dumps(response, ensure_ascii=False) + "\n").encode("utf-8"))
 
     except (OSError, RuntimeError, ConnectionError) as exc:
-        logger.error("Error handling client: %s", exc)
+        logger.debug("Client disconnected (id=%d): %s", client_id, exc)
     finally:
+        with _active_clients_lock:
+            _active_clients.pop(client_id, None)
+        logger.info(
+            "Client disconnected (id=%d, remaining=%d)",
+            client_id,
+            len(_active_clients),
+        )
         try:
             client_socket.close()
         except (OSError, RuntimeError) as exc:
