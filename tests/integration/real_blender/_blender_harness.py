@@ -89,7 +89,9 @@ class BlenderProcessHarness:
         self._started = False
 
         # Path to the addon package that starts the socket server
-        self._server_script = Path(__file__).parent.parent.parent.parent / "src" / "blender_mcp_addon" / "server" / "socket_server.py"
+        self._server_script = (
+            Path(__file__).parent.parent.parent.parent / "src" / "blender_mcp_addon" / "server" / "socket_server.py"
+        )
 
     def start(self) -> bool:
         """Start the Blender process with the socket server.
@@ -218,10 +220,7 @@ class BlenderProcessHarness:
                 return response
 
         except socket.timeout:
-            raise TimeoutError(
-                f"Request timeout after {self._request_timeout}s. "
-                f"Blender may be unresponsive."
-            )
+            raise TimeoutError(f"Request timeout after {self._request_timeout}s. Blender may be unresponsive.")
         except (ConnectionError, OSError) as e:
             raise RuntimeError(f"Socket communication failed: {e}") from e
         except json.JSONDecodeError as e:

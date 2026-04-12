@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Operator execution with context override support."""
+
 from __future__ import annotations
 
 import logging
@@ -198,7 +199,7 @@ def operator_execute(payload: dict[str, Any], *, started: float) -> dict[str, An
             data={"operator": operator_id},
             started=started,
         )
-    except Exception as exc:
+    except (AttributeError, ValueError) as exc:
         return operation_failed_error("operator.execute", exc, started)
 
 
@@ -232,7 +233,7 @@ def _build_context_override(bpy: Any, context_override: dict[str, Any]) -> tuple
     if "selected_objects" in context_override:
         obj_names = context_override["selected_objects"]
         original_selected = [o for o in bpy.context.selected_objects]
-        bpy.ops.object.select_all(action='DESELECT')
+        bpy.ops.object.select_all(action="DESELECT")
         for obj_name in obj_names:
             obj = bpy.data.objects.get(obj_name)
             if obj:
@@ -245,13 +246,13 @@ def _build_context_override(bpy: Any, context_override: dict[str, Any]) -> tuple
         if original_mode != target_mode:
             try:
                 if target_mode == "OBJECT":
-                    bpy.ops.object.mode_set(mode='OBJECT')
+                    bpy.ops.object.mode_set(mode="OBJECT")
                 elif target_mode in ("EDIT", "EDIT_MESH"):
-                    bpy.ops.object.mode_set(mode='EDIT')
+                    bpy.ops.object.mode_set(mode="EDIT")
                 elif target_mode == "SCULPT":
-                    bpy.ops.object.mode_set(mode='SCULPT')
+                    bpy.ops.object.mode_set(mode="SCULPT")
                 elif target_mode == "POSE":
-                    bpy.ops.object.mode_set(mode='POSE')
+                    bpy.ops.object.mode_set(mode="POSE")
                 cleanup_actions.append(("mode", original_mode))
             except RuntimeError:
                 pass
@@ -261,7 +262,7 @@ def _build_context_override(bpy: Any, context_override: dict[str, Any]) -> tuple
             if area.type == context_override["area_type"]:
                 override["area"] = area
                 for region in area.regions:
-                    if region.type == 'WINDOW':
+                    if region.type == "WINDOW":
                         override["region"] = region
                         break
                 break
@@ -284,11 +285,11 @@ def _build_context_override(bpy: Any, context_override: dict[str, Any]) -> tuple
                 elif action_type == "active":
                     bpy.context.view_layer.objects.active = original_value
                 elif action_type == "selected":
-                    bpy.ops.object.select_all(action='DESELECT')
+                    bpy.ops.object.select_all(action="DESELECT")
                     for obj in original_value:
                         if obj:
                             obj.select_set(True)
-            except Exception as exc:
+            except (AttributeError, RuntimeError) as exc:
                 logger.debug("Context cleanup failed for %s: %s", action_type, exc)
 
     return override, cleanup if cleanup_actions else None
@@ -307,7 +308,7 @@ def _get_reports_snapshot(bpy: Any) -> list[tuple[str, str]]:
         wm = bpy.context.window_manager
         if hasattr(wm, "reports"):
             return [(r.type, r.message) for r in wm.reports]
-    except Exception as exc:
+    except (AttributeError, RuntimeError) as exc:
         logger.debug("Failed to get reports snapshot: %s", exc)
     return []
 

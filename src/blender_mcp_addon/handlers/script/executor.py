@@ -168,7 +168,7 @@ def script_execute(payload: dict[str, Any], *, started: float) -> dict[str, Any]
             data={"timeout": timeout},
             started=started,
         )
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 — user code may raise any exception
         exec_duration = (time.perf_counter() - exec_start) * 1000.0
         error_msg = str(exc)
         tb = traceback.format_exc()
@@ -243,7 +243,7 @@ def _execute_with_timeout(code: str, timeout: int, bpy: Any) -> dict[str, Any]:
                     result_container["return_value"] = exec_globals["_result"]
 
             result_container["output"] = stdout_capture.getvalue() + stderr_capture.getvalue()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — executes arbitrary user code
             result_container["error"] = e
             result_container["output"] = stdout_capture.getvalue() + stderr_capture.getvalue()
         finally:

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Integration workflow tests using the production mcp_protocol.MCPServer."""
+
 from __future__ import annotations
 
 import os
@@ -43,7 +44,9 @@ class TestWorkflowScenarios(unittest.TestCase):
         r1 = self._rpc("tools/call", {"name": "blender_get_scene", "arguments": {}}, 1)
         self.assertNotIn("isError", r1["result"])
 
-        r2 = self._rpc("tools/call", {"name": "blender_create_object", "arguments": {"name": "WF_Cube", "object_type": "MESH"}}, 2)
+        r2 = self._rpc(
+            "tools/call", {"name": "blender_create_object", "arguments": {"name": "WF_Cube", "object_type": "MESH"}}, 2
+        )
         self.assertNotIn("isError", r2["result"])
 
     def test_prompts_workflow(self) -> None:

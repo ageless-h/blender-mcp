@@ -223,9 +223,7 @@ def _find_input_by_name_and_type(node, input_name: str, value: Any):
     if len(candidates) == 1:
         return candidates[0]
 
-    preferred_type = _SOCKET_TYPE_FOR_VALUE.get(
-        len(value) if isinstance(value, (list, tuple)) else 1, None
-    )
+    preferred_type = _SOCKET_TYPE_FOR_VALUE.get(len(value) if isinstance(value, (list, tuple)) else 1, None)
     if preferred_type:
         for inp in candidates:
             if inp.type == preferred_type:
@@ -279,12 +277,7 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
                 if not scene.use_nodes:
                     scene.use_nodes = True
                 node_tree = scene.node_tree
-        if (
-            tree_type == "GEOMETRY"
-            and context == "MODIFIER"
-            and target
-            and "/" in target
-        ):
+        if tree_type == "GEOMETRY" and context == "MODIFIER" and target and "/" in target:
             obj_name, mod_name = target.split("/", 1)
             obj = bpy.data.objects.get(obj_name)
             if obj:
@@ -325,9 +318,7 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
                     node.label = op["name"]
                 if op.get("location"):
                     node.location = tuple(op["location"])
-                results.append(
-                    {"op": i, "action": "add_node", "name": node.name, "ok": True}
-                )
+                results.append({"op": i, "action": "add_node", "name": node.name, "ok": True})
 
             elif action == "remove_node":
                 node_name = op.get("name", "")
@@ -479,7 +470,7 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
                     }
                 )
 
-        except Exception as exc:
+        except (AttributeError, KeyError, TypeError, RuntimeError, ValueError) as exc:
             results.append({"op": i, "action": action, "ok": False, "error": str(exc)})
 
     success_count = sum(1 for r in results if r.get("ok"))

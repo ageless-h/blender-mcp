@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """UV mapping handler — seams, unwrap algorithms, pack, UV layers."""
+
 from __future__ import annotations
 
 import logging
@@ -117,5 +118,5 @@ def uv_manage(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
 
         return _ok(result={"action": action, "object": object_name, "message": result_msg}, started=started)
 
-    except Exception as exc:
+    except (AttributeError, RuntimeError, TypeError) as exc:
         return _error(code="operation_failed", message=f"UV {action} failed: {exc}", started=started)

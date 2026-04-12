@@ -41,13 +41,11 @@ def get_server_address() -> tuple[str, int]:
 
         prefs = bpy.context.preferences.addons["blender_mcp_addon"].preferences
         return prefs.host, prefs.port
-    except Exception:
+    except (AttributeError, KeyError, ImportError):
         return "127.0.0.1", 9876
 
 
-def start_socket_server(
-    host: str | None = None, port: int | None = None
-) -> dict[str, Any]:
+def start_socket_server(host: str | None = None, port: int | None = None) -> dict[str, Any]:
     """Start the socket server for receiving capability requests."""
     global _server_socket, _server_thread
 
@@ -79,7 +77,7 @@ def start_socket_server(
 
             logger.info("Socket server started on %s:%s", host, port)
             return {"ok": True, "host": host, "port": port}
-        except Exception as exc:
+        except (OSError, RuntimeError) as exc:
             logger.error("Failed to start socket server: %s", exc)
             _server_socket = None
             return {"ok": False, "error": str(exc)}
@@ -97,7 +95,7 @@ def stop_socket_server() -> dict[str, Any]:
 
         try:
             _server_socket.close()
-        except Exception as exc:
+        except (OSError, RuntimeError) as exc:
             logger.debug("Error closing server socket: %s", exc)
 
         if _server_thread is not None:
@@ -164,16 +162,14 @@ def _handle_client(client_socket: socket.socket) -> None:
             return
 
         response = _dispatch_to_main_thread(request)
-        client_socket.sendall(
-            (json.dumps(response, ensure_ascii=False) + "\n").encode("utf-8")
-        )
+        client_socket.sendall((json.dumps(response, ensure_ascii=False) + "\n").encode("utf-8"))
 
-    except Exception as exc:
+    except (OSError, RuntimeError, ConnectionError) as exc:
         logger.error("Error handling client: %s", exc)
     finally:
         try:
             client_socket.close()
-        except Exception as exc:
+        except (OSError, RuntimeError) as exc:
             logger.debug("Error closing client socket: %s", exc)
 
 
@@ -208,7 +204,7 @@ def _main_thread_poll() -> float | None:
         try:
             result = execute_capability(request)
             response_holder.append(result)
-        except Exception as exc:
+        except (AttributeError, RuntimeError, TypeError) as exc:
             logger.error("Main-thread execution error: %s", exc)
             response_holder.append(
                 {
@@ -233,12 +229,10 @@ def _ensure_timer_registered() -> None:
     try:
         import bpy  # type: ignore
 
-        bpy.app.timers.register(
-            _main_thread_poll, first_interval=_TIMER_INTERVAL, persistent=True
-        )
+        bpy.app.timers.register(_main_thread_poll, first_interval=_TIMER_INTERVAL, persistent=True)
         _timer_registered = True
         logger.debug("Main-thread dispatch timer registered")
-    except Exception as exc:
+    except (AttributeError, RuntimeError, ImportError) as exc:
         logger.error("Failed to register dispatch timer: %s", exc)
 
 
@@ -247,11 +241,9 @@ def _ensure_watchdog_registered() -> None:
         import bpy  # type: ignore
 
         if not bpy.app.timers.is_registered(_watchdog_poll):
-            bpy.app.timers.register(
-                _watchdog_poll, first_interval=_WATCHDOG_INTERVAL, persistent=True
-            )
+            bpy.app.timers.register(_watchdog_poll, first_interval=_WATCHDOG_INTERVAL, persistent=True)
             logger.debug("Watchdog timer registered")
-    except Exception as exc:
+    except (AttributeError, RuntimeError, ImportError) as exc:
         logger.error("Failed to register watchdog timer: %s", exc)
 
 
@@ -269,7 +261,7 @@ def _unregister_timer() -> None:
             bpy.app.timers.unregister(_watchdog_poll)
         _timer_registered = False
         logger.debug("Main-thread dispatch timer unregistered")
-    except Exception as exc:
+    except (AttributeError, RuntimeError, ImportError) as exc:
         logger.debug("Error unregistering dispatch timer: %s", exc)
 
 
@@ -291,7 +283,7 @@ def _watchdog_poll() -> float | None:
                 first_interval=0.0,
                 persistent=True,
             )
-    except Exception as exc:
+    except (AttributeError, RuntimeError, ImportError) as exc:
         logger.error("Watchdog: failed to re-register poll timer: %s", exc)
     return _WATCHDOG_INTERVAL
 
@@ -306,11 +298,7 @@ def _kick_timer_if_dead() -> None:
 
     if _shutdown_flag.is_set():
         return
-    elapsed = (
-        _time.monotonic() - _last_poll_time
-        if _last_poll_time
-        else _WATCHDOG_INTERVAL + 1
-    )
+    elapsed = _time.monotonic() - _last_poll_time if _last_poll_time else _WATCHDOG_INTERVAL + 1
     if elapsed > _WATCHDOG_INTERVAL and _last_poll_time > 0:
         logger.warning(
             "Timer appears dead (no tick for %.1fs), scheduling restart",
@@ -328,5 +316,5 @@ def _kick_timer_if_dead() -> None:
                     )
 
             bpy.app.timers.register(_restart, first_interval=0.0)
-        except Exception as exc:
+        except (AttributeError, RuntimeError, ImportError) as exc:
             logger.error("Failed to schedule timer restart: %s", exc)

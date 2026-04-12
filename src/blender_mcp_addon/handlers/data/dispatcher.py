@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Dispatcher for data.* tool operations."""
+
 from __future__ import annotations
 
 import logging
@@ -21,9 +22,7 @@ from ..response import (
 logger = logging.getLogger(__name__)
 
 
-def _resolve_handler(
-    payload: dict[str, Any], started: float
-) -> tuple[Any, str, dict[str, Any] | None]:
+def _resolve_handler(payload: dict[str, Any], started: float) -> tuple[Any, str, dict[str, Any] | None]:
     """Common preamble: check bpy, parse type, look up handler.
 
     Returns:
@@ -64,7 +63,7 @@ def data_create(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
     try:
         result = handler.create(name, params)
         return _ok(result=result, started=started)
-    except Exception as exc:
+    except (AttributeError, KeyError, TypeError, RuntimeError, ValueError) as exc:
         return operation_failed_error("data.create", exc, started)
 
 
@@ -85,7 +84,7 @@ def data_read(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
         return _ok(result=result, started=started)
     except KeyError:
         return not_found_error(type_str, name, started)
-    except Exception as exc:
+    except (AttributeError, TypeError, RuntimeError, ValueError) as exc:
         return operation_failed_error("data.read", exc, started)
 
 
@@ -108,7 +107,7 @@ def data_write(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
         return _ok(result=result, started=started)
     except KeyError:
         return not_found_error(type_str, name, started)
-    except Exception as exc:
+    except (AttributeError, TypeError, RuntimeError, ValueError) as exc:
         return operation_failed_error("data.write", exc, started)
 
 
@@ -130,7 +129,7 @@ def data_delete(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
         return _ok(result=result, started=started)
     except KeyError:
         return not_found_error(type_str, name, started)
-    except Exception as exc:
+    except (AttributeError, TypeError, RuntimeError, ValueError) as exc:
         return operation_failed_error("data.delete", exc, started)
 
 
@@ -145,7 +144,7 @@ def data_list(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
     try:
         result = handler.list_items(filter_params)
         return _ok(result=result, started=started)
-    except Exception as exc:
+    except (AttributeError, TypeError, RuntimeError, ValueError) as exc:
         return operation_failed_error("data.list", exc, started)
 
 
@@ -213,5 +212,5 @@ def data_link(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
             message=str(exc),
             started=started,
         )
-    except Exception as exc:
+    except (AttributeError, TypeError, RuntimeError, ValueError) as exc:
         return operation_failed_error("data.link", exc, started)

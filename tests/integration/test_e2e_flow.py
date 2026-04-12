@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """End-to-end integration tests for MCP request flow."""
+
 from __future__ import annotations
 
 import os
@@ -20,7 +21,11 @@ class TestE2EFlow(unittest.TestCase):
         return self.server.handle_request(req)
 
     def test_initialize_then_tools_list(self):
-        r1 = self._rpc("initialize", {"protocolVersion": "2024-11-05", "capabilities": {}, "clientInfo": {"name": "test", "version": "1.0"}}, 1)
+        r1 = self._rpc(
+            "initialize",
+            {"protocolVersion": "2024-11-05", "capabilities": {}, "clientInfo": {"name": "test", "version": "1.0"}},
+            1,
+        )
         self.assertIn("serverInfo", r1["result"])
         r2 = self._rpc("tools/list", {}, 2)
         self.assertEqual(len(r2["result"]["tools"]), 26)
@@ -31,7 +36,9 @@ class TestE2EFlow(unittest.TestCase):
         self.assertNotIn("isError", resp["result"])
 
     def test_tools_call_imperative(self):
-        resp = self._rpc("tools/call", {"name": "blender_create_object", "arguments": {"name": "Cube", "object_type": "MESH"}}, 4)
+        resp = self._rpc(
+            "tools/call", {"name": "blender_create_object", "arguments": {"name": "Cube", "object_type": "MESH"}}, 4
+        )
         self.assertIn("content", resp["result"])
 
     def test_tools_call_fallback(self):

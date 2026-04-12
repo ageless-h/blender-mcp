@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Context handler for pseudo-type access to bpy.context."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -57,7 +58,9 @@ class ContextHandler(BaseHandler):
             "workspace": ctx.workspace.name if ctx.workspace else None,
             "area_type": ctx.area.type if ctx.area else None,
             "region_type": ctx.region.type if ctx.region else None,
-            "tool": ctx.tool_settings.workspace_tool_type if hasattr(ctx.tool_settings, "workspace_tool_type") else None,
+            "tool": ctx.tool_settings.workspace_tool_type
+            if hasattr(ctx.tool_settings, "workspace_tool_type")
+            else None,
         }
 
     def write(self, name: str, properties: dict[str, Any], params: dict[str, Any]) -> dict[str, Any]:
@@ -79,7 +82,7 @@ class ContextHandler(BaseHandler):
         modified = []
 
         if "selected_objects" in properties:
-            bpy.ops.object.select_all(action='DESELECT')
+            bpy.ops.object.select_all(action="DESELECT")
             for obj_name in properties["selected_objects"]:
                 obj = bpy.data.objects.get(obj_name)
                 if obj:
@@ -98,19 +101,19 @@ class ContextHandler(BaseHandler):
 
             if target_mode != current_mode:
                 if target_mode == "OBJECT":
-                    bpy.ops.object.mode_set(mode='OBJECT')
+                    bpy.ops.object.mode_set(mode="OBJECT")
                 elif target_mode == "EDIT" or target_mode == "EDIT_MESH":
-                    bpy.ops.object.mode_set(mode='EDIT')
+                    bpy.ops.object.mode_set(mode="EDIT")
                 elif target_mode == "SCULPT":
-                    bpy.ops.object.mode_set(mode='SCULPT')
+                    bpy.ops.object.mode_set(mode="SCULPT")
                 elif target_mode == "VERTEX_PAINT":
-                    bpy.ops.object.mode_set(mode='VERTEX_PAINT')
+                    bpy.ops.object.mode_set(mode="VERTEX_PAINT")
                 elif target_mode == "WEIGHT_PAINT":
-                    bpy.ops.object.mode_set(mode='WEIGHT_PAINT')
+                    bpy.ops.object.mode_set(mode="WEIGHT_PAINT")
                 elif target_mode == "TEXTURE_PAINT":
-                    bpy.ops.object.mode_set(mode='TEXTURE_PAINT')
+                    bpy.ops.object.mode_set(mode="TEXTURE_PAINT")
                 elif target_mode == "POSE":
-                    bpy.ops.object.mode_set(mode='POSE')
+                    bpy.ops.object.mode_set(mode="POSE")
                 modified.append("mode")
 
         if "scene" in properties:

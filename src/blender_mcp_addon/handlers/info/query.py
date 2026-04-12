@@ -118,12 +118,10 @@ def info_query(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
         elif info_type == InfoType.MEMORY:
             result = _query_memory(bpy, params)
         else:
-            return invalid_params_error(
-                f"Query type not implemented: {query_type}", started
-            )
+            return invalid_params_error(f"Query type not implemented: {query_type}", started)
 
         return _ok(result=result, started=started)
-    except Exception as exc:
+    except (AttributeError, KeyError, TypeError, RuntimeError, ValueError) as exc:
         return operation_failed_error("info.query", exc, started)
 
 
@@ -142,7 +140,7 @@ def _query_reports(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
                         "message": report.message,
                     }
                 )
-    except Exception as exc:
+    except (AttributeError, KeyError, RuntimeError) as exc:
         logger.debug("Failed to query reports: %s", exc)
 
     return {"reports": reports, "count": len(reports)}
@@ -180,7 +178,7 @@ def _query_undo_history(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
                 )
                 if hasattr(step, "is_current") and step.is_current:
                     current_step = i
-    except Exception as exc:
+    except (AttributeError, RuntimeError) as exc:
         logger.debug("Failed to query undo history: %s", exc)
 
     return {
@@ -212,7 +210,7 @@ def _query_scene_stats(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
                     total_edges += len(mesh.edges)
                     total_faces += len(mesh.polygons)
                     obj_eval.to_mesh_clear()
-            except Exception as exc:
+            except (AttributeError, RuntimeError, ValueError) as exc:
                 logger.debug("Failed to evaluate mesh for '%s': %s", obj.name, exc)
 
     memory_stats = {}
@@ -222,7 +220,7 @@ def _query_scene_stats(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
 
             mem_info = resource.getrusage(resource.RUSAGE_SELF)
             memory_stats["peak_mb"] = mem_info.ru_maxrss / 1024.0
-    except Exception as exc:
+    except (ImportError, AttributeError, OSError) as exc:
         logger.debug("Failed to query memory stats: %s", exc)
 
     return {
@@ -245,13 +243,13 @@ def _query_selection(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
     """Query current selection state."""
     try:
         mode = bpy.context.mode
-    except Exception:
+    except (AttributeError, RuntimeError):
         mode = "OBJECT"
 
     try:
         active = bpy.context.view_layer.objects.active
         active_name = active.name if active else None
-    except Exception:
+    except (AttributeError, RuntimeError):
         active_name = None
 
     selected_names = []
@@ -260,9 +258,9 @@ def _query_selection(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
             try:
                 if obj.select_get():
                     selected_names.append(obj.name)
-            except Exception:
+            except (AttributeError, RuntimeError):
                 pass
-    except Exception:
+    except (AttributeError, RuntimeError):
         pass
 
     result = {
@@ -287,7 +285,7 @@ def _query_selection(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
                     "total_edges": len(bm.edges),
                     "total_faces": len(bm.faces),
                 }
-        except Exception as exc:
+        except (AttributeError, RuntimeError, ImportError) as exc:
             logger.debug("Failed to query edit mesh selection: %s", exc)
 
     return result
@@ -326,7 +324,7 @@ def _query_mode(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
                 if tool.mode == mode_string:
                     active_tool = tool.idname
                     break
-    except Exception:
+    except (AttributeError, RuntimeError):
         pass
 
     return {
@@ -390,17 +388,13 @@ def _query_viewport_capture(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
                         try:
                             override = {
                                 "area": area,
-                                "region": [
-                                    r for r in area.regions if r.type == "WINDOW"
-                                ][0],
+                                "region": [r for r in area.regions if r.type == "WINDOW"][0],
                             }
 
                             if resolution:
                                 with bpy.context.temp_override(**override):
                                     bpy.ops.render.opengl(write_still=True)
-                                    bpy.data.images["Render Result"].save_render(
-                                        tmp_path
-                                    )
+                                    bpy.data.images["Render Result"].save_render(tmp_path)
                             else:
                                 with bpy.context.temp_override(**override):
                                     bpy.ops.screen.screenshot(filepath=tmp_path)
@@ -431,7 +425,7 @@ def _query_viewport_capture(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
             "height": height,
             "mime_type": mime_type,
         }
-    except Exception:
+    except (AttributeError, RuntimeError, OSError, IndexError):
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
         raise
@@ -500,12 +494,8 @@ def _query_version(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
         "api_version": list(bpy.app.version) if hasattr(bpy.app, "version") else None,
         "python_version": sys.version,
         "python_version_info": list(sys.version_info[:3]),
-        "build_date": bpy.app.build_date.decode()
-        if hasattr(bpy.app, "build_date")
-        else None,
-        "build_hash": bpy.app.build_hash.decode()
-        if hasattr(bpy.app, "build_hash")
-        else None,
+        "build_date": bpy.app.build_date.decode() if hasattr(bpy.app, "build_date") else None,
+        "build_hash": bpy.app.build_hash.decode() if hasattr(bpy.app, "build_hash") else None,
     }
 
 
@@ -523,25 +513,19 @@ def _query_memory(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
         process = psutil.Process()
         mem_info = process.memory_info()
         result["used_mb"] = mem_info.rss / (1024 * 1024)
-        result["peak_mb"] = (
-            mem_info.peak_wset / (1024 * 1024)
-            if hasattr(mem_info, "peak_wset")
-            else None
-        )
+        result["peak_mb"] = mem_info.peak_wset / (1024 * 1024) if hasattr(mem_info, "peak_wset") else None
 
         vm = psutil.virtual_memory()
         result["total_mb"] = vm.total / (1024 * 1024)
     except ImportError:
         pass
-    except Exception:
+    except (AttributeError, OSError, RuntimeError):
         pass
 
     categories = {}
     try:
         categories["meshes"] = sum(
-            m.calc_loop_triangles_count() * 12
-            if hasattr(m, "calc_loop_triangles_count")
-            else 0
+            m.calc_loop_triangles_count() * 12 if hasattr(m, "calc_loop_triangles_count") else 0
             for m in bpy.data.meshes
         ) / (1024 * 1024)
         categories["images"] = sum(
@@ -549,7 +533,7 @@ def _query_memory(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
             for img in bpy.data.images
             if img.size[0] > 0
         ) / (1024 * 1024)
-    except Exception:
+    except (AttributeError, TypeError, ZeroDivisionError):
         pass
 
     result["categories"] = categories

@@ -60,9 +60,7 @@ def _handle_get_node_tree(payload: dict[str, Any], started: float) -> dict[str, 
     return node_tree_read(payload, started=started)
 
 
-def _handle_get_animation_data(
-    payload: dict[str, Any], started: float
-) -> dict[str, Any]:
+def _handle_get_animation_data(payload: dict[str, Any], started: float) -> dict[str, Any]:
     from ..handlers.animation.reader import animation_read
 
     return animation_read(payload, started=started)
@@ -121,12 +119,8 @@ def _handle_get_scene(payload: dict[str, Any], started: float) -> dict[str, Any]
                 if world.use_nodes and world.node_tree:
                     bg = world.node_tree.nodes.get("Background")
                     if bg:
-                        world_info["background_color"] = list(
-                            bg.inputs["Color"].default_value
-                        )
-                        world_info["background_strength"] = bg.inputs[
-                            "Strength"
-                        ].default_value
+                        world_info["background_color"] = list(bg.inputs["Color"].default_value)
+                        world_info["background_strength"] = bg.inputs["Strength"].default_value
                 result["world"] = world_info
         except (AttributeError, KeyError, TypeError):
             pass
@@ -143,9 +137,7 @@ def _handle_get_collections(payload: dict[str, Any], started: float) -> dict[str
     )
 
 
-def _handle_get_armature_data(
-    payload: dict[str, Any], started: float
-) -> dict[str, Any]:
+def _handle_get_armature_data(payload: dict[str, Any], started: float) -> dict[str, Any]:
     read_params = {}
     if "include" in payload:
         read_params["include"] = payload["include"]
@@ -175,9 +167,7 @@ def _handle_capture_viewport(payload: dict[str, Any], started: float) -> dict[st
         capture_params["camera_view"] = payload["camera_view"]
     if "format" in payload:
         capture_params["format"] = payload["format"]
-    return info_query(
-        {"type": "viewport_capture", "params": capture_params}, started=started
-    )
+    return info_query({"type": "viewport_capture", "params": capture_params}, started=started)
 
 
 def _handle_get_selection(payload: dict[str, Any], started: float) -> dict[str, Any]:
@@ -215,9 +205,7 @@ def _handle_edit_sequencer(payload: dict[str, Any], started: float) -> dict[str,
 def _handle_create_object(payload: dict[str, Any], started: float) -> dict[str, Any]:
     obj_name = payload.get("name", "")
     params = {k: v for k, v in payload.items() if k != "name"}
-    return data_create(
-        {"type": "object", "name": obj_name, "params": params}, started=started
-    )
+    return data_create({"type": "object", "name": obj_name, "params": params}, started=started)
 
 
 def _handle_modify_object(payload: dict[str, Any], started: float) -> dict[str, Any]:
@@ -269,9 +257,7 @@ def _handle_modify_object(payload: dict[str, Any], started: float) -> dict[str, 
         props["name"] = payload["new_name"]
     if not props:
         return _ok(result={"name": obj_name, "modified": []}, started=started)
-    return data_write(
-        {"type": "object", "name": obj_name, "properties": props}, started=started
-    )
+    return data_write({"type": "object", "name": obj_name, "properties": props}, started=started)
 
 
 def _handle_manage_material(payload: dict[str, Any], started: float) -> dict[str, Any]:
@@ -289,9 +275,7 @@ def _handle_manage_material(payload: dict[str, Any], started: float) -> dict[str
     )
     if action == "create":
         mat_params = {k: payload[k] for k in _PBR_KEYS if k in payload}
-        return data_create(
-            {"type": "material", "name": name, "params": mat_params}, started=started
-        )
+        return data_create({"type": "material", "name": name, "params": mat_params}, started=started)
     elif action == "delete":
         return data_delete({"type": "material", "name": name}, started=started)
     elif action in ("assign", "unassign"):
@@ -307,9 +291,7 @@ def _handle_manage_material(payload: dict[str, Any], started: float) -> dict[str
     else:
         # edit action — build properties dict from PBR params
         mat_props = {k: payload[k] for k in _PBR_KEYS if k in payload}
-        return data_write(
-            {"type": "material", "name": name, "properties": mat_props}, started=started
-        )
+        return data_write({"type": "material", "name": name, "properties": mat_props}, started=started)
 
 
 def _handle_manage_modifier(payload: dict[str, Any], started: float) -> dict[str, Any]:
@@ -365,9 +347,7 @@ def _handle_manage_modifier(payload: dict[str, Any], started: float) -> dict[str
     )
 
 
-def _handle_manage_collection(
-    payload: dict[str, Any], started: float
-) -> dict[str, Any]:
+def _handle_manage_collection(payload: dict[str, Any], started: float) -> dict[str, Any]:
     action = payload.get("action", "")
     col_name = payload.get("collection_name", "")
     if action == "create":
@@ -422,9 +402,7 @@ def _handle_manage_uv(payload: dict[str, Any], started: float) -> dict[str, Any]
     return uv_manage(payload, started=started)
 
 
-def _handle_manage_constraints(
-    payload: dict[str, Any], started: float
-) -> dict[str, Any]:
+def _handle_manage_constraints(payload: dict[str, Any], started: float) -> dict[str, Any]:
     from ..handlers.constraints.handler import constraints_manage
 
     return constraints_manage(payload, started=started)
@@ -506,9 +484,7 @@ _CAPABILITY_HANDLERS: dict[str, Callable[[dict[str, Any], float], dict[str, Any]
 }
 
 
-def _dispatch_new_capability(
-    capability: str, payload: dict[str, Any], started: float
-) -> dict[str, Any]:
+def _dispatch_new_capability(capability: str, payload: dict[str, Any], started: float) -> dict[str, Any]:
     """Dispatch new blender.* capabilities via registry lookup.
 
     Maps the 26 new tool internal capabilities to handler calls.
@@ -607,7 +583,7 @@ def execute_capability(request: dict[str, Any]) -> dict[str, Any]:
             data={"capability": capability},
             started=started,
         )
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 — top-level fallback for all capability handlers
         import traceback
 
         tb = traceback.format_exc()

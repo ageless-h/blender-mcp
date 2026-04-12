@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Constraint handler — add/configure/remove/enable/disable constraints on objects and bones."""
+
 from __future__ import annotations
 
 import logging
@@ -22,7 +23,11 @@ def _resolve_target(bpy: Any, payload: dict[str, Any], started: float):
         armature_name, bone_name = target_name.split("/", 1)
         obj = bpy.data.objects.get(armature_name)
         if obj is None or obj.type != "ARMATURE":
-            return None, None, _error(code="not_found", message=f"Armature '{armature_name}' not found", started=started)
+            return (
+                None,
+                None,
+                _error(code="not_found", message=f"Armature '{armature_name}' not found", started=started),
+            )
         bone = obj.pose.bones.get(bone_name) if obj.pose else None
         if bone is None:
             return None, None, _error(code="not_found", message=f"Bone '{bone_name}' not found", started=started)
@@ -99,7 +104,7 @@ def constraints_manage(payload: dict[str, Any], *, started: float) -> dict[str, 
             c = constraints.get(constraint_name)
             if not c:
                 return _error(code="not_found", message=f"Constraint '{constraint_name}' not found", started=started)
-            c.mute = (action == "disable")
+            c.mute = action == "disable"
             return _ok(result={"action": action, "name": c.name, "muted": c.mute}, started=started)
 
         elif action in ("move_up", "move_down"):
@@ -118,5 +123,5 @@ def constraints_manage(payload: dict[str, Any], *, started: float) -> dict[str, 
         else:
             return _error(code="invalid_params", message=f"Unknown action: {action}", started=started)
 
-    except Exception as exc:
+    except (AttributeError, KeyError, TypeError, RuntimeError, ValueError) as exc:
         return _error(code="operation_failed", message=f"Constraint {action} failed: {exc}", started=started)

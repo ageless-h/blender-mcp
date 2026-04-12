@@ -31,11 +31,7 @@ class CapabilityCatalog:
 def capability_scope_map(
     capabilities: Iterable[CapabilityMeta],
 ) -> dict[str, set[str]]:
-    return {
-        capability.name: set(capability.scopes)
-        for capability in capabilities
-        if capability.scopes
-    }
+    return {capability.name: set(capability.scopes) for capability in capabilities if capability.scopes}
 
 
 def _parse_version(version: str) -> tuple[int, ...] | None:
@@ -57,9 +53,7 @@ def _lt(a: tuple[int, ...], b: tuple[int, ...]) -> bool:
     return aa < bb
 
 
-def capability_availability(
-    capability: CapabilityMeta, version: str | None
-) -> tuple[bool, str | None]:
+def capability_availability(capability: CapabilityMeta, version: str | None) -> tuple[bool, str | None]:
     if version is None:
         return True, None
     target = _parse_version(version)
@@ -103,35 +97,165 @@ def minimal_capability_set() -> list[CapabilityMeta]:
     """
     return [
         # Perception layer (11)
-        CapabilityMeta(name="blender.get_objects", description="List/filter scene objects", scopes=["data:read"], min_version="4.2"),
-        CapabilityMeta(name="blender.get_object_data", description="Deep object data (12 include sections)", scopes=["data:read"], min_version="4.2"),
-        CapabilityMeta(name="blender.get_node_tree", description="Read node tree (6 contexts)", scopes=["data:read"], min_version="4.2"),
-        CapabilityMeta(name="blender.get_animation_data", description="Keyframes/NLA/drivers/shape keys", scopes=["data:read"], min_version="4.2"),
-        CapabilityMeta(name="blender.get_materials", description="Material asset list", scopes=["data:read"], min_version="4.2"),
-        CapabilityMeta(name="blender.get_scene", description="Scene stats/render/world/version/memory", scopes=["info:read"], min_version="4.2"),
-        CapabilityMeta(name="blender.get_collections", description="Collection hierarchy tree", scopes=["data:read"], min_version="4.2"),
-        CapabilityMeta(name="blender.get_armature_data", description="Armature/bone hierarchy/constraints/poses", scopes=["data:read"], min_version="4.2"),
-        CapabilityMeta(name="blender.get_images", description="Texture/image asset list", scopes=["data:read"], min_version="4.2"),
-        CapabilityMeta(name="blender.capture_viewport", description="Viewport screenshot", scopes=["info:read"], min_version="4.2"),
-        CapabilityMeta(name="blender.get_selection", description="Current selection/mode/active object", scopes=["info:read"], min_version="4.2"),
+        CapabilityMeta(
+            name="blender.get_objects",
+            description="List/filter scene objects",
+            scopes=["data:read"],
+            min_version="4.2",
+        ),
+        CapabilityMeta(
+            name="blender.get_object_data",
+            description="Deep object data (12 include sections)",
+            scopes=["data:read"],
+            min_version="4.2",
+        ),
+        CapabilityMeta(
+            name="blender.get_node_tree",
+            description="Read node tree (6 contexts)",
+            scopes=["data:read"],
+            min_version="4.2",
+        ),
+        CapabilityMeta(
+            name="blender.get_animation_data",
+            description="Keyframes/NLA/drivers/shape keys",
+            scopes=["data:read"],
+            min_version="4.2",
+        ),
+        CapabilityMeta(
+            name="blender.get_materials",
+            description="Material asset list",
+            scopes=["data:read"],
+            min_version="4.2",
+        ),
+        CapabilityMeta(
+            name="blender.get_scene",
+            description="Scene stats/render/world/version/memory",
+            scopes=["info:read"],
+            min_version="4.2",
+        ),
+        CapabilityMeta(
+            name="blender.get_collections",
+            description="Collection hierarchy tree",
+            scopes=["data:read"],
+            min_version="4.2",
+        ),
+        CapabilityMeta(
+            name="blender.get_armature_data",
+            description="Armature/bone hierarchy/constraints/poses",
+            scopes=["data:read"],
+            min_version="4.2",
+        ),
+        CapabilityMeta(
+            name="blender.get_images",
+            description="Texture/image asset list",
+            scopes=["data:read"],
+            min_version="4.2",
+        ),
+        CapabilityMeta(
+            name="blender.capture_viewport",
+            description="Viewport screenshot",
+            scopes=["info:read"],
+            min_version="4.2",
+        ),
+        CapabilityMeta(
+            name="blender.get_selection",
+            description="Current selection/mode/active object",
+            scopes=["info:read"],
+            min_version="4.2",
+        ),
         # Declarative write layer (3)
-        CapabilityMeta(name="blender.edit_nodes", description="Edit any node tree", scopes=["data:write"], min_version="4.2"),
-        CapabilityMeta(name="blender.edit_animation", description="Keyframe/NLA/driver/shape key edits", scopes=["data:write"], min_version="4.2"),
-        CapabilityMeta(name="blender.edit_sequencer", description="VSE strip/transition/effect edits", scopes=["data:write"], min_version="4.2"),
+        CapabilityMeta(
+            name="blender.edit_nodes",
+            description="Edit any node tree",
+            scopes=["data:write"],
+            min_version="4.2",
+        ),
+        CapabilityMeta(
+            name="blender.edit_animation",
+            description="Keyframe/NLA/driver/shape key edits",
+            scopes=["data:write"],
+            min_version="4.2",
+        ),
+        CapabilityMeta(
+            name="blender.edit_sequencer",
+            description="VSE strip/transition/effect edits",
+            scopes=["data:write"],
+            min_version="4.2",
+        ),
         # Imperative write layer (9)
-        CapabilityMeta(name="blender.create_object", description="Create objects (MESH/LIGHT/CAMERA/...)", scopes=["data:create"], min_version="4.2"),
-        CapabilityMeta(name="blender.modify_object", description="Transform/parent/visibility/rename/delete", scopes=["data:write"], min_version="4.2"),
-        CapabilityMeta(name="blender.manage_material", description="Material CRUD + PBR + assign", scopes=["data:write"], min_version="4.2"),
-        CapabilityMeta(name="blender.manage_modifier", description="Modifier add/configure/apply/remove/move", scopes=["data:write"], min_version="4.2"),
-        CapabilityMeta(name="blender.manage_collection", description="Collection CRUD + object linking", scopes=["data:write"], min_version="4.2"),
-        CapabilityMeta(name="blender.manage_uv", description="UV unwrap/seam/pack/layers", scopes=["data:write"], min_version="4.2"),
-        CapabilityMeta(name="blender.manage_constraints", description="Object/bone constraint management", scopes=["data:write"], min_version="4.2"),
-        CapabilityMeta(name="blender.manage_physics", description="Physics simulation management", scopes=["data:write"], min_version="4.2"),
-        CapabilityMeta(name="blender.setup_scene", description="Render engine/output/world/timeline", scopes=["data:write"], min_version="4.2"),
+        CapabilityMeta(
+            name="blender.create_object",
+            description="Create objects (MESH/LIGHT/CAMERA/...)",
+            scopes=["data:create"],
+            min_version="4.2",
+        ),
+        CapabilityMeta(
+            name="blender.modify_object",
+            description="Transform/parent/visibility/rename/delete",
+            scopes=["data:write"],
+            min_version="4.2",
+        ),
+        CapabilityMeta(
+            name="blender.manage_material",
+            description="Material CRUD + PBR + assign",
+            scopes=["data:write"],
+            min_version="4.2",
+        ),
+        CapabilityMeta(
+            name="blender.manage_modifier",
+            description="Modifier add/configure/apply/remove/move",
+            scopes=["data:write"],
+            min_version="4.2",
+        ),
+        CapabilityMeta(
+            name="blender.manage_collection",
+            description="Collection CRUD + object linking",
+            scopes=["data:write"],
+            min_version="4.2",
+        ),
+        CapabilityMeta(
+            name="blender.manage_uv",
+            description="UV unwrap/seam/pack/layers",
+            scopes=["data:write"],
+            min_version="4.2",
+        ),
+        CapabilityMeta(
+            name="blender.manage_constraints",
+            description="Object/bone constraint management",
+            scopes=["data:write"],
+            min_version="4.2",
+        ),
+        CapabilityMeta(
+            name="blender.manage_physics",
+            description="Physics simulation management",
+            scopes=["data:write"],
+            min_version="4.2",
+        ),
+        CapabilityMeta(
+            name="blender.setup_scene",
+            description="Render engine/output/world/timeline",
+            scopes=["data:write"],
+            min_version="4.2",
+        ),
         # Fallback layer (3)
-        CapabilityMeta(name="blender.execute_operator", description="Execute any bpy.ops.*", scopes=["operator:execute"], min_version="4.2"),
-        CapabilityMeta(name="blender.execute_script", description="Execute Python code (dangerous, disabled by default)", scopes=["script:execute"], min_version="4.2"),
-        CapabilityMeta(name="blender.import_export", description="Import/export FBX/OBJ/GLTF/GLB/USD/STL", scopes=["data:write", "operator:execute"], min_version="4.2"),
+        CapabilityMeta(
+            name="blender.execute_operator",
+            description="Execute any bpy.ops.*",
+            scopes=["operator:execute"],
+            min_version="4.2",
+        ),
+        CapabilityMeta(
+            name="blender.execute_script",
+            description="Execute Python code (dangerous, disabled by default)",
+            scopes=["script:execute"],
+            min_version="4.2",
+        ),
+        CapabilityMeta(
+            name="blender.import_export",
+            description="Import/export FBX/OBJ/GLTF/GLB/USD/STL",
+            scopes=["data:write", "operator:execute"],
+            min_version="4.2",
+        ),
     ]
 
 

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Import/export handler — maps format enum to specific Blender operators."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -108,13 +109,16 @@ def import_export(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
         with bpy.context.temp_override(**override):
             result = op_func(**params)
         status = "FINISHED" if result == {"FINISHED"} else str(result)
-    except Exception as exc:
+    except (AttributeError, RuntimeError, OSError, KeyError, TypeError) as exc:
         return _error(code="operation_failed", message=f"{action} {fmt} failed: {exc}", started=started)
 
-    return _ok(result={
-        "action": action,
-        "format": fmt,
-        "filepath": filepath,
-        "operator": operator_id,
-        "status": status,
-    }, started=started)
+    return _ok(
+        result={
+            "action": action,
+            "format": fmt,
+            "filepath": filepath,
+            "operator": operator_id,
+            "status": status,
+        },
+        started=started,
+    )

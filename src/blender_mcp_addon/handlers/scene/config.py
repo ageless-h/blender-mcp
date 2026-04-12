@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Scene configuration handler — render, output, world, timeline settings."""
+
 from __future__ import annotations
 
 import logging
@@ -100,14 +101,17 @@ def scene_setup(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
             scene.frame_set(payload["frame_current"])
             modified.append("frame_current")
 
-        return _ok(result={
-            "action": "setup_scene",
-            "modified": modified,
-            "engine": scene.render.engine,
-            "resolution": [scene.render.resolution_x, scene.render.resolution_y],
-            "fps": scene.render.fps,
-            "frame_range": [scene.frame_start, scene.frame_end],
-        }, started=started)
+        return _ok(
+            result={
+                "action": "setup_scene",
+                "modified": modified,
+                "engine": scene.render.engine,
+                "resolution": [scene.render.resolution_x, scene.render.resolution_y],
+                "fps": scene.render.fps,
+                "frame_range": [scene.frame_start, scene.frame_end],
+            },
+            started=started,
+        )
 
-    except Exception as exc:
+    except (AttributeError, KeyError, TypeError, RuntimeError, ValueError) as exc:
         return _error(code="operation_failed", message=f"Scene setup failed: {exc}", started=started)

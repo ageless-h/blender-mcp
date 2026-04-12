@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Object handler for unified CRUD operations."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -209,7 +210,12 @@ class ObjectHandler(BaseHandler):
         if "modifiers" in include:
             mods = []
             for m in obj.modifiers:
-                mod_info: dict[str, Any] = {"name": m.name, "type": m.type, "show_viewport": m.show_viewport, "show_render": m.show_render}
+                mod_info: dict[str, Any] = {
+                    "name": m.name,
+                    "type": m.type,
+                    "show_viewport": m.show_viewport,
+                    "show_render": m.show_render,
+                }
                 mods.append(mod_info)
             result["modifiers"] = mods
 
@@ -220,10 +226,7 @@ class ObjectHandler(BaseHandler):
             ]
 
         if "constraints" in include:
-            result["constraints"] = [
-                {"name": c.name, "type": c.type, "enabled": not c.mute}
-                for c in obj.constraints
-            ]
+            result["constraints"] = [{"name": c.name, "type": c.type, "enabled": not c.mute} for c in obj.constraints]
 
         if "physics" in include:
             physics = {}
@@ -231,7 +234,11 @@ class ObjectHandler(BaseHandler):
                 if mod.type in {"PARTICLE_SYSTEM", "CLOTH", "SOFT_BODY", "FLUID", "COLLISION", "DYNAMIC_PAINT"}:
                     physics[mod.name] = {"type": mod.type}
             if hasattr(obj, "rigid_body") and obj.rigid_body:
-                physics["rigid_body"] = {"type": obj.rigid_body.type, "mass": obj.rigid_body.mass, "enabled": obj.rigid_body.enabled}
+                physics["rigid_body"] = {
+                    "type": obj.rigid_body.type,
+                    "mass": obj.rigid_body.mass,
+                    "enabled": obj.rigid_body.enabled,
+                }
             result["physics"] = physics
 
         if "animation" in include:
@@ -250,7 +257,9 @@ class ObjectHandler(BaseHandler):
             result["custom_properties"] = {k: v for k, v in obj.items() if k != "_RNA_UI" and not k.startswith("_")}
 
         if "vertex_groups" in include:
-            result["vertex_groups"] = [{"index": vg.index, "name": vg.name, "lock_weight": vg.lock_weight} for vg in obj.vertex_groups]
+            result["vertex_groups"] = [
+                {"index": vg.index, "name": vg.name, "lock_weight": vg.lock_weight} for vg in obj.vertex_groups
+            ]
 
         if "shape_keys" in include and obj.data and hasattr(obj.data, "shape_keys") and obj.data.shape_keys:
             sk = obj.data.shape_keys
@@ -264,7 +273,11 @@ class ObjectHandler(BaseHandler):
 
         if "particle_systems" in include:
             result["particle_systems"] = [
-                {"name": ps.name, "type": ps.settings.type if ps.settings else None, "count": ps.settings.count if ps.settings else 0}
+                {
+                    "name": ps.name,
+                    "type": ps.settings.type if ps.settings else None,
+                    "count": ps.settings.count if ps.settings else 0,
+                }
                 for ps in obj.particle_systems
             ]
 
@@ -391,13 +404,15 @@ class ObjectHandler(BaseHandler):
             if collection_objects is not None and obj.name not in collection_objects:
                 continue
 
-            items.append({
-                "name": obj.name,
-                "type": obj.type,
-                "location": list(obj.location),
-                "selected": obj.select_get(),
-                "visible": obj.visible_get(),
-            })
+            items.append(
+                {
+                    "name": obj.name,
+                    "type": obj.type,
+                    "location": list(obj.location),
+                    "selected": obj.select_get(),
+                    "visible": obj.visible_get(),
+                }
+            )
 
         return {"items": items, "count": len(items)}
 

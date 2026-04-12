@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Physics simulation handler — rigid body, cloth, soft body, fluid, particle, force field."""
+
 from __future__ import annotations
 
 import logging
@@ -46,10 +47,8 @@ def physics_manage(payload: dict[str, Any], *, started: float) -> dict[str, Any]
             return _free_bake(bpy, payload, started)
         else:
             return _error(code="invalid_params", message=f"Unknown action: {action}", started=started)
-    except Exception as exc:
+    except (AttributeError, RuntimeError, TypeError) as exc:
         return _error(code="operation_failed", message=f"Physics {action} failed: {exc}", started=started)
-
-
 
 
 def _add_physics(bpy: Any, obj: Any, payload: dict[str, Any], started: float) -> dict[str, Any]:
@@ -107,8 +106,9 @@ def _configure_physics(obj: Any, payload: dict[str, Any], started: float) -> dic
         return _error(code="invalid_params", message="settings are required for configure", started=started)
 
     _apply_settings(obj, physics_type, settings)
-    return _ok(result={"action": "configure", "object": obj.name,
-                       "settings_applied": list(settings.keys())}, started=started)
+    return _ok(
+        result={"action": "configure", "object": obj.name, "settings_applied": list(settings.keys())}, started=started
+    )
 
 
 def _apply_settings(obj: Any, physics_type: str, settings: dict[str, Any]) -> None:
@@ -143,8 +143,9 @@ def _remove_physics(bpy: Any, obj: Any, payload: dict[str, Any], started: float)
     if physics_type in ("RIGID_BODY", "RIGID_BODY_PASSIVE"):
         bpy.ops.rigidbody.object_remove()
     elif physics_type in ("CLOTH", "SOFT_BODY", "FLUID_DOMAIN", "FLUID_FLOW"):
-        mod_type = {"CLOTH": "CLOTH", "SOFT_BODY": "SOFT_BODY",
-                     "FLUID_DOMAIN": "FLUID", "FLUID_FLOW": "FLUID"}.get(physics_type)
+        mod_type = {"CLOTH": "CLOTH", "SOFT_BODY": "SOFT_BODY", "FLUID_DOMAIN": "FLUID", "FLUID_FLOW": "FLUID"}.get(
+            physics_type
+        )
         for mod in obj.modifiers:
             if mod.type == mod_type:
                 obj.modifiers.remove(mod)

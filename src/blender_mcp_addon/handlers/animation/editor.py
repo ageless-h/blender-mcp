@@ -26,9 +26,7 @@ def animation_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
 
     action = payload.get("action", "")
     if not action:
-        return _error(
-            code="invalid_params", message="action is required", started=started
-        )
+        return _error(code="invalid_params", message="action is required", started=started)
 
     try:
         if action == "insert_keyframe":
@@ -59,30 +57,22 @@ def animation_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
                 message=f"Unknown action: {action}",
                 started=started,
             )
-    except Exception as exc:
+    except (AttributeError, KeyError, TypeError, RuntimeError, ValueError) as exc:
         return operation_failed_error(action, exc, started)
 
 
-def _get_object(
-    bpy: Any, payload: dict[str, Any], started: float
-) -> tuple[Any, dict[str, Any] | None]:
+def _get_object(bpy: Any, payload: dict[str, Any], started: float) -> tuple[Any, dict[str, Any] | None]:
     """Get object from payload, returning (obj, error_response_or_None)."""
     name = payload.get("object_name", "")
     if not name:
-        return None, _error(
-            code="invalid_params", message="object_name is required", started=started
-        )
+        return None, _error(code="invalid_params", message="object_name is required", started=started)
     obj = bpy.data.objects.get(name)
     if obj is None:
-        return None, _error(
-            code="not_found", message=f"Object '{name}' not found", started=started
-        )
+        return None, _error(code="not_found", message=f"Object '{name}' not found", started=started)
     return obj, None
 
 
-def _insert_keyframe(
-    bpy: Any, payload: dict[str, Any], started: float
-) -> dict[str, Any]:
+def _insert_keyframe(bpy: Any, payload: dict[str, Any], started: float) -> dict[str, Any]:
     obj, err = _get_object(bpy, payload, started)
     if err:
         return err
@@ -96,9 +86,7 @@ def _insert_keyframe(
         if hasattr(prop, "__len__") and index >= 0:
             prop[index] = value
         elif not hasattr(prop, "__len__"):
-            setattr(
-                obj, data_path.split(".")[-1], value
-            ) if "." not in data_path else None
+            setattr(obj, data_path.split(".")[-1], value) if "." not in data_path else None
 
     obj.keyframe_insert(data_path=data_path, index=index, frame=frame)
 
@@ -121,9 +109,7 @@ def _insert_keyframe(
     )
 
 
-def _delete_keyframe(
-    bpy: Any, payload: dict[str, Any], started: float
-) -> dict[str, Any]:
+def _delete_keyframe(bpy: Any, payload: dict[str, Any], started: float) -> dict[str, Any]:
     obj, err = _get_object(bpy, payload, started)
     if err:
         return err
@@ -142,9 +128,7 @@ def _delete_keyframe(
     )
 
 
-def _modify_keyframe(
-    bpy: Any, payload: dict[str, Any], started: float
-) -> dict[str, Any]:
+def _modify_keyframe(bpy: Any, payload: dict[str, Any], started: float) -> dict[str, Any]:
     obj, err = _get_object(bpy, payload, started)
     if err:
         return err
@@ -155,9 +139,7 @@ def _modify_keyframe(
     value = payload.get("value")
 
     if not obj.animation_data or not obj.animation_data.action:
-        return _error(
-            code="not_found", message="No animation data on object", started=started
-        )
+        return _error(code="not_found", message="No animation data on object", started=started)
 
     modified = 0
     for fc in iter_fcurves(obj.animation_data.action):
@@ -166,9 +148,7 @@ def _modify_keyframe(
                 target_frame = int(frame)
                 for kp in list(fc.keyframe_points):
                     if int(kp.co[0]) == target_frame:
-                        new_kp = fc.keyframe_points.insert(
-                            float(target_frame), float(value)
-                        )
+                        new_kp = fc.keyframe_points.insert(float(target_frame), float(value))
                         new_kp.interpolation = interp or kp.interpolation
                         modified += 1
                         break
@@ -214,9 +194,7 @@ def _add_nla_strip(bpy: Any, payload: dict[str, Any], started: float) -> dict[st
     )
 
 
-def _modify_nla_strip(
-    bpy: Any, payload: dict[str, Any], started: float
-) -> dict[str, Any]:
+def _modify_nla_strip(bpy: Any, payload: dict[str, Any], started: float) -> dict[str, Any]:
     obj, err = _get_object(bpy, payload, started)
     if err:
         return err
@@ -233,14 +211,10 @@ def _modify_nla_strip(
                     result={"action": "modify_nla_strip", "strip": strip.name},
                     started=started,
                 )
-    return _error(
-        code="not_found", message=f"NLA strip '{strip_name}' not found", started=started
-    )
+    return _error(code="not_found", message=f"NLA strip '{strip_name}' not found", started=started)
 
 
-def _remove_nla_strip(
-    bpy: Any, payload: dict[str, Any], started: float
-) -> dict[str, Any]:
+def _remove_nla_strip(bpy: Any, payload: dict[str, Any], started: float) -> dict[str, Any]:
     obj, err = _get_object(bpy, payload, started)
     if err:
         return err
@@ -256,9 +230,7 @@ def _remove_nla_strip(
                     result={"action": "remove_nla_strip", "removed": strip_name},
                     started=started,
                 )
-    return _error(
-        code="not_found", message=f"NLA strip '{strip_name}' not found", started=started
-    )
+    return _error(code="not_found", message=f"NLA strip '{strip_name}' not found", started=started)
 
 
 def _add_driver(bpy: Any, payload: dict[str, Any], started: float) -> dict[str, Any]:
@@ -292,9 +264,7 @@ def _remove_driver(bpy: Any, payload: dict[str, Any], started: float) -> dict[st
     data_path = payload.get("data_path", "")
     index = payload.get("index", -1)
     obj.driver_remove(data_path, index) if index >= 0 else obj.driver_remove(data_path)
-    return _ok(
-        result={"action": "remove_driver", "data_path": data_path}, started=started
-    )
+    return _ok(result={"action": "remove_driver", "data_path": data_path}, started=started)
 
 
 def _set_shape_key(bpy: Any, payload: dict[str, Any], started: float) -> dict[str, Any]:
@@ -304,9 +274,7 @@ def _set_shape_key(bpy: Any, payload: dict[str, Any], started: float) -> dict[st
     sk_name = payload.get("shape_key_name", "")
     value = payload.get("value", 0)
     if not obj.data or not obj.data.shape_keys:
-        return _error(
-            code="not_found", message="No shape keys on object", started=started
-        )
+        return _error(code="not_found", message="No shape keys on object", started=started)
     kb = obj.data.shape_keys.key_blocks.get(sk_name)
     if not kb:
         return _error(
@@ -322,16 +290,12 @@ def _set_shape_key(bpy: Any, payload: dict[str, Any], started: float) -> dict[st
 
 
 def _set_frame(bpy: Any, payload: dict[str, Any], started: float) -> dict[str, Any]:
-    frame = payload.get(
-        "frame_start", payload.get("frame", bpy.context.scene.frame_current)
-    )
+    frame = payload.get("frame_start", payload.get("frame", bpy.context.scene.frame_current))
     bpy.context.scene.frame_set(frame)
     return _ok(result={"action": "set_frame", "frame": frame}, started=started)
 
 
-def _set_frame_range(
-    bpy: Any, payload: dict[str, Any], started: float
-) -> dict[str, Any]:
+def _set_frame_range(bpy: Any, payload: dict[str, Any], started: float) -> dict[str, Any]:
     scene = bpy.context.scene
     if "frame_start" in payload:
         scene.frame_start = payload["frame_start"]

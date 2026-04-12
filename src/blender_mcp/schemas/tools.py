@@ -8,6 +8,7 @@ Each tool definition contains:
 - annotations: MCP tool annotations (readOnlyHint, destructiveHint, etc.)
 - internal: Internal routing info (capability name + param transform)
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -33,11 +34,15 @@ def _tool(
 # Shared schema fragments
 # ---------------------------------------------------------------------------
 
+
 def _vec3(description: str, **kwargs: Any) -> dict[str, Any]:
     """Schema for a 3-element numeric array (e.g. location, rotation, scale)."""
     schema: dict[str, Any] = {
-        "type": "array", "items": {"type": "number"},
-        "minItems": 3, "maxItems": 3, "description": description,
+        "type": "array",
+        "items": {"type": "number"},
+        "minItems": 3,
+        "maxItems": 3,
+        "description": description,
     }
     schema.update(kwargs)
     return schema
@@ -46,8 +51,11 @@ def _vec3(description: str, **kwargs: Any) -> dict[str, Any]:
 def _rgba4(description: str, **kwargs: Any) -> dict[str, Any]:
     """Schema for a 4-element RGBA color array."""
     schema: dict[str, Any] = {
-        "type": "array", "items": {"type": "number"},
-        "minItems": 4, "maxItems": 4, "description": description,
+        "type": "array",
+        "items": {"type": "number"},
+        "minItems": 4,
+        "maxItems": 4,
+        "description": description,
     }
     schema.update(kwargs)
     return schema
@@ -56,8 +64,11 @@ def _rgba4(description: str, **kwargs: Any) -> dict[str, Any]:
 def _color3_4(description: str, **kwargs: Any) -> dict[str, Any]:
     """Schema for a 3-or-4-element color array (RGB or RGBA)."""
     schema: dict[str, Any] = {
-        "type": "array", "items": {"type": "number"},
-        "minItems": 3, "maxItems": 4, "description": description,
+        "type": "array",
+        "items": {"type": "number"},
+        "minItems": 3,
+        "maxItems": 4,
+        "description": description,
     }
     schema.update(kwargs)
     return schema
@@ -82,8 +93,19 @@ _PERCEPTION_TOOLS = [
             "properties": {
                 "type_filter": {
                     "type": "string",
-                    "enum": ["MESH", "LIGHT", "CAMERA", "CURVE", "EMPTY", "ARMATURE",
-                             "LATTICE", "FONT", "GPENCIL", "SPEAKER", "VOLUME"],
+                    "enum": [
+                        "MESH",
+                        "LIGHT",
+                        "CAMERA",
+                        "CURVE",
+                        "EMPTY",
+                        "ARMATURE",
+                        "LATTICE",
+                        "FONT",
+                        "GPENCIL",
+                        "SPEAKER",
+                        "VOLUME",
+                    ],
                     "description": "Filter by object type.",
                 },
                 "collection": {
@@ -116,7 +138,6 @@ _PERCEPTION_TOOLS = [
         },
         internal_capability="blender.get_objects",
     ),
-
     _tool(
         name="blender_get_object_data",
         description=(
@@ -137,9 +158,20 @@ _PERCEPTION_TOOLS = [
                     "type": "array",
                     "items": {
                         "type": "string",
-                        "enum": ["summary", "mesh_stats", "modifiers", "materials",
-                                 "constraints", "physics", "animation", "custom_properties",
-                                 "vertex_groups", "shape_keys", "uv_maps", "particle_systems"],
+                        "enum": [
+                            "summary",
+                            "mesh_stats",
+                            "modifiers",
+                            "materials",
+                            "constraints",
+                            "physics",
+                            "animation",
+                            "custom_properties",
+                            "vertex_groups",
+                            "shape_keys",
+                            "uv_maps",
+                            "particle_systems",
+                        ],
                     },
                     "default": ["summary"],
                     "description": "Which data sections to include. Use 'summary' for a quick overview.",
@@ -157,7 +189,6 @@ _PERCEPTION_TOOLS = [
         },
         internal_capability="blender.get_object_data",
     ),
-
     _tool(
         name="blender_get_node_tree",
         description=(
@@ -178,17 +209,29 @@ _PERCEPTION_TOOLS = [
                 "context": {
                     "type": "string",
                     "enum": ["OBJECT", "WORLD", "LINESTYLE", "SCENE", "MODIFIER", "TOOL"],
-                    "description": "Context within the tree type. SHADER: OBJECT|WORLD|LINESTYLE. COMPOSITOR: SCENE. GEOMETRY: MODIFIER|TOOL.",
+                    "description": (
+                        "Context within the tree type. "
+                        "SHADER: OBJECT|WORLD|LINESTYLE. "
+                        "COMPOSITOR: SCENE. "
+                        "GEOMETRY: MODIFIER|TOOL."
+                    ),
                 },
                 "target": {
                     "type": "string",
-                    "description": "Target name. For SHADER/OBJECT: material name. For SHADER/WORLD: world name. For GEOMETRY/MODIFIER: 'ObjectName/ModifierName'.",
+                    "description": (
+                        "Target name. For SHADER/OBJECT: material name. "
+                        "For SHADER/WORLD: world name. "
+                        "For GEOMETRY/MODIFIER: 'ObjectName/ModifierName'."
+                    ),
                 },
                 "depth": {
                     "type": "string",
                     "enum": ["summary", "full"],
                     "default": "summary",
-                    "description": "Level of detail. 'summary' returns node names and types only. 'full' returns all parameters and connections.",
+                    "description": (
+                        "Level of detail. 'summary' returns node names and types only. "
+                        "'full' returns all parameters and connections."
+                    ),
                 },
             },
             "required": ["tree_type", "context"],
@@ -203,7 +246,6 @@ _PERCEPTION_TOOLS = [
         },
         internal_capability="blender.get_node_tree",
     ),
-
     _tool(
         name="blender_get_animation_data",
         description=(
@@ -248,7 +290,6 @@ _PERCEPTION_TOOLS = [
         },
         internal_capability="blender.get_animation_data",
     ),
-
     _tool(
         name="blender_get_materials",
         description=(
@@ -282,7 +323,6 @@ _PERCEPTION_TOOLS = [
         },
         internal_capability="blender.get_materials",
     ),
-
     _tool(
         name="blender_get_scene",
         description=(
@@ -315,7 +355,6 @@ _PERCEPTION_TOOLS = [
         },
         internal_capability="blender.get_scene",
     ),
-
     _tool(
         name="blender_get_collections",
         description=(
@@ -349,7 +388,6 @@ _PERCEPTION_TOOLS = [
         },
         internal_capability="blender.get_collections",
     ),
-
     _tool(
         name="blender_get_armature_data",
         description=(
@@ -391,7 +429,6 @@ _PERCEPTION_TOOLS = [
         },
         internal_capability="blender.get_armature_data",
     ),
-
     _tool(
         name="blender_get_images",
         description=(
@@ -425,7 +462,6 @@ _PERCEPTION_TOOLS = [
         },
         internal_capability="blender.get_images",
     ),
-
     _tool(
         name="blender_capture_viewport",
         description=(
@@ -466,7 +502,6 @@ _PERCEPTION_TOOLS = [
         },
         internal_capability="blender.capture_viewport",
     ),
-
     _tool(
         name="blender_get_selection",
         description=(
@@ -517,11 +552,21 @@ _DECLARATIVE_TOOLS = [
                 "context": {
                     "type": "string",
                     "enum": ["OBJECT", "WORLD", "LINESTYLE", "SCENE", "MODIFIER", "TOOL"],
-                    "description": "Context within the tree type. SHADER: OBJECT|WORLD|LINESTYLE. COMPOSITOR: SCENE. GEOMETRY: MODIFIER|TOOL.",
+                    "description": (
+                        "Context within the tree type. "
+                        "SHADER: OBJECT|WORLD|LINESTYLE. "
+                        "COMPOSITOR: SCENE. "
+                        "GEOMETRY: MODIFIER|TOOL."
+                    ),
                 },
                 "target": {
                     "type": "string",
-                    "description": "Target name. For SHADER/OBJECT: material name. For SHADER/WORLD: world name. For GEOMETRY/MODIFIER: 'ObjectName/ModifierName'. For COMPOSITOR/SCENE: omit or scene name.",
+                    "description": (
+                        "Target name. For SHADER/OBJECT: material name. "
+                        "For SHADER/WORLD: world name. "
+                        "For GEOMETRY/MODIFIER: 'ObjectName/ModifierName'. "
+                        "For COMPOSITOR/SCENE: omit or scene name."
+                    ),
                 },
                 "operations": {
                     "type": "array",
@@ -530,16 +575,27 @@ _DECLARATIVE_TOOLS = [
                         "properties": {
                             "action": {
                                 "type": "string",
-                                "enum": ["add_node", "remove_node", "connect", "disconnect", "set_value", "set_property"],
+                                "enum": [
+                                    "add_node",
+                                    "remove_node",
+                                    "connect",
+                                    "disconnect",
+                                    "set_value",
+                                    "set_property",
+                                ],
                                 "description": "The node operation to perform.",
                             },
                             "type": {
                                 "type": "string",
-                                "description": "For add_node: Blender node type identifier (e.g. 'ShaderNodeBsdfPrincipled').",
+                                "description": (
+                                    "For add_node: Blender node type identifier (e.g. 'ShaderNodeBsdfPrincipled')."
+                                ),
                             },
                             "name": {
                                 "type": "string",
-                                "description": "Node name. For add_node: desired name. For remove_node: name to remove.",
+                                "description": (
+                                    "Node name. For add_node: desired name. For remove_node: name to remove."
+                                ),
                             },
                             "location": {
                                 "type": "array",
@@ -561,12 +617,17 @@ _DECLARATIVE_TOOLS = [
                             },
                             "property": {
                                 "type": "string",
-                                "description": "For set_property: node property name (e.g. 'interpolation', 'blend_type').",
+                                "description": (
+                                    "For set_property: node property name (e.g. 'interpolation', 'blend_type')."
+                                ),
                             },
                             "from_node": {"type": "string", "description": "For connect: source node name."},
                             "from_socket": {"type": "string", "description": "For connect: source output socket name."},
                             "to_node": {"type": "string", "description": "For connect: destination node name."},
-                            "to_socket": {"type": "string", "description": "For connect: destination input socket name."},
+                            "to_socket": {
+                                "type": "string",
+                                "description": "For connect: destination input socket name.",
+                            },
                         },
                         "required": ["action"],
                     },
@@ -585,7 +646,6 @@ _DECLARATIVE_TOOLS = [
         },
         internal_capability="blender.edit_nodes",
     ),
-
     _tool(
         name="blender_edit_animation",
         description=(
@@ -599,10 +659,19 @@ _DECLARATIVE_TOOLS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["insert_keyframe", "delete_keyframe", "modify_keyframe",
-                             "add_nla_strip", "modify_nla_strip", "remove_nla_strip",
-                             "add_driver", "remove_driver", "set_shape_key",
-                             "set_frame", "set_frame_range"],
+                    "enum": [
+                        "insert_keyframe",
+                        "delete_keyframe",
+                        "modify_keyframe",
+                        "add_nla_strip",
+                        "modify_nla_strip",
+                        "remove_nla_strip",
+                        "add_driver",
+                        "remove_driver",
+                        "set_shape_key",
+                        "set_frame",
+                        "set_frame_range",
+                    ],
                     "description": "The animation operation to perform.",
                 },
                 "object_name": {"type": "string", "description": "Target object name."},
@@ -619,8 +688,21 @@ _DECLARATIVE_TOOLS = [
                 "value": {"description": "Value for keyframe or shape key (number, array, or boolean)."},
                 "interpolation": {
                     "type": "string",
-                    "enum": ["CONSTANT", "LINEAR", "BEZIER", "SINE", "QUAD", "CUBIC",
-                             "QUART", "QUINT", "EXPO", "CIRC", "BACK", "BOUNCE", "ELASTIC"],
+                    "enum": [
+                        "CONSTANT",
+                        "LINEAR",
+                        "BEZIER",
+                        "SINE",
+                        "QUAD",
+                        "CUBIC",
+                        "QUART",
+                        "QUINT",
+                        "EXPO",
+                        "CIRC",
+                        "BACK",
+                        "BOUNCE",
+                        "ELASTIC",
+                    ],
                     "description": "Keyframe interpolation type.",
                 },
                 "nla_action": {"type": "string", "description": "Action name for NLA strip operations."},
@@ -644,7 +726,6 @@ _DECLARATIVE_TOOLS = [
         },
         internal_capability="blender.edit_animation",
     ),
-
     _tool(
         name="blender_edit_sequencer",
         description=(
@@ -676,8 +757,16 @@ _DECLARATIVE_TOOLS = [
                 "color": _color3_4("Color [r,g,b] or [r,g,b,a] for TEXT/COLOR strips."),
                 "effect_type": {
                     "type": "string",
-                    "enum": ["TRANSFORM", "SPEED", "GLOW", "GAUSSIAN_BLUR", "COLOR_BALANCE",
-                             "ALPHA_OVER", "ALPHA_UNDER", "MULTIPLY"],
+                    "enum": [
+                        "TRANSFORM",
+                        "SPEED",
+                        "GLOW",
+                        "GAUSSIAN_BLUR",
+                        "COLOR_BALANCE",
+                        "ALPHA_OVER",
+                        "ALPHA_UNDER",
+                        "MULTIPLY",
+                    ],
                     "description": "Effect type for add_effect action.",
                 },
                 "transition_type": {
@@ -731,8 +820,18 @@ _IMPERATIVE_TOOLS = [
                     "enum": ["cube", "sphere", "cylinder", "cone", "plane", "torus", "icosphere"],
                     "description": "Mesh primitive shape. Only for object_type=MESH.",
                 },
-                "size": {"type": "number", "default": 2.0, "minimum": 0.001, "description": "Size of mesh primitive in Blender units."},
-                "segments": {"type": "integer", "default": 32, "minimum": 3, "description": "Segments for sphere/cylinder/cone/torus."},
+                "size": {
+                    "type": "number",
+                    "default": 2.0,
+                    "minimum": 0.001,
+                    "description": "Size of mesh primitive in Blender units.",
+                },
+                "segments": {
+                    "type": "integer",
+                    "default": 32,
+                    "minimum": 3,
+                    "description": "Segments for sphere/cylinder/cone/torus.",
+                },
                 "light_type": {
                     "type": "string",
                     "enum": ["POINT", "SUN", "SPOT", "AREA"],
@@ -744,9 +843,15 @@ _IMPERATIVE_TOOLS = [
                 "lens": {"type": "number", "default": 50, "description": "Camera focal length in mm. Only for CAMERA."},
                 "clip_start": {"type": "number", "default": 0.1, "description": "Camera near clip. Only for CAMERA."},
                 "clip_end": {"type": "number", "default": 1000, "description": "Camera far clip. Only for CAMERA."},
-                "set_active_camera": {"type": "boolean", "default": False, "description": "Set as active scene camera. Only for CAMERA."},
+                "set_active_camera": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": "Set as active scene camera. Only for CAMERA.",
+                },
                 "curve_type": {
-                    "type": "string", "enum": ["BEZIER", "NURBS", "POLY"], "default": "BEZIER",
+                    "type": "string",
+                    "enum": ["BEZIER", "NURBS", "POLY"],
+                    "default": "BEZIER",
                     "description": "Spline type. Only for CURVE.",
                 },
                 "body": {"type": "string", "description": "Text content. Only for TEXT."},
@@ -754,7 +859,10 @@ _IMPERATIVE_TOOLS = [
                 "location": _vec3("3D position [x, y, z].", default=[0, 0, 0]),
                 "rotation": _vec3("Euler rotation [x, y, z] in radians.", default=[0, 0, 0]),
                 "scale": _vec3("Scale [x, y, z].", default=[1, 1, 1]),
-                "collection": {"type": "string", "description": "Collection to link to. Uses scene collection if omitted."},
+                "collection": {
+                    "type": "string",
+                    "description": "Collection to link to. Uses scene collection if omitted.",
+                },
             },
             "required": ["name"],
             "additionalProperties": False,
@@ -768,7 +876,6 @@ _IMPERATIVE_TOOLS = [
         },
         internal_capability="blender.create_object",
     ),
-
     _tool(
         name="blender_modify_object",
         description=(
@@ -791,9 +898,21 @@ _IMPERATIVE_TOOLS = [
                 "new_name": {"type": "string", "description": "Rename the object.", "maxLength": 63},
                 "active": {"type": "boolean", "description": "Set as active object."},
                 "selected": {"type": "boolean", "description": "Set selection state."},
-                "origin": {"type": "string", "enum": ["GEOMETRY", "CURSOR", "MEDIAN"], "description": "Set origin point."},
-                "delete": {"type": "boolean", "default": False, "description": "If true, delete this object. DESTRUCTIVE."},
-                "delete_data": {"type": "boolean", "default": True, "description": "When deleting, also delete underlying data block."},
+                "origin": {
+                    "type": "string",
+                    "enum": ["GEOMETRY", "CURSOR", "MEDIAN"],
+                    "description": "Set origin point.",
+                },
+                "delete": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": "If true, delete this object. DESTRUCTIVE.",
+                },
+                "delete_data": {
+                    "type": "boolean",
+                    "default": True,
+                    "description": "When deleting, also delete underlying data block.",
+                },
             },
             "required": ["name"],
             "additionalProperties": False,
@@ -807,7 +926,6 @@ _IMPERATIVE_TOOLS = [
         },
         internal_capability="blender.modify_object",
     ),
-
     _tool(
         name="blender_manage_material",
         description=(
@@ -826,8 +944,18 @@ _IMPERATIVE_TOOLS = [
                 },
                 "name": {"type": "string", "description": "Material name."},
                 "base_color": _rgba4("Base color [r,g,b,a] range 0-1."),
-                "metallic": {"type": "number", "minimum": 0, "maximum": 1, "description": "Metallic value 0-1. 0=dielectric, 1=full metal."},
-                "roughness": {"type": "number", "minimum": 0, "maximum": 1, "description": "Roughness value 0-1. 0=mirror, 1=diffuse."},
+                "metallic": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Metallic value 0-1. 0=dielectric, 1=full metal.",
+                },
+                "roughness": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Roughness value 0-1. 0=mirror, 1=diffuse.",
+                },
                 "specular": {"type": "number", "minimum": 0, "maximum": 1, "description": "Specular value 0-1."},
                 "alpha": {"type": "number", "minimum": 0, "maximum": 1, "description": "Alpha value 0-1."},
                 "emission_color": _rgba4("Emission color [r,g,b,a]."),
@@ -848,7 +976,6 @@ _IMPERATIVE_TOOLS = [
         },
         internal_capability="blender.manage_material",
     ),
-
     _tool(
         name="blender_manage_modifier",
         description=(
@@ -869,20 +996,50 @@ _IMPERATIVE_TOOLS = [
                 "modifier_name": {"type": "string", "description": "Modifier name."},
                 "modifier_type": {
                     "type": "string",
-                    "enum": ["SUBSURF", "MIRROR", "ARRAY", "BOOLEAN", "SOLIDIFY", "BEVEL",
-                             "SHRINKWRAP", "DECIMATE", "REMESH", "WEIGHTED_NORMAL",
-                             "SIMPLE_DEFORM", "SKIN", "WIREFRAME", "SCREW", "DISPLACE",
-                             "CAST", "SMOOTH", "LAPLACIANSMOOTH", "CORRECTIVE_SMOOTH",
-                             "CURVE", "LATTICE", "WARP", "WAVE", "CLOTH", "COLLISION",
-                             "ARMATURE", "MESH_DEFORM", "HOOK", "SURFACE_DEFORM",
-                             "DATA_TRANSFER", "NORMAL_EDIT", "UV_PROJECT", "UV_WARP",
-                             "VERTEX_WEIGHT_EDIT", "VERTEX_WEIGHT_MIX",
-                             "VERTEX_WEIGHT_PROXIMITY", "NODES"],
+                    "enum": [
+                        "SUBSURF",
+                        "MIRROR",
+                        "ARRAY",
+                        "BOOLEAN",
+                        "SOLIDIFY",
+                        "BEVEL",
+                        "SHRINKWRAP",
+                        "DECIMATE",
+                        "REMESH",
+                        "WEIGHTED_NORMAL",
+                        "SIMPLE_DEFORM",
+                        "SKIN",
+                        "WIREFRAME",
+                        "SCREW",
+                        "DISPLACE",
+                        "CAST",
+                        "SMOOTH",
+                        "LAPLACIANSMOOTH",
+                        "CORRECTIVE_SMOOTH",
+                        "CURVE",
+                        "LATTICE",
+                        "WARP",
+                        "WAVE",
+                        "CLOTH",
+                        "COLLISION",
+                        "ARMATURE",
+                        "MESH_DEFORM",
+                        "HOOK",
+                        "SURFACE_DEFORM",
+                        "DATA_TRANSFER",
+                        "NORMAL_EDIT",
+                        "UV_PROJECT",
+                        "UV_WARP",
+                        "VERTEX_WEIGHT_EDIT",
+                        "VERTEX_WEIGHT_MIX",
+                        "VERTEX_WEIGHT_PROXIMITY",
+                        "NODES",
+                    ],
                     "description": "Modifier type. For add action only.",
                 },
                 "settings": {
                     "type": "object",
-                    "description": "Modifier settings as key-value pairs (e.g. {\"levels\": 3} for SUBSURF).",
+                    "description": 'Modifier settings as key-value pairs (e.g. {"levels": 3} for SUBSURF).',
                 },
             },
             "required": ["action", "object_name"],
@@ -897,7 +1054,6 @@ _IMPERATIVE_TOOLS = [
         },
         internal_capability="blender.manage_modifier",
     ),
-
     _tool(
         name="blender_manage_collection",
         description=(
@@ -920,8 +1076,17 @@ _IMPERATIVE_TOOLS = [
                 "hide_render": {"type": "boolean", "description": "Hide in render (for set_visibility)."},
                 "color_tag": {
                     "type": "string",
-                    "enum": ["NONE", "COLOR_01", "COLOR_02", "COLOR_03", "COLOR_04",
-                             "COLOR_05", "COLOR_06", "COLOR_07", "COLOR_08"],
+                    "enum": [
+                        "NONE",
+                        "COLOR_01",
+                        "COLOR_02",
+                        "COLOR_03",
+                        "COLOR_04",
+                        "COLOR_05",
+                        "COLOR_06",
+                        "COLOR_07",
+                        "COLOR_08",
+                    ],
                     "description": "Color tag for visual organization.",
                 },
             },
@@ -937,7 +1102,6 @@ _IMPERATIVE_TOOLS = [
         },
         internal_capability="blender.manage_collection",
     ),
-
     _tool(
         name="blender_manage_uv",
         description=(
@@ -951,17 +1115,44 @@ _IMPERATIVE_TOOLS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["mark_seam", "clear_seam", "unwrap", "smart_project", "cube_project",
-                             "cylinder_project", "sphere_project", "lightmap_pack",
-                             "pack_islands", "average_island_scale",
-                             "add_uv_map", "remove_uv_map", "set_active_uv"],
+                    "enum": [
+                        "mark_seam",
+                        "clear_seam",
+                        "unwrap",
+                        "smart_project",
+                        "cube_project",
+                        "cylinder_project",
+                        "sphere_project",
+                        "lightmap_pack",
+                        "pack_islands",
+                        "average_island_scale",
+                        "add_uv_map",
+                        "remove_uv_map",
+                        "set_active_uv",
+                    ],
                     "description": "The UV operation.",
                 },
                 "object_name": {"type": "string", "description": "Name of the mesh object."},
                 "uv_map_name": {"type": "string", "description": "UV map name for add/remove/set_active."},
-                "angle_limit": {"type": "number", "default": 66.0, "minimum": 0, "maximum": 89, "description": "Angle limit in degrees for smart_project."},
-                "island_margin": {"type": "number", "default": 0.02, "minimum": 0, "maximum": 1, "description": "Margin between UV islands."},
-                "correct_aspect": {"type": "boolean", "default": True, "description": "Correct for non-square textures."},
+                "angle_limit": {
+                    "type": "number",
+                    "default": 66.0,
+                    "minimum": 0,
+                    "maximum": 89,
+                    "description": "Angle limit in degrees for smart_project.",
+                },
+                "island_margin": {
+                    "type": "number",
+                    "default": 0.02,
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Margin between UV islands.",
+                },
+                "correct_aspect": {
+                    "type": "boolean",
+                    "default": True,
+                    "description": "Correct for non-square textures.",
+                },
                 "selection_mode": {
                     "type": "string",
                     "enum": ["SHARP_EDGES", "ANGLE_BASED", "ALL_EDGES"],
@@ -980,7 +1171,6 @@ _IMPERATIVE_TOOLS = [
         },
         internal_capability="blender.manage_uv",
     ),
-
     _tool(
         name="blender_manage_constraints",
         description=(
@@ -1007,11 +1197,30 @@ _IMPERATIVE_TOOLS = [
                 "constraint_name": {"type": "string", "description": "Constraint name."},
                 "constraint_type": {
                     "type": "string",
-                    "enum": ["COPY_LOCATION", "COPY_ROTATION", "COPY_SCALE", "COPY_TRANSFORMS",
-                             "LIMIT_DISTANCE", "LIMIT_LOCATION", "LIMIT_ROTATION", "LIMIT_SCALE",
-                             "TRACK_TO", "DAMPED_TRACK", "LOCKED_TRACK", "IK", "STRETCH_TO",
-                             "FLOOR", "CHILD_OF", "FOLLOW_PATH", "CLAMP_TO", "PIVOT",
-                             "MAINTAIN_VOLUME", "TRANSFORMATION", "SHRINKWRAP", "ACTION"],
+                    "enum": [
+                        "COPY_LOCATION",
+                        "COPY_ROTATION",
+                        "COPY_SCALE",
+                        "COPY_TRANSFORMS",
+                        "LIMIT_DISTANCE",
+                        "LIMIT_LOCATION",
+                        "LIMIT_ROTATION",
+                        "LIMIT_SCALE",
+                        "TRACK_TO",
+                        "DAMPED_TRACK",
+                        "LOCKED_TRACK",
+                        "IK",
+                        "STRETCH_TO",
+                        "FLOOR",
+                        "CHILD_OF",
+                        "FOLLOW_PATH",
+                        "CLAMP_TO",
+                        "PIVOT",
+                        "MAINTAIN_VOLUME",
+                        "TRANSFORMATION",
+                        "SHRINKWRAP",
+                        "ACTION",
+                    ],
                     "description": "Constraint type for add action.",
                 },
                 "settings": {"type": "object", "description": "Constraint settings as key-value pairs."},
@@ -1028,7 +1237,6 @@ _IMPERATIVE_TOOLS = [
         },
         internal_capability="blender.manage_constraints",
     ),
-
     _tool(
         name="blender_manage_physics",
         description=(
@@ -1048,8 +1256,16 @@ _IMPERATIVE_TOOLS = [
                 "object_name": {"type": "string", "description": "Name of the object."},
                 "physics_type": {
                     "type": "string",
-                    "enum": ["RIGID_BODY", "RIGID_BODY_PASSIVE", "CLOTH", "SOFT_BODY",
-                             "FLUID_DOMAIN", "FLUID_FLOW", "PARTICLE", "FORCE_FIELD"],
+                    "enum": [
+                        "RIGID_BODY",
+                        "RIGID_BODY_PASSIVE",
+                        "CLOTH",
+                        "SOFT_BODY",
+                        "FLUID_DOMAIN",
+                        "FLUID_FLOW",
+                        "PARTICLE",
+                        "FORCE_FIELD",
+                    ],
                     "description": "Physics type for add action.",
                 },
                 "force_field_type": {
@@ -1073,23 +1289,31 @@ _IMPERATIVE_TOOLS = [
         },
         internal_capability="blender.manage_physics",
     ),
-
     _tool(
         name="blender_setup_scene",
         description=(
             "Configure scene-level settings — render engine and quality, output resolution, "
             "world environment basics, and timeline/FPS.\n\n"
             "Use this when: you need to configure render, output, or timeline settings.\n\n"
-            "Do NOT use for: detailed world shader editing (use blender_edit_nodes with tree_type=SHADER, context=WORLD)."
+            "Do NOT use for: detailed world shader editing "
+            "(use blender_edit_nodes with tree_type=SHADER, context=WORLD)."
         ),
         input_schema={
             "type": "object",
             "properties": {
-                "engine": {"type": "string", "enum": ["BLENDER_EEVEE", "BLENDER_EEVEE_NEXT", "CYCLES"], "description": "Render engine."},
+                "engine": {
+                    "type": "string",
+                    "enum": ["BLENDER_EEVEE", "BLENDER_EEVEE_NEXT", "CYCLES"],
+                    "description": "Render engine.",
+                },
                 "samples": {"type": "integer", "minimum": 1, "description": "Render samples."},
                 "resolution_x": {"type": "integer", "minimum": 1, "description": "Output width in pixels."},
                 "resolution_y": {"type": "integer", "minimum": 1, "description": "Output height in pixels."},
-                "output_format": {"type": "string", "enum": ["PNG", "JPEG", "OPEN_EXR", "TIFF", "BMP", "FFMPEG"], "description": "Output file format."},
+                "output_format": {
+                    "type": "string",
+                    "enum": ["PNG", "JPEG", "OPEN_EXR", "TIFF", "BMP", "FFMPEG"],
+                    "description": "Output file format.",
+                },
                 "output_path": {"type": "string", "description": "Output file/directory path."},
                 "film_transparent": {"type": "boolean", "description": "Render with transparent background."},
                 "denoising": {"type": "boolean", "description": "Enable render denoising."},
@@ -1133,10 +1357,15 @@ _FALLBACK_TOOLS = [
             "properties": {
                 "operator": {
                     "type": "string",
-                    "description": "Operator ID in 'category.name' format (e.g. 'mesh.primitive_cube_add', 'uv.smart_project').",
+                    "description": (
+                        "Operator ID in 'category.name' format (e.g. 'mesh.primitive_cube_add', 'uv.smart_project')."
+                    ),
                 },
                 "params": {"type": "object", "description": "Operator parameters as key-value pairs."},
-                "context": {"type": "object", "description": "Context override (e.g. {\"active_object\": \"Cube\", \"mode\": \"EDIT\"})."},
+                "context": {
+                    "type": "object",
+                    "description": 'Context override (e.g. {"active_object": "Cube", "mode": "EDIT"}).',
+                },
             },
             "required": ["operator"],
             "additionalProperties": False,
@@ -1150,7 +1379,6 @@ _FALLBACK_TOOLS = [
         },
         internal_capability="blender.execute_operator",
     ),
-
     _tool(
         name="blender_execute_script",
         description=(
@@ -1179,7 +1407,6 @@ _FALLBACK_TOOLS = [
         },
         internal_capability="blender.execute_script",
     ),
-
     _tool(
         name="blender_import_export",
         description=(
@@ -1190,14 +1417,34 @@ _FALLBACK_TOOLS = [
         input_schema={
             "type": "object",
             "properties": {
-                "action": {"type": "string", "enum": ["import", "export"], "description": "Whether to import or export."},
+                "action": {
+                    "type": "string",
+                    "enum": ["import", "export"],
+                    "description": "Whether to import or export.",
+                },
                 "format": {
                     "type": "string",
-                    "enum": ["FBX", "OBJ", "GLTF", "GLB", "USD", "USDC", "USDA",
-                             "ALEMBIC", "STL", "PLY", "SVG", "DAE", "X3D"],
+                    "enum": [
+                        "FBX",
+                        "OBJ",
+                        "GLTF",
+                        "GLB",
+                        "USD",
+                        "USDC",
+                        "USDA",
+                        "ALEMBIC",
+                        "STL",
+                        "PLY",
+                        "SVG",
+                        "DAE",
+                        "X3D",
+                    ],
                     "description": "File format.",
                 },
-                "filepath": {"type": "string", "description": "Absolute file path for import source or export destination."},
+                "filepath": {
+                    "type": "string",
+                    "description": "Absolute file path for import source or export destination.",
+                },
                 "settings": {"type": "object", "description": "Format-specific settings."},
             },
             "required": ["action", "format", "filepath"],
@@ -1218,9 +1465,7 @@ _FALLBACK_TOOLS = [
 # Public API
 # ---------------------------------------------------------------------------
 
-TOOL_DEFINITIONS: list[dict[str, Any]] = (
-    _PERCEPTION_TOOLS + _DECLARATIVE_TOOLS + _IMPERATIVE_TOOLS + _FALLBACK_TOOLS
-)
+TOOL_DEFINITIONS: list[dict[str, Any]] = _PERCEPTION_TOOLS + _DECLARATIVE_TOOLS + _IMPERATIVE_TOOLS + _FALLBACK_TOOLS
 
 _TOOL_INDEX: dict[str, dict[str, Any]] = {t["name"]: t for t in TOOL_DEFINITIONS}
 
