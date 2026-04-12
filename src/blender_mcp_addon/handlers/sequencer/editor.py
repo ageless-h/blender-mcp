@@ -25,7 +25,7 @@ def sequencer_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
 
     try:
         scene = bpy.context.scene
-    except Exception:
+    except (AttributeError, RuntimeError):
         scene = next(iter(bpy.data.scenes), None)
     if scene is None:
         return _error(
@@ -67,7 +67,7 @@ def sequencer_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
             )
             txt.clear()
             txt.write(f"VSE {action}: {type(exc).__name__}: {exc}\n\n{tb}")
-        except Exception:
+        except (AttributeError, RuntimeError):
             pass
         return _error(
             code="operation_failed",

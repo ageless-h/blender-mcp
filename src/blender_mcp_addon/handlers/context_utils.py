@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Shared context override utilities for Blender operator calls."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -27,13 +28,13 @@ def get_view3d_override(bpy: Any, obj: Any | None = None) -> dict[str, Any]:
         if window:
             override["window"] = window
             for area in window.screen.areas:
-                if area.type == 'VIEW_3D':
+                if area.type == "VIEW_3D":
                     override["area"] = area
                     for region in area.regions:
-                        if region.type == 'WINDOW':
+                        if region.type == "WINDOW":
                             override["region"] = region
                             break
                     break
-    except Exception:
+    except (AttributeError, RuntimeError):
         pass
     return override
