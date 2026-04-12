@@ -50,3 +50,19 @@ include = ["src/blender_mcp/**", "README.md", "LICENSE"]
 
 [tool.pyright]
 extraPaths = ["src"]
+
+[tool.ruff]
+src = ["src", "tests"]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]  # TODO: fix line-length violations incrementally
+
+[tool.ruff.lint.per-file-ignores]
+"src/blender_mcp/mcp_protocol.py" = ["E402", "I001"]
+"src/blender_mcp/prompts/__init__.py" = ["I001"]
+"src/blender_mcp/prompts/registry.py" = ["I001"]
+"tests/test_error_codes_and_schema.py" = ["E702"]
+"src/blender_mcp_addon/handlers/data/core_handlers.py" = ["E741"]
+"src/blender_mcp_addon/handlers/nodes/reader.py" = ["E741"]
