@@ -361,7 +361,8 @@ def _query_changes(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
 
 def _query_viewport_capture(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
     """Capture viewport image with optional thumbnail compression."""
-    output_format = params.get("format", "base64")
+    image_format = params.get("format", "JPEG")
+    output_format = params.get("output", "base64")
     resolution = params.get("resolution")
     shading = params.get("shading")
     thumbnail = params.get("thumbnail", True)
@@ -410,25 +411,26 @@ def _query_viewport_capture(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
                         break
                 break
 
-        if output_format == "base64":
-            image_data, width, height, mime_type = _encode_image(
-                bpy,
-                tmp_path,
-                thumbnail=thumbnail,
-                max_size=max_size,
-            )
-            return {
-                "format": "base64",
-                "data": image_data,
-                "width": width,
-                "height": height,
-                "mime_type": mime_type,
-            }
-        else:
+        if output_format == "filepath":
             return {
                 "format": "filepath",
                 "filepath": tmp_path,
             }
+
+        image_data, width, height, mime_type = _encode_image(
+            bpy,
+            tmp_path,
+            thumbnail=thumbnail,
+            max_size=max_size,
+            image_format=image_format,
+        )
+        return {
+            "format": "base64",
+            "data": image_data,
+            "width": width,
+            "height": height,
+            "mime_type": mime_type,
+        }
     except Exception:
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
@@ -441,6 +443,7 @@ def _encode_image(
     *,
     thumbnail: bool = True,
     max_size: int = 320,
+    image_format: str = "JPEG",
 ) -> tuple[str, int, int, str]:
     """Load image from *filepath*, optionally resize, return (base64, w, h, mime)."""
     with open(filepath, "rb") as f:
@@ -453,6 +456,9 @@ def _encode_image(
         width, height = struct.unpack(">II", raw_data[16:24])
 
     if not thumbnail or width == 0 or height == 0:
+        return base64.b64encode(raw_data).decode("utf-8"), width, height, "image/png"
+
+    if image_format.upper() == "PNG":
         return base64.b64encode(raw_data).decode("utf-8"), width, height, "image/png"
 
     if width <= max_size and height <= max_size:
