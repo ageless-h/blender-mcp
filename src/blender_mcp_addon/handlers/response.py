@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Unified response format helpers for handler operations."""
+
 from __future__ import annotations
 
 import time
@@ -8,11 +9,11 @@ from typing import Any
 
 def _ok(*, result: dict[str, Any], started: float) -> dict[str, Any]:
     """Create a successful response.
-    
+
     Args:
         result: The result data to include
         started: The start time from time.perf_counter()
-        
+
     Returns:
         Standard success response dict with ok=True
     """
@@ -30,34 +31,40 @@ def _error(
     message: str,
     started: float,
     data: dict[str, Any] | None = None,
+    suggestion: str | None = None,
 ) -> dict[str, Any]:
     """Create an error response.
-    
-    Args:
-        code: Error code (e.g., "not_found", "invalid_params")
-        message: Human-readable error message
-        started: The start time from time.perf_counter()
-        data: Optional additional error data
-        
-    Returns:
-        Standard error response dict with ok=False
+
+    If *suggestion* is not provided, looks up a default suggestion from
+    ``error_codes.DEFAULT_SUGGESTIONS`` using *code*.
     """
+    from .error_codes import DEFAULT_SUGGESTIONS
+
+    resolved_suggestion = (
+        suggestion if suggestion is not None else DEFAULT_SUGGESTIONS.get(code)
+    )
+
+    err: dict[str, Any] = {"code": code, "message": message, "data": data}
+    if resolved_suggestion is not None:
+        err["suggestion"] = resolved_suggestion
+
     return {
         "ok": False,
         "result": None,
-        "error": {"code": code, "message": message, "data": data},
+        "error": err,
         "timing_ms": (time.perf_counter() - started) * 1000.0,
     }
 
 
 def check_bpy_available() -> tuple[bool, Any]:
     """Check if bpy is available and return it.
-    
+
     Returns:
         Tuple of (is_available, bpy_module_or_None)
     """
     try:
         import bpy  # type: ignore
+
         return True, bpy
     except ImportError:
         return False, None
@@ -65,10 +72,10 @@ def check_bpy_available() -> tuple[bool, Any]:
 
 def bpy_unavailable_error(started: float) -> dict[str, Any]:
     """Create a standard error for when bpy is not available.
-    
+
     Args:
         started: The start time from time.perf_counter()
-        
+
     Returns:
         Error response indicating bpy is unavailable
     """
@@ -76,6 +83,7 @@ def bpy_unavailable_error(started: float) -> dict[str, Any]:
         code="bpy_unavailable",
         message="bpy is not available; this entrypoint must run inside Blender",
         started=started,
+        suggestion="Ensure Blender is running with the MCP addon enabled.",
     )
 
 
@@ -85,12 +93,12 @@ def not_found_error(
     started: float,
 ) -> dict[str, Any]:
     """Create a standard error for when a data block is not found.
-    
+
     Args:
         data_type: The type of data block
         name: The name that was not found
         started: The start time from time.perf_counter()
-        
+
     Returns:
         Error response indicating the data was not found
     """
@@ -99,6 +107,7 @@ def not_found_error(
         message=f"{data_type} '{name}' not found",
         data={"type": data_type, "name": name},
         started=started,
+        suggestion=f"Use blender_get_objects to list available {data_type}s, then retry with an exact name.",
     )
 
 
@@ -108,12 +117,12 @@ def invalid_params_error(
     data: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Create a standard error for invalid parameters.
-    
+
     Args:
         message: Description of the parameter error
         started: The start time from time.perf_counter()
         data: Optional additional data about the error
-        
+
     Returns:
         Error response indicating invalid parameters
     """
@@ -131,12 +140,12 @@ def operation_failed_error(
     started: float,
 ) -> dict[str, Any]:
     """Create a standard error for a failed operation.
-    
+
     Args:
         operation: The operation that failed (e.g., "data.read")
         exc: The exception that was raised
         started: The start time from time.perf_counter()
-        
+
     Returns:
         Error response indicating the operation failed
     """
@@ -149,6 +158,7 @@ def operation_failed_error(
         message=f"{operation} failed: {exc_message}",
         data={"exception_type": type(exc).__name__},
         started=started,
+        suggestion=f"Try blender_execute_script as a fallback for {operation}, or check object mode/state.",
     )
 
 
@@ -157,11 +167,11 @@ def unsupported_type_error(
     started: float,
 ) -> dict[str, Any]:
     """Create a standard error for unsupported data type.
-    
+
     Args:
         data_type: The unsupported type string
         started: The start time from time.perf_counter()
-        
+
     Returns:
         Error response indicating the type is not supported
     """
@@ -170,4 +180,5 @@ def unsupported_type_error(
         message=f"No handler registered for type: {data_type}",
         data={"type": data_type},
         started=started,
+        suggestion="Use blender_get_scene to inspect available data types and their names.",
     )

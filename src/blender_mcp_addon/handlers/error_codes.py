@@ -6,6 +6,7 @@ This module serves as a single source of truth so that:
   - Client code can match on stable, documented strings.
   - New handlers stay consistent without inventing ad-hoc codes.
 """
+
 from __future__ import annotations
 
 from enum import Enum
@@ -71,3 +72,31 @@ class ErrorCode(str, Enum):
 
     CONSENT_REQUIRED = "consent_required"
     """Operation requires explicit user consent before proceeding."""
+
+
+# ── Default suggestions for each error code ─────────────────────────
+# These are automatically appended to error responses when the error
+# code matches.  Callers can override by passing an explicit suggestion.
+
+DEFAULT_SUGGESTIONS: dict[str, str] = {
+    # Environment
+    ErrorCode.BPY_UNAVAILABLE: "Ensure Blender is running with the MCP addon enabled.",
+    # Validation
+    ErrorCode.INVALID_PARAMS: "Check the tool description for required parameters and their types.",
+    ErrorCode.INVALID_OPERATOR: "Use blender_execute_script to run custom Python instead, or verify the operator ID.",
+    ErrorCode.INVALID_REQUEST: "Check the request format matches the MCP tool inputSchema.",
+    ErrorCode.UNSUPPORTED_TYPE: "Use blender_get_objects to inspect the scene, then check available data types.",
+    ErrorCode.UNSUPPORTED_CAPABILITY: "Use blender_get_scene to see what tools are available.",
+    # Lookup
+    ErrorCode.NOT_FOUND: "Use blender_get_objects or blender_get_collections to list available items first.",
+    # Execution
+    ErrorCode.OPERATION_FAILED: "Try blender_execute_script as a fallback, or check object mode and state.",
+    ErrorCode.OPERATOR_ERROR: "The object may be in the wrong mode. Try switching mode first.",
+    ErrorCode.EXECUTION_ERROR: "Check the Python traceback for details. Simplify the script.",
+    ErrorCode.EXECUTION_TIMEOUT: "The script ran too long. Break it into smaller operations.",
+    ErrorCode.LINK_FAILED: "Verify both source and target exist before linking.",
+    ErrorCode.ADDON_EXCEPTION: "This is an internal error. Check the Blender system console for details.",
+    # Security
+    ErrorCode.SCRIPT_DISABLED: "Set MCP_ENABLE_SCRIPT_EXECUTE=true in environment variables to enable.",
+    ErrorCode.CONSENT_REQUIRED: "This operation needs user approval in the Blender addon UI.",
+}
