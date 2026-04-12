@@ -7,7 +7,7 @@
         "MCP_ADAPTER": "socket",
         "MCP_SOCKET_HOST": "127.0.0.1",
         "MCP_SOCKET_PORT": "9876",
-        "PYTHONPATH": "Z:\\8_code\\blender-mcp\\src"
+        "PYTHONPATH": "src"
       }
     }
   }
