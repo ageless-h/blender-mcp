@@ -10,6 +10,33 @@ from ..types import DataType
 from ..registry import HandlerRegistry
 
 
+def _find_principled(nodes) -> object | None:
+    """Find the Principled BSDF node, handling localized Blender UI names.
+
+    In non-English Blender, the default Principled BSDF node gets a localized
+    name (e.g. "原理化 BSDF" in Chinese), so ``nodes.get("Principled BSDF")``
+    returns None.  Falling back to a type-based search is reliable because
+    bl_idname is always stable across locales.
+
+    Args:
+        nodes: A bpy.types.bpy_prop_collection of shader nodes.
+
+    Returns:
+        The Principled BSDF node, or None.
+    """
+    # 1. Try the English default name first (fast path)
+    node = nodes.get("Principled BSDF")
+    if node is not None:
+        return node
+
+    # 2. Fallback: search by node type (works for any locale)
+    for n in nodes:
+        if n.bl_idname == "ShaderNodeBsdfPrincipled":
+            return n
+
+    return None
+
+
 @HandlerRegistry.register
 class MaterialHandler(BaseHandler):
     """Handler for Blender material data type (bpy.data.materials)."""
@@ -42,7 +69,7 @@ class MaterialHandler(BaseHandler):
             mat.use_nodes = True
 
         if mat.use_nodes:
-            principled = mat.node_tree.nodes.get("Principled BSDF")
+            principled = _find_principled(mat.node_tree.nodes)
             if principled:
                 color = params.get("base_color") or params.get("color")
                 if color:
@@ -105,7 +132,7 @@ class MaterialHandler(BaseHandler):
         }
 
         if mat.use_nodes and mat.node_tree:
-            principled = mat.node_tree.nodes.get("Principled BSDF")
+            principled = _find_principled(mat.node_tree.nodes)
             if principled:
                 result["base_color"] = list(
                     principled.inputs["Base Color"].default_value
@@ -141,21 +168,16 @@ class MaterialHandler(BaseHandler):
 
         modified = []
         for prop_path, value in properties.items():
-            if prop_path == "base_color" and mat.use_nodes:
-                principled = mat.node_tree.nodes.get("Principled BSDF")
+            if prop_path in ("base_color", "metallic", "roughness") and mat.use_nodes:
+                principled = _find_principled(mat.node_tree.nodes)
                 if principled:
-                    principled.inputs["Base Color"].default_value = tuple(value)
-                    modified.append("base_color")
-            elif prop_path == "metallic" and mat.use_nodes:
-                principled = mat.node_tree.nodes.get("Principled BSDF")
-                if principled:
-                    principled.inputs["Metallic"].default_value = value
-                    modified.append("metallic")
-            elif prop_path == "roughness" and mat.use_nodes:
-                principled = mat.node_tree.nodes.get("Principled BSDF")
-                if principled:
-                    principled.inputs["Roughness"].default_value = value
-                    modified.append("roughness")
+                    if prop_path == "base_color":
+                        principled.inputs["Base Color"].default_value = tuple(value)
+                    elif prop_path == "metallic":
+                        principled.inputs["Metallic"].default_value = value
+                    elif prop_path == "roughness":
+                        principled.inputs["Roughness"].default_value = value
+                    modified.append(prop_path)
             else:
                 self._set_nested_attr(mat, prop_path, value)
                 modified.append(prop_path)
