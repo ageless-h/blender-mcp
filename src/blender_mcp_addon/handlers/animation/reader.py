@@ -7,21 +7,7 @@ import unicodedata
 from typing import Any
 
 from ..response import _ok, _error, check_bpy_available, bpy_unavailable_error
-
-
-def _iter_fcurves(action: Any):
-    """Yield F-Curves from an action, supporting both legacy and Blender 5.0+ layered API."""
-    if hasattr(action, "layers") and len(action.layers) > 0:
-        for layer in action.layers:
-            if hasattr(layer, "strips"):
-                for strip in layer.strips:
-                    if hasattr(strip, "channelbags"):
-                        for cbag in strip.channelbags:
-                            if hasattr(cbag, "fcurves"):
-                                yield from cbag.fcurves
-        return
-    if hasattr(action, "fcurves"):
-        yield from action.fcurves
+from . import iter_fcurves
 
 
 def _read_keyframes(
@@ -31,7 +17,7 @@ def _read_keyframes(
     keyframes = []
     if not obj.animation_data or not obj.animation_data.action:
         return keyframes
-    for fcurve in _iter_fcurves(obj.animation_data.action):
+    for fcurve in iter_fcurves(obj.animation_data.action):
         for kp in fcurve.keyframe_points:
             frame = int(kp.co[0])
             if frame_range and (frame < frame_range[0] or frame > frame_range[1]):
@@ -53,7 +39,7 @@ def _read_fcurves(obj: Any) -> list[dict[str, Any]]:
     curves = []
     if not obj.animation_data or not obj.animation_data.action:
         return curves
-    for fc in _iter_fcurves(obj.animation_data.action):
+    for fc in iter_fcurves(obj.animation_data.action):
         curves.append(
             {
                 "data_path": fc.data_path,
