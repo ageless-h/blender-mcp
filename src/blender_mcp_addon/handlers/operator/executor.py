@@ -7,8 +7,12 @@ import time
 from typing import Any
 
 from ..response import (
-    _ok, _error, check_bpy_available, bpy_unavailable_error,
-    invalid_params_error, operation_failed_error,
+    _error,
+    _ok,
+    bpy_unavailable_error,
+    check_bpy_available,
+    invalid_params_error,
+    operation_failed_error,
 )
 
 logger = logging.getLogger(__name__)
@@ -77,54 +81,54 @@ OPERATOR_SCOPE_MAP: dict[str, list[str]] = {
 
 def get_operator_scopes(operator_id: str) -> list[str]:
     """Get required scopes for an operator.
-    
+
     Args:
         operator_id: Operator identifier (e.g., "mesh.primitive_cube_add")
-        
+
     Returns:
         List of required scope strings
     """
     if "." not in operator_id:
         return ["operator:execute"]
-    
+
     category = operator_id.split(".")[0]
     return OPERATOR_SCOPE_MAP.get(category, ["operator:execute"])
 
 
 def operator_execute(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
     """Execute a Blender operator (bpy.ops.*).
-    
+
     Args:
         payload: Execution parameters:
             - operator: Operator identifier (e.g., "mesh.primitive_cube_add")
             - params: Operator parameters
             - context: Context override settings
         started: Start time for timing
-        
+
     Returns:
         Response dict with execution result
     """
     available, bpy = check_bpy_available()
     if not available:
         return bpy_unavailable_error(started)
-    
+
     operator_id = payload.get("operator")
     if not operator_id:
         return invalid_params_error("'operator' parameter is required", started)
-    
+
     if not isinstance(operator_id, str) or "." not in operator_id:
         return invalid_params_error(
             f"Invalid operator identifier: {operator_id}. "
             "Expected format: 'category.operator_name' (e.g., 'mesh.primitive_cube_add')",
             started,
         )
-    
+
     params = payload.get("params", {})
     context_override = payload.get("context", {})
-    
+
     try:
         category, op_name = operator_id.split(".", 1)
-        
+
         if not hasattr(bpy.ops, category):
             return _error(
                 code="invalid_operator",
@@ -132,7 +136,7 @@ def operator_execute(payload: dict[str, Any], *, started: float) -> dict[str, An
                 data={"operator": operator_id},
                 started=started,
             )
-        
+
         op_category = getattr(bpy.ops, category)
         if not hasattr(op_category, op_name):
             return _error(
@@ -141,30 +145,30 @@ def operator_execute(payload: dict[str, Any], *, started: float) -> dict[str, An
                 data={"operator": operator_id},
                 started=started,
             )
-        
+
         op_func = getattr(op_category, op_name)
-        
+
         override_dict, cleanup_func = _build_context_override(bpy, context_override)
-        
+
         exec_start = time.perf_counter()
-        
+
         try:
             reports_before = _get_reports_snapshot(bpy)
-            
+
             if override_dict:
                 with bpy.context.temp_override(**override_dict):
                     result = op_func(**params)
             else:
                 result = op_func(**params)
-            
+
             reports_after = _get_reports_snapshot(bpy)
             new_reports = _extract_new_reports(reports_before, reports_after)
-            
+
             exec_duration = (time.perf_counter() - exec_start) * 1000.0
-            
+
             result_str = _result_to_string(result)
             success = result_str in ("FINISHED", "FINISHED_MODAL")
-            
+
             return _ok(
                 result={
                     "success": success,
@@ -179,7 +183,7 @@ def operator_execute(payload: dict[str, Any], *, started: float) -> dict[str, An
         finally:
             if cleanup_func:
                 cleanup_func()
-                
+
     except TypeError as exc:
         return _error(
             code="invalid_params",
@@ -200,23 +204,23 @@ def operator_execute(payload: dict[str, Any], *, started: float) -> dict[str, An
 
 def _build_context_override(bpy: Any, context_override: dict[str, Any]) -> tuple[dict[str, Any], Any]:
     """Build context override dictionary for temp_override.
-    
+
     Args:
         bpy: The bpy module
         context_override: User-specified context overrides
-        
+
     Returns:
         Tuple of (override_dict, cleanup_function)
     """
     if not context_override:
         return {}, None
-    
+
     override = {}
     cleanup_actions = []
     original_mode = None
     original_active = None
     original_selected = None
-    
+
     if "active_object" in context_override:
         obj_name = context_override["active_object"]
         obj = bpy.data.objects.get(obj_name)
@@ -224,7 +228,7 @@ def _build_context_override(bpy: Any, context_override: dict[str, Any]) -> tuple
             original_active = bpy.context.view_layer.objects.active
             bpy.context.view_layer.objects.active = obj
             cleanup_actions.append(("active", original_active))
-    
+
     if "selected_objects" in context_override:
         obj_names = context_override["selected_objects"]
         original_selected = [o for o in bpy.context.selected_objects]
@@ -234,7 +238,7 @@ def _build_context_override(bpy: Any, context_override: dict[str, Any]) -> tuple
             if obj:
                 obj.select_set(True)
         cleanup_actions.append(("selected", original_selected))
-    
+
     if "mode" in context_override:
         target_mode = context_override["mode"].upper()
         original_mode = bpy.context.mode
@@ -251,7 +255,7 @@ def _build_context_override(bpy: Any, context_override: dict[str, Any]) -> tuple
                 cleanup_actions.append(("mode", original_mode))
             except RuntimeError:
                 pass
-    
+
     if "area_type" in context_override:
         for area in bpy.context.screen.areas:
             if area.type == context_override["area_type"]:
@@ -261,15 +265,15 @@ def _build_context_override(bpy: Any, context_override: dict[str, Any]) -> tuple
                         override["region"] = region
                         break
                 break
-    
+
     if "scene" in context_override:
         scene = bpy.data.scenes.get(context_override["scene"])
         if scene:
             override["scene"] = scene
-    
+
     if "window" in context_override:
         override["window"] = bpy.context.window
-    
+
     def cleanup():
         for action_type, original_value in reversed(cleanup_actions):
             try:
@@ -286,16 +290,16 @@ def _build_context_override(bpy: Any, context_override: dict[str, Any]) -> tuple
                             obj.select_set(True)
             except Exception as exc:
                 logger.debug("Context cleanup failed for %s: %s", action_type, exc)
-    
+
     return override, cleanup if cleanup_actions else None
 
 
 def _get_reports_snapshot(bpy: Any) -> list[tuple[str, str]]:
     """Get a snapshot of current reports.
-    
+
     Args:
         bpy: The bpy module
-        
+
     Returns:
         List of (type, message) tuples
     """
@@ -313,11 +317,11 @@ def _extract_new_reports(
     after: list[tuple[str, str]],
 ) -> list[dict[str, str]]:
     """Extract new reports added after an operation.
-    
+
     Args:
         before: Reports snapshot before operation
         after: Reports snapshot after operation
-        
+
     Returns:
         List of new report dicts with 'type' and 'message'
     """
@@ -331,10 +335,10 @@ def _extract_new_reports(
 
 def _result_to_string(result: Any) -> str:
     """Convert operator result to string.
-    
+
     Args:
         result: Operator return value (usually a set)
-        
+
     Returns:
         Result status string
     """

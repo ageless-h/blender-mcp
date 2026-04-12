@@ -9,7 +9,6 @@ os.environ["MCP_ADAPTER"] = "mock"
 
 from blender_mcp.schemas.tools import TOOL_DEFINITIONS, get_tool
 
-
 ANN_KEYS = ["readOnlyHint", "destructiveHint", "idempotentHint", "openWorldHint"]
 
 

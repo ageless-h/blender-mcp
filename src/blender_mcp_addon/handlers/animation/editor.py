@@ -7,10 +7,10 @@ import logging
 from typing import Any
 
 from ..response import (
-    _ok,
     _error,
-    check_bpy_available,
+    _ok,
     bpy_unavailable_error,
+    check_bpy_available,
     operation_failed_error,
 )
 from . import iter_fcurves

@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from typing import Any
 
-
 # ── Canonical envelope keys ──────────────────────────────────────
 _OK_KEYS = {"ok", "result", "error", "timing_ms"}
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..response import _ok, _error, check_bpy_available, bpy_unavailable_error
+from ..response import _error, _ok, bpy_unavailable_error, check_bpy_available
 
 
 def _read_node(node: Any, depth: str) -> dict[str, Any]:

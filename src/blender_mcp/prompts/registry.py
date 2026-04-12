@@ -302,7 +302,7 @@ def list_prompts() -> list[dict[str, Any]]:
 
 def get_prompt_messages(name: str, arguments: dict[str, str] | None = None) -> dict[str, Any] | None:
     """Generate prompt messages for a given prompt name and arguments.
-    
+
     Returns a GetPromptResult-compatible dict with 'messages' list,
     or None if prompt not found.
     """

@@ -7,7 +7,6 @@ from typing import Iterable, Set
 
 from blender_mcp.security.audit import AuditEvent, AuditLogger
 
-
 # Default allowlist for 26-tool architecture (excludes blender.execute_script for safety)
 DEFAULT_ALLOWED_TOOLS: Set[str] = {
     "blender.get_objects",
@@ -88,11 +87,11 @@ class Allowlist:
         with self._lock:
             previous = self.allowed
             new_capabilities = set(capabilities)
-            
+
             # Automatically filter out dangerous tools unless explicitly enabled
             if not self.script_execute_enabled:
                 new_capabilities -= DANGEROUS_TOOLS
-            
+
             self.allowed = new_capabilities
             added = sorted(self.allowed - previous)
             removed = sorted(previous - self.allowed)
@@ -111,7 +110,7 @@ class Allowlist:
 
     def add_tool(self, capability: str) -> bool:
         """Add a tool to the allowlist.
-        
+
         Returns False if the tool is dangerous and not enabled.
         """
         with self._lock:

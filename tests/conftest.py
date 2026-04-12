@@ -13,7 +13,6 @@ from pathlib import Path
 
 import pytest
 
-
 # Project paths - available to all tests
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"

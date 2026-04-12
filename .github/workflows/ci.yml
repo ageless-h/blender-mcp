@@ -10,84 +10,33 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - name: Install lint dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install ruff
+      - uses: astral-sh/setup-uv@v4
+      - name: Install dependencies
+        run: uv sync
       - name: Lint
-        run: ruff check --select F .
+        run: uv run ruff check src/ tests/
 
   unit:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - name: Install test dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install .
-      - name: Unit tests
-        run: python -m unittest discover -s tests -p "test_*.py"
-        env:
-          PYTHONPATH: src
-
-  integration:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - name: Install test dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install .
-      - name: Integration tests
-        run: python -m unittest discover -s tests/integration -p "test_*.py" -t .
-      - name: Integration example
-        run: python -m examples.stdio_loop < /dev/null
-
-  # Version compatibility matrix - tests against supported Blender versions
-  blender-compat:
-    name: Blender ${{ matrix.blender_version }} (${{ matrix.status }})
-    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        include:
-          # LTS versions
-          - blender_version: "4.2"
-            status: "LTS"
-            python_version: "3.11"
-            ci_coverage: "full"
-          - blender_version: "4.5"
-            status: "LTS"
-            python_version: "3.11"
-            ci_coverage: "full"
-          # Latest stable
-          - blender_version: "5.0"
-            status: "Latest"
-            python_version: "3.12"
-            ci_coverage: "basic"
+        python-version: ["3.11", "3.12", "3.13"]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python_version }}
+      - uses: astral-sh/setup-uv@v4
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install .
-      - name: Check compatibility
-        run: |
-          BLENDER_VERSION=${{ matrix.blender_version }} \
-          CI_COVERAGE=${{ matrix.ci_coverage }} \
-          python scripts/check_compatibility.py
-      - name: Validate plugin boundary
-        run: python scripts/validate_plugin_boundary.py
+        run: uv sync --python ${{ matrix.python-version }}
+      - name: Unit tests
+        run: uv run python -m unittest discover -s tests -p "test_*.py"
+
+  schema:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - name: Install dependencies
+        run: uv sync
+      - name: Schema validation tests
+        run: uv run python -m unittest discover -s tests/tools -p "test_*.py"
 

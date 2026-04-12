@@ -6,8 +6,8 @@ from __future__ import annotations
 from typing import Any
 
 from ..base import BaseHandler
-from ..types import DataType
 from ..registry import HandlerRegistry
+from ..types import DataType
 
 
 @HandlerRegistry.register
