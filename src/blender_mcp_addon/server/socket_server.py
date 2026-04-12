@@ -11,6 +11,7 @@ import threading
 from typing import Any
 
 from ..capabilities.base import execute_capability
+from .timeouts import get_timeout
 
 logger = logging.getLogger(__name__)
 
@@ -19,8 +20,8 @@ _server_socket: socket.socket | None = None
 _server_thread: threading.Thread | None = None
 _shutdown_flag = threading.Event()
 
-# Main-thread dispatch queue: items are (request, response_holder, done_event)
-_dispatch_queue: queue.Queue[tuple[dict, list, threading.Event]] = queue.Queue()
+# Main-thread dispatch queue: items are (request, response_holder, done_event, timeout)
+_dispatch_queue: queue.Queue[tuple[dict, list, threading.Event, float]] = queue.Queue()
 _timer_registered = False
 
 _TIMER_INTERVAL = 0.05  # seconds between main-thread polls
@@ -176,16 +177,21 @@ def _handle_client(client_socket: socket.socket) -> None:
 def _dispatch_to_main_thread(request: dict) -> dict:
     """Queue a request for main-thread execution and block until done."""
     _kick_timer_if_dead()
+    capability = request.get("capability", "")
+    timeout = get_timeout(capability)
     response_holder: list[dict] = []
     done_event = threading.Event()
-    _dispatch_queue.put((request, response_holder, done_event))
-    done_event.wait(timeout=120.0)
+    _dispatch_queue.put((request, response_holder, done_event, timeout))
+    done_event.wait(timeout=timeout)
     if response_holder:
         return response_holder[0]
     return {
         "ok": False,
         "result": None,
-        "error": {"code": "timeout", "message": "Main-thread dispatch timed out"},
+        "error": {
+            "code": "timeout",
+            "message": f"Main-thread dispatch timed out after {timeout:.0f}s for {capability}",
+        },
     }
 
 
@@ -198,7 +204,7 @@ def _main_thread_poll() -> float | None:
 
     while not _dispatch_queue.empty():
         try:
-            request, response_holder, done_event = _dispatch_queue.get_nowait()
+            request, response_holder, done_event, _timeout = _dispatch_queue.get_nowait()
         except queue.Empty:
             break
         try:
