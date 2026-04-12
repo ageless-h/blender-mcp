@@ -128,7 +128,7 @@ def _handle_get_scene(payload: dict[str, Any], started: float) -> dict[str, Any]
                             "Strength"
                         ].default_value
                 result["world"] = world_info
-        except Exception:
+        except (AttributeError, KeyError, TypeError):
             pass
     return _ok(result=result, started=started)
 
@@ -553,7 +553,7 @@ def _push_undo_step(capability: str) -> None:
         import bpy  # type: ignore
 
         bpy.ops.ed.undo_push(message=f"MCP: {capability}")
-    except Exception:
+    except (AttributeError, RuntimeError):
         pass
 
 

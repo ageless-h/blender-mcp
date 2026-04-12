@@ -27,7 +27,7 @@ def _read_node(node: Any, depth: str) -> dict[str, Any]:
                         inp_data["value"] = list(val)
                     else:
                         inp_data["value"] = val
-                except Exception:
+                except (AttributeError, ValueError):
                     inp_data["value"] = "<unreadable>"
             inp_data["is_linked"] = inp.is_linked
             inputs.append(inp_data)
@@ -89,22 +89,22 @@ def _resolve_node_tree(bpy: Any, payload: dict[str, Any]) -> Any:
         if scene is None:
             try:
                 scene = bpy.context.scene
-            except Exception:
+            except (AttributeError, RuntimeError):
                 pass
         if scene:
             use_nodes = False
             try:
                 use_nodes = scene.use_nodes
-            except Exception:
+            except (AttributeError, RuntimeError):
                 pass
             if not use_nodes:
                 try:
                     scene.use_nodes = True
-                except Exception:
+                except (AttributeError, RuntimeError):
                     pass
             try:
                 use_nodes = scene.use_nodes
-            except Exception:
+            except (AttributeError, RuntimeError):
                 pass
             if use_nodes and scene.node_tree:
                 return scene.node_tree

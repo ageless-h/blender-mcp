@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Script execution with security controls."""
+
 from __future__ import annotations
 
 import io
@@ -10,10 +11,10 @@ import traceback
 from typing import Any
 
 from ..response import (
-    _error,
     _ok,
-    bpy_unavailable_error,
+    _error,
     check_bpy_available,
+    bpy_unavailable_error,
     invalid_params_error,
 )
 
@@ -122,8 +123,7 @@ def script_execute(payload: dict[str, Any], *, started: float) -> dict[str, Any]
         if not consent_granted:
             return _error(
                 code="consent_required",
-                message="User consent is required before executing scripts. "
-                        "Set 'consent_granted: true' to proceed.",
+                message="User consent is required before executing scripts. Set 'consent_granted: true' to proceed.",
                 data={"warning": "This will execute arbitrary Python code in your Blender session."},
                 started=started,
             )
@@ -197,7 +197,11 @@ def _execute_with_timeout(code: str, timeout: int, bpy: Any) -> dict[str, Any]:
         TimeoutError: If execution exceeds timeout
         Exception: If execution fails
     """
-    result_container: dict[str, Any] = {"return_value": None, "output": "", "error": None}
+    result_container: dict[str, Any] = {
+        "return_value": None,
+        "output": "",
+        "error": None,
+    }
 
     old_stdout = sys.stdout
     old_stderr = sys.stderr
@@ -213,12 +217,14 @@ def _execute_with_timeout(code: str, timeout: int, bpy: Any) -> dict[str, Any]:
 
     try:
         import bmesh
+
         exec_globals["bmesh"] = bmesh
     except ImportError:
         pass
 
     try:
         import mathutils
+
         exec_globals["mathutils"] = mathutils
     except ImportError:
         pass
@@ -263,8 +269,8 @@ def _execute_with_timeout(code: str, timeout: int, bpy: Any) -> dict[str, Any]:
                 return_value = f"<{type(return_value).__name__}: {return_value.name}>"
             elif not isinstance(return_value, (bool, int, float, str, list, dict, type(None))):
                 return_value = str(return_value)
-        except Exception:
-            return_value = str(return_value)  # safe fallback for non-serializable values
+        except (TypeError, ValueError):
+            return_value = str(return_value)
 
     return {
         "return_value": return_value,

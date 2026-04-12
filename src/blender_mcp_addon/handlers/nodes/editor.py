@@ -273,7 +273,7 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
             if scene is None:
                 try:
                     scene = bpy.context.scene
-                except Exception:
+                except (AttributeError, RuntimeError):
                     pass
             if scene:
                 if not scene.use_nodes:
