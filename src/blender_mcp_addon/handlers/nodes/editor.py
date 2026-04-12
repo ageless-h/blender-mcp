@@ -144,6 +144,22 @@ _ENGLISH_NODE_NAMES: dict[str, str] = {
 }
 
 
+def _resolve_node_type(type_str: str) -> str:
+    """Resolve a node type string to a valid bl_idname.
+
+    Tries in order:
+    1. Pass through as-is (works for exact bl_idname like ShaderNodeTexNoise)
+    2. Look up in _ENGLISH_NODE_NAMES keys (friendly name -> bl_idname)
+    """
+    if not type_str:
+        return type_str
+    if type_str in _ENGLISH_NODE_NAMES.values():
+        return type_str
+    if type_str in _ENGLISH_NODE_NAMES:
+        return _ENGLISH_NODE_NAMES[type_str]
+    return type_str
+
+
 def _get_node(node_tree, name_or_identifier: str):
     """Get a node by name, label, or bl_idname (type) fallback.
 
@@ -283,7 +299,8 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
         try:
             if action == "add_node":
                 node_type = op.get("type", "")
-                node = node_tree.nodes.new(type=node_type)
+                resolved_type = _resolve_node_type(node_type)
+                node = node_tree.nodes.new(type=resolved_type)
                 if op.get("name"):
                     node.name = op["name"]
                     node.label = op["name"]
