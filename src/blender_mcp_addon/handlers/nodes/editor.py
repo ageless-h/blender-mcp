@@ -8,6 +8,7 @@ from typing import Any
 
 from ..response import _ok, _error, check_bpy_available, bpy_unavailable_error
 from .reader import _resolve_node_tree
+from ..utils.property_parser import coerce_value
 
 logger = logging.getLogger(__name__)
 
@@ -382,10 +383,8 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
                     inp = _find_input_by_name_and_type(node, input_name, value)
                     if inp and hasattr(inp, "default_value"):
                         try:
-                            if isinstance(value, (list, tuple)):
-                                inp.default_value = tuple(value)
-                            else:
-                                inp.default_value = value
+                            coerced = coerce_value(value, inp.default_value)
+                            inp.default_value = coerced
                             results.append({"op": i, "action": "set_value", "ok": True})
                         except (TypeError, ValueError) as exc:
                             results.append(
@@ -421,7 +420,8 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
                 value = op.get("value")
                 node = _get_node(node_tree, node_name)
                 if node and hasattr(node, prop_name):
-                    setattr(node, prop_name, value)
+                    current = getattr(node, prop_name)
+                    setattr(node, prop_name, coerce_value(value, current))
                     results.append({"op": i, "action": "set_property", "ok": True})
                 else:
                     results.append(
