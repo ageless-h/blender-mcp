@@ -136,6 +136,7 @@ class SocketAdapter:
                     result=response.get("result"),
                     error=err_obj.get("code") if err_obj else None,
                     error_message=err_obj.get("message") if err_obj else None,
+                    error_suggestion=err_obj.get("suggestion") if err_obj else None,
                     timing_ms=elapsed_ms,
                 )
 

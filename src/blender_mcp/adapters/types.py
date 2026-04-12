@@ -11,4 +11,5 @@ class AdapterResult:
     result: Dict[str, Any] | None = None
     error: str | None = None
     error_message: str | None = None
+    error_suggestion: str | None = None
     timing_ms: float | None = None
