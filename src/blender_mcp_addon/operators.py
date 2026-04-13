@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Operators for Blender MCP addon."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -12,6 +13,7 @@ except ImportError:  # pragma: no cover - allow imports outside Blender
 if TYPE_CHECKING:
     import bpy  # type: ignore
 
+from .server.op_log import operation_log
 from .server.socket_server import (
     is_server_running,
     start_socket_server,
@@ -43,7 +45,6 @@ if bpy is not None:
                 self.report({"ERROR"}, f"Failed to start server: {result.get('error')}")
                 return {"CANCELLED"}
 
-
     class MCP_OT_stop_server(Operator):
         """Stop the MCP socket server"""
 
@@ -65,10 +66,23 @@ if bpy is not None:
                 self.report({"ERROR"}, f"Failed to stop server: {result.get('error')}")
                 return {"CANCELLED"}
 
+    class MCP_OT_clear_log(Operator):
+        """Clear the MCP activity log"""
+
+        bl_idname = "mcp.clear_log"
+        bl_label = "Clear Log"
+        bl_description = "Clear all activity log entries"
+
+        def execute(self, context: bpy.types.Context) -> set[str]:
+            operation_log.clear()
+            context.scene.blender_mcp.log_entries.clear()
+            self.report({"INFO"}, "Log cleared")
+            return {"FINISHED"}
 
     classes = (
         MCP_OT_start_server,
         MCP_OT_stop_server,
+        MCP_OT_clear_log,
     )
 else:
     classes = ()
