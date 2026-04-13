@@ -1,6 +1,6 @@
 # Implementation Status
 
-> Status Snapshot: v1.1.0 (2026-04-12)
+> Status Snapshot: v1.2.0 (2026-04-14)
 >
 > This document tracks the implementation status of all 26 tools across the four-layer architecture.
 
@@ -120,7 +120,7 @@
 
 ### Tests
 - **Status**: ✅ Complete
-- **Description**: 312 total tests across multiple test files
+- **Description**: 329 total tests across multiple test files
 - **Coverage**:
   - Perception tools: 11 tests
   - Declarative write tools: 3 tests

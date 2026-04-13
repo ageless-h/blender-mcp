@@ -12,7 +12,7 @@
 - [ ] Install MCP server (`uv pip install -e .`)
 - [ ] Configure MCP client (OpenCode/Claude)
 - [ ] Start Blender, enable addon, start server
-- [ ] Verify addon shows "Blender MCP" panel in N-panel with status
+- [ ] Verify MCP status appears in bottom status bar ("MCP ● Offline" or "MCP ● N req")
 
 ---
 
@@ -23,7 +23,7 @@
 | T1.1 | Get scene info | `blender_get_scene` | Returns stats with blender version 5.1 |
 | T1.2 | List objects | `blender_get_objects` | Returns default cube + light + camera |
 | T1.3 | Get selection | `blender_get_selection` | Returns current mode + active object |
-| T1.4 | UI panel shows status | Manual | N-panel shows "Status: Running" + request count |
+| T1.4 | UI shows status | Manual | Statusbar shows "MCP ● N req 0 err" (global, all editors) |
 
 ---
 
@@ -37,15 +37,18 @@
 
 ---
 
-## T3: UI Status Panel (v1.2.0 new)
+## T3: UI — Statusbar + Popup Panel (v1.2.0 new)
 
 | # | Test | Tool | Expected |
 |---|------|------|----------|
-| T3.1 | Activity log visible | Manual | N-panel shows log entries with capability name + duration |
-| T3.2 | Request counter increments | `blender_get_scene` x3 | Counter shows "Requests: 3" |
-| T3.3 | Error counter increments | Trigger error (bad object name) | Counter shows "Errors: 1" |
-| T3.4 | Log entry icons correct | 1 success + 1 error | CHECKMARK for success, ERROR for failure |
-| T3.5 | Collapsible log toggle | Manual | Click "Activity Log" toggles visibility |
+| T3.1 | Statusbar shows MCP status | Manual | Bottom bar shows "MCP ● N req M err" when running |
+| T3.2 | Popup panel opens | Ctrl+Shift+M | Dialog shows server status + activity log |
+| T3.3 | Click statusbar opens popup | Manual click | Same popup dialog as hotkey |
+| T3.4 | Request counter increments | `blender_get_scene` x3 | Counter shows "3 req" |
+| T3.5 | Error counter increments | Trigger error (bad object name) | Counter shows "1 err" |
+| T3.6 | Log entry icons correct | 1 success + 1 error | CHECKMARK for success, ERROR for failure |
+| T3.7 | Filter log entries | Type in filter box | Only matching entries shown |
+| T3.8 | i18n follows Blender language | Switch to Chinese | Labels show Chinese text |
 
 ---
 
@@ -216,5 +219,5 @@ Add to OpenCode config:
 
 1. Open Blender 5.1
 2. Edit > Preferences > Add-ons > Enable "Blender MCP"
-3. N-panel > Blender MCP > Start Server
+3. Statusbar shows "MCP" — click it or press Ctrl+Shift+M > Start Server
 4. In OpenCode: `blender_get_scene` to verify connection

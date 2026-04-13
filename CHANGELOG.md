@@ -16,6 +16,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - WebSocket transport layer
 - PolyHaven integration (HDRI/textures)
 - Sketchfab integration (model import)
+- Statusbar auto-refresh via `bpy.app.timers` for real-time log updates
+
+---
+
+## [1.2.0] - 2026-04-14
+
+### Added
+- **Dynamic timeout per capability**: Replace fixed 120s timeout with tiered system — Fast (10s) for all `get_*` queries, Standard (60s) for `edit_*`/`create_*`/`modify_*`/`manage_*`, Slow (300s) for `execute_operator`/`execute_script`/`import_export`.
+- **Global statusbar indicator**: MCP status (running/offline + request count + error count) displayed in Blender's bottom status bar across all editors, not just 3D viewport.
+- **Popup panel (Ctrl+Shift+M)**: Floating dialog with full server controls and scrollable activity log, accessible from any editor via hotkey or clicking the statusbar indicator.
+- **Activity log with UIList**: Thread-safe `OperationLog` tracking up to 200 entries with capability name, duration, success/fail status, and response preview. Filterable, clearable.
+- **Multi-connection support**: Persistent client sessions — `socket_server` handles multiple sequential requests per connection and tracks active clients.
+- **Dynamic node type discovery**: Runtime `_discover_node_types()` scans `bpy.types` for Node subclasses, falling back to static English name mapping. New `node_types` include option on `blender_get_scene`.
+- **i18n support**: Addon UI follows Blender's language setting (Chinese/English). Uses `_t()` helper with `translate=False` to prevent unwanted auto-translation of modifier key labels.
+- **Customizable hotkey**: Panel popup hotkey configurable in addon preferences (Edit > Preferences > Add-ons > Blender MCP > Hotkey Settings).
+
+### Changed
+- **UI relocated from N-panel to global**: Removed `VIEW3D_PT_blender_mcp` sidebar panel. MCP is now editor-agnostic — statusbar + popup panel.
+- **Test coverage**: 329 tests (up from 312).
+
+### Fixed
+- **UI panel stats key bug**: `stats['error']` → `stats['errors']` KeyError that silently killed remaining panel draw.
+- **Write-in-draw error**: Log collection population moved from `draw()` to `invoke()` to avoid "Writing to ID classes in this context" error.
+- **EnumProperty registration**: Fixed 2-tuple items (missing description field) causing registration failure.
 
 ---
 
@@ -118,7 +142,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Fixed**: Bug fixes
 - **Improved**: Non-breaking improvements
 
-[Unreleased]: https://github.com/ageless-h/blender-mcp/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/ageless-h/blender-mcp/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/ageless-h/blender-mcp/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/ageless-h/blender-mcp/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/ageless-h/blender-mcp/compare/v0.1.0...v1.0.0
 [0.1.0]: https://github.com/ageless-h/blender-mcp/releases/tag/v0.1.0

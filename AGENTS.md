@@ -4,7 +4,7 @@
 
 Blender MCP — MCP server integration for AI-assisted Blender automation.
 - **Package**: `ageless-blender-mcp` on PyPI
-- **Version**: 1.1.0
+- **Version**: 1.2.0
 - **Python**: >=3.11
 - **Blender**: 4.2 LTS / 4.5 LTS / 5.0+ / 5.1
 
@@ -23,7 +23,12 @@ src/
   blender_mcp_addon/    # Blender addon (runs inside Blender)
     capabilities/        # Capability dispatcher + base handler
     handlers/            # Tool handlers (nodes, sequencer, etc.)
+    operators.py         # Blender operators (start/stop server, show panel, clear log)
+    preferences.py       # Addon preferences (host, port, auto-start, hotkey)
+    ui.py                # Global statusbar + popup panel, i18n support
     server/              # Socket server for addon-MCP communication
+      op_log.py          # Thread-safe operation log with stats
+      timeouts.py        # Per-capability dynamic timeout tiers
 tests/
   addon/                # Addon unit tests (mocked Blender)
   integration/          # Integration tests
@@ -41,7 +46,8 @@ docs/testing/advanced-test-suite.md  # 10 advanced real-Blender test scenarios
 - Keep changes minimal and aligned to OpenSpec artifacts.
 - Prefer updating tests and examples alongside behavior changes.
 - All write operations in the addon go through `_push_undo_step()` for Ctrl+Z support.
-- Node name lookup in `edit_nodes` uses 3-tier fallback: exact name → bl_idname → English display-name mapping.
+- Node name lookup in `edit_nodes` uses 3-tier fallback: exact name → bl_idname → English display-name mapping + dynamic `_discover_node_types()`.
+- UI is global: statusbar indicator (all editors) + popup panel (Ctrl+Shift+M or click statusbar).
 
 ## Verification Steps
 

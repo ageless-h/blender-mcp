@@ -24,7 +24,7 @@ Get Blender MCP running in **5 minutes**.
 
 2. In Blender: **Edit > Preferences > Add-ons** > Search "Blender MCP" > Enable
 
-3. In the 3D Viewport, press **N** to open the sidebar, find the **Blender MCP** tab, click **Start Server**
+3. The MCP status appears in the **bottom status bar** of Blender (all editors). Click it or press **Ctrl+Shift+M** to open the panel, then click **Start Server**
 
 ### Step 2: Configure Your MCP Client
 
@@ -75,14 +75,14 @@ The assistant should:
 
 #### Connection Failed / Cannot connect to Blender
 
-- **Check addon is running**: In Blender, press N > Blender MCP tab > verify server shows "Running"
+- **Check addon is running**: Look at the bottom status bar in Blender — should show "MCP ● N req 0 err". Click it or press Ctrl+Shift+M to open the panel
 - **Check port**: Default is `9876`. Ensure your client config matches the addon's port setting
 - **Check firewall**: Allow local connections on the configured port
 
 #### Timeout Errors
 
 - The command may be too complex. Try breaking it into smaller steps
-- Increase timeout: set `MCP_SOCKET_TIMEOUT` environment variable (default: 30 seconds)
+- Increase timeout: timeouts are now dynamic per tool (10s–300s). For custom scripts, try `execute_script`
 
 #### "Object not found" Errors
 
@@ -121,7 +121,7 @@ The assistant should:
 
 2. 在 Blender 中：**编辑 > 偏好设置 > 插件** > 搜索 "Blender MCP" > 启用
 
-3. 在 3D 视口中按 **N** 打开侧边栏，找到 **Blender MCP** 标签，点击 **Start Server**
+3. MCP 状态显示在 Blender **底部状态栏**（所有编辑器通用）。点击状态栏或按 **Ctrl+Shift+M** 打开面板，点击 **Start Server**
 
 ### 第 2 步：配置 MCP 客户端
 
@@ -172,14 +172,14 @@ The assistant should:
 
 #### 连接失败 / 无法连接 Blender
 
-- **检查插件是否运行中**：在 Blender 中按 N > Blender MCP 标签 > 确认服务器显示 "Running"
+- **检查插件是否运行中**：查看 Blender 底部状态栏 — 应显示 "MCP ● N req 0 err"。点击状态栏或按 Ctrl+Shift+M 打开面板
 - **检查端口**：默认为 `9876`，确保客户端配置与插件端口一致
 - **检查防火墙**：允许配置端口的本地连接
 
 #### 超时错误
 
 - 命令可能过于复杂，尝试拆分为更小的步骤
-- 增加超时：设置 `MCP_SOCKET_TIMEOUT` 环境变量（默认 30 秒）
+- 增加超时：超时时间现在按工具动态分配（10s–300s）。对于自定义脚本，尝试 `execute_script`
 
 #### "Object not found" 错误
 
