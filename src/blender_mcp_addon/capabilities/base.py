@@ -11,18 +11,12 @@ import time
 from typing import Any, Callable
 
 from ..handlers import data as _data_handlers  # noqa: F401 - Import to register handlers
-from ..handlers.data.dispatcher import (
-    data_create,
-    data_delete,
-    data_link,
-    data_list,
-    data_read,
-    data_write,
-)
 from ..handlers.info import info_query
 from ..handlers.operator import operator_execute
-from ..handlers.response import _error, _ok
+from ..handlers.registry import HandlerRegistry
+from ..handlers.response import _error, _ok, not_found_error, operation_failed_error
 from ..handlers.script import script_execute
+from ..handlers.types import DataType
 
 # ---------------------------------------------------------------
 # Individual capability handlers
@@ -41,17 +35,29 @@ def _handle_get_objects(payload: dict[str, Any], started: float) -> dict[str, An
         filter_dict["name_pattern"] = payload["name_pattern"]
     if "collection" in payload:
         filter_dict["collection"] = payload["collection"]
-    return data_list({"type": "object", "filter": filter_dict}, started=started)
+    handler = HandlerRegistry.get(DataType.OBJECT)
+    if handler is None:
+        return _error(code="unsupported_type", message="object handler not available", started=started)
+    try:
+        return _ok(result=handler.list_items(filter_dict), started=started)
+    except (AttributeError, TypeError, RuntimeError, ValueError) as exc:
+        return operation_failed_error("get_objects", exc, started)
 
 
 def _handle_get_object_data(payload: dict[str, Any], started: float) -> dict[str, Any]:
-    read_params = {}
+    name = payload.get("name", "")
+    read_params: dict[str, Any] = {}
     if "include" in payload:
         read_params["include"] = payload["include"]
-    return data_read(
-        {"type": "object", "name": payload.get("name", ""), "params": read_params},
-        started=started,
-    )
+    handler = HandlerRegistry.get(DataType.OBJECT)
+    if handler is None:
+        return _error(code="unsupported_type", message="object handler not available", started=started)
+    try:
+        return _ok(result=handler.read(name, None, read_params), started=started)
+    except KeyError:
+        return not_found_error("object", name, started)
+    except (AttributeError, TypeError, RuntimeError, ValueError) as exc:
+        return operation_failed_error("get_object_data", exc, started)
 
 
 def _handle_get_node_tree(payload: dict[str, Any], started: float) -> dict[str, Any]:
@@ -67,7 +73,13 @@ def _handle_get_animation_data(payload: dict[str, Any], started: float) -> dict[
 
 
 def _handle_get_materials(payload: dict[str, Any], started: float) -> dict[str, Any]:
-    return data_list({"type": "material", **payload}, started=started)
+    handler = HandlerRegistry.get(DataType.MATERIAL)
+    if handler is None:
+        return _error(code="unsupported_type", message="material handler not available", started=started)
+    try:
+        return _ok(result=handler.list_items(payload), started=started)
+    except (AttributeError, TypeError, RuntimeError, ValueError) as exc:
+        return operation_failed_error("get_materials", exc, started)
 
 
 def _handle_get_scene(payload: dict[str, Any], started: float) -> dict[str, Any]:
@@ -132,29 +144,37 @@ def _handle_get_scene(payload: dict[str, Any], started: float) -> dict[str, Any]
 
 
 def _handle_get_collections(payload: dict[str, Any], started: float) -> dict[str, Any]:
-    read_params = {}
+    name = payload.get("root", "")
+    read_params: dict[str, Any] = {}
     if "depth" in payload:
         read_params["max_depth"] = payload["depth"]
-    return data_read(
-        {"type": "collection", "name": payload.get("root", ""), "params": read_params},
-        started=started,
-    )
+    handler = HandlerRegistry.get(DataType.COLLECTION)
+    if handler is None:
+        return _error(code="unsupported_type", message="collection handler not available", started=started)
+    try:
+        return _ok(result=handler.read(name, None, read_params), started=started)
+    except KeyError:
+        return not_found_error("collection", name, started)
+    except (AttributeError, TypeError, RuntimeError, ValueError) as exc:
+        return operation_failed_error("get_collections", exc, started)
 
 
 def _handle_get_armature_data(payload: dict[str, Any], started: float) -> dict[str, Any]:
-    read_params = {}
+    name = payload.get("armature_name", "")
+    read_params: dict[str, Any] = {}
     if "include" in payload:
         read_params["include"] = payload["include"]
     if "bone_filter" in payload:
         read_params["bone_filter"] = payload["bone_filter"]
-    return data_read(
-        {
-            "type": "armature",
-            "name": payload.get("armature_name", ""),
-            "params": read_params,
-        },
-        started=started,
-    )
+    handler = HandlerRegistry.get(DataType.ARMATURE)
+    if handler is None:
+        return _error(code="unsupported_type", message="armature handler not available", started=started)
+    try:
+        return _ok(result=handler.read(name, None, read_params), started=started)
+    except KeyError:
+        return not_found_error("armature", name, started)
+    except (AttributeError, TypeError, RuntimeError, ValueError) as exc:
+        return operation_failed_error("get_armature_data", exc, started)
 
 
 def _handle_get_images(payload: dict[str, Any], started: float) -> dict[str, Any]:
@@ -208,22 +228,32 @@ def _handle_edit_sequencer(payload: dict[str, Any], started: float) -> dict[str,
 
 def _handle_create_object(payload: dict[str, Any], started: float) -> dict[str, Any]:
     obj_name = payload.get("name", "")
+    if not obj_name:
+        return _error(code="invalid_params", message="'name' parameter is required", started=started)
     params = {k: v for k, v in payload.items() if k != "name"}
-    return data_create({"type": "object", "name": obj_name, "params": params}, started=started)
+    handler = HandlerRegistry.get(DataType.OBJECT)
+    if handler is None:
+        return _error(code="unsupported_type", message="object handler not available", started=started)
+    try:
+        return _ok(result=handler.create(obj_name, params), started=started)
+    except (AttributeError, KeyError, TypeError, RuntimeError, ValueError) as exc:
+        return operation_failed_error("create_object", exc, started)
 
 
 def _handle_modify_object(payload: dict[str, Any], started: float) -> dict[str, Any]:
     obj_name = payload.get("name", "")
+    handler = HandlerRegistry.get(DataType.OBJECT)
+    if handler is None:
+        return _error(code="unsupported_type", message="object handler not available", started=started)
     if payload.get("delete"):
-        return data_delete(
-            {
-                "type": "object",
-                "name": obj_name,
-                "params": {"delete_data": payload.get("delete_data", True)},
-            },
-            started=started,
-        )
-    # Handle set_origin via operator
+        try:
+            result = handler.delete(obj_name, {"delete_data": payload.get("delete_data", True)})
+            result["success"] = True
+            return _ok(result=result, started=started)
+        except KeyError:
+            return not_found_error("object", obj_name, started)
+        except (AttributeError, TypeError, RuntimeError, ValueError) as exc:
+            return operation_failed_error("modify_object", exc, started)
     if "origin" in payload:
         origin_map = {
             "GEOMETRY": "ORIGIN_GEOMETRY",
@@ -239,7 +269,6 @@ def _handle_modify_object(payload: dict[str, Any], started: float) -> dict[str, 
             },
             started=started,
         )
-    # Build properties dict from flat schema params
     props: dict[str, Any] = {}
     if "location" in payload:
         props["location"] = payload["location"]
@@ -261,7 +290,14 @@ def _handle_modify_object(payload: dict[str, Any], started: float) -> dict[str, 
         props["name"] = payload["new_name"]
     if not props:
         return _ok(result={"name": obj_name, "modified": []}, started=started)
-    return data_write({"type": "object", "name": obj_name, "properties": props}, started=started)
+    try:
+        result = handler.write(obj_name, props, {})
+        result["success"] = True
+        return _ok(result=result, started=started)
+    except KeyError:
+        return not_found_error("object", obj_name, started)
+    except (AttributeError, TypeError, RuntimeError, ValueError) as exc:
+        return operation_failed_error("modify_object", exc, started)
 
 
 def _handle_manage_material(payload: dict[str, Any], started: float) -> dict[str, Any]:
@@ -277,73 +313,84 @@ def _handle_manage_material(payload: dict[str, Any], started: float) -> dict[str
         "emission_strength",
         "use_fake_user",
     )
-    if action == "create":
-        mat_params = {k: payload[k] for k in _PBR_KEYS if k in payload}
-        return data_create({"type": "material", "name": name, "params": mat_params}, started=started)
-    elif action == "delete":
-        return data_delete({"type": "material", "name": name}, started=started)
-    elif action in ("assign", "unassign"):
-        return data_link(
-            {
-                "source": {"type": "material", "name": name},
-                "target": {"type": "object", "name": payload.get("object_name", "")},
-                "unlink": action == "unassign",
-                "params": {"slot": payload.get("slot")},
-            },
-            started=started,
-        )
-    else:
-        # edit action — build properties dict from PBR params
-        mat_props = {k: payload[k] for k in _PBR_KEYS if k in payload}
-        return data_write({"type": "material", "name": name, "properties": mat_props}, started=started)
+    handler = HandlerRegistry.get(DataType.MATERIAL)
+    if handler is None:
+        return _error(code="unsupported_type", message="material handler not available", started=started)
+    try:
+        if action == "create":
+            mat_params = {k: payload[k] for k in _PBR_KEYS if k in payload}
+            return _ok(result=handler.create(name, mat_params), started=started)
+        elif action == "delete":
+            result = handler.delete(name, {})
+            result["success"] = True
+            return _ok(result=result, started=started)
+        elif action in ("assign", "unassign"):
+            result = handler.link(
+                name,
+                DataType.OBJECT,
+                payload.get("object_name", ""),
+                action == "unassign",
+                {"slot": payload.get("slot")},
+            )
+            if "error" in result:
+                return _error(code="link_failed", message=result["error"], started=started)
+            result["success"] = True
+            return _ok(result=result, started=started)
+        else:
+            mat_props = {k: payload[k] for k in _PBR_KEYS if k in payload}
+            result = handler.write(name, mat_props, {})
+            result["success"] = True
+            return _ok(result=result, started=started)
+    except KeyError:
+        return not_found_error("material", name, started)
+    except (AttributeError, TypeError, RuntimeError, ValueError) as exc:
+        return operation_failed_error("manage_material", exc, started)
 
 
 def _handle_manage_modifier(payload: dict[str, Any], started: float) -> dict[str, Any]:
     action = payload.get("action", "")
     obj = payload.get("object_name", "")
     mod_name = payload.get("modifier_name", "")
-    if action == "add":
-        return data_create(
-            {
-                "type": "modifier",
-                "name": mod_name,
-                "params": {
+    handler = HandlerRegistry.get(DataType.MODIFIER)
+    if handler is None:
+        return _error(code="unsupported_type", message="modifier handler not available", started=started)
+    try:
+        if action == "add":
+            result = handler.create(
+                mod_name,
+                {
                     "object": obj,
                     "type": payload.get("modifier_type", ""),
                     "settings": payload.get("settings", {}),
                 },
-            },
-            started=started,
-        )
-    elif action == "remove":
-        return data_delete(
-            {"type": "modifier", "name": mod_name, "params": {"object": obj}},
-            started=started,
-        )
-    elif action == "configure":
-        return data_write(
-            {
-                "type": "modifier",
-                "name": mod_name,
-                "properties": payload.get("settings", {}),
-                "params": {"object": obj},
-            },
-            started=started,
-        )
-    elif action in ("apply", "move_up", "move_down"):
-        op_map = {
-            "apply": "object.modifier_apply",
-            "move_up": "object.modifier_move_up",
-            "move_down": "object.modifier_move_down",
-        }
-        return operator_execute(
-            {
-                "operator": op_map[action],
-                "params": {"modifier": mod_name},
-                "context": {"active_object": obj},
-            },
-            started=started,
-        )
+            )
+            return _ok(result=result, started=started)
+        elif action == "remove":
+            result = handler.delete(mod_name, {"object": obj})
+            result["success"] = True
+            return _ok(result=result, started=started)
+        elif action == "configure":
+            result = handler.write(mod_name, payload.get("settings", {}), {"object": obj})
+            result["success"] = True
+            return _ok(result=result, started=started)
+        elif action in ("apply", "move_up", "move_down"):
+            op_map = {
+                "apply": "object.modifier_apply",
+                "move_up": "object.modifier_move_up",
+                "move_down": "object.modifier_move_down",
+            }
+            return operator_execute(
+                {
+                    "operator": op_map[action],
+                    "params": {"modifier": mod_name},
+                    "context": {"active_object": obj},
+                },
+                started=started,
+            )
+    except KeyError:
+        return not_found_error("modifier", mod_name, started)
+    except (AttributeError, TypeError, RuntimeError, ValueError) as exc:
+        return operation_failed_error("manage_modifier", exc, started)
     return _error(
         code="invalid_params",
         message=f"Unknown modifier action: {action}",
@@ -354,45 +401,58 @@ def _handle_manage_modifier(payload: dict[str, Any], started: float) -> dict[str
 def _handle_manage_collection(payload: dict[str, Any], started: float) -> dict[str, Any]:
     action = payload.get("action", "")
     col_name = payload.get("collection_name", "")
-    if action == "create":
-        col_params: dict[str, Any] = {}
-        if "parent" in payload:
-            col_params["parent"] = payload["parent"]
-        if "color_tag" in payload:
-            col_params["color_tag"] = payload["color_tag"]
-        return data_create(
-            {"type": "collection", "name": col_name, "params": col_params},
-            started=started,
-        )
-    elif action == "delete":
-        return data_delete({"type": "collection", "name": col_name}, started=started)
-    elif action in ("link_object", "unlink_object"):
-        return data_link(
-            {
-                "source": {"type": "object", "name": payload.get("object_name", "")},
-                "target": {"type": "collection", "name": col_name},
-                "unlink": action == "unlink_object",
-            },
-            started=started,
-        )
-    elif action == "set_visibility":
-        vis_props: dict[str, Any] = {}
-        if "hide_viewport" in payload:
-            vis_props["hide_viewport"] = payload["hide_viewport"]
-        if "hide_render" in payload:
-            vis_props["hide_render"] = payload["hide_render"]
-        return data_write(
-            {"type": "collection", "name": col_name, "properties": vis_props},
-            started=started,
-        )
-    elif action == "set_parent":
-        return data_link(
-            {
-                "source": {"type": "collection", "name": col_name},
-                "target": {"type": "collection", "name": payload.get("parent", "")},
-            },
-            started=started,
-        )
+    handler = HandlerRegistry.get(DataType.COLLECTION)
+    if handler is None:
+        return _error(code="unsupported_type", message="collection handler not available", started=started)
+    try:
+        if action == "create":
+            col_params: dict[str, Any] = {}
+            if "parent" in payload:
+                col_params["parent"] = payload["parent"]
+            if "color_tag" in payload:
+                col_params["color_tag"] = payload["color_tag"]
+            return _ok(result=handler.create(col_name, col_params), started=started)
+        elif action == "delete":
+            result = handler.delete(col_name, {})
+            result["success"] = True
+            return _ok(result=result, started=started)
+        elif action in ("link_object", "unlink_object"):
+            result = handler.link(
+                payload.get("object_name", ""),
+                DataType.COLLECTION,
+                col_name,
+                action == "unlink_object",
+                {},
+            )
+            if "error" in result:
+                return _error(code="link_failed", message=result["error"], started=started)
+            result["success"] = True
+            return _ok(result=result, started=started)
+        elif action == "set_visibility":
+            vis_props: dict[str, Any] = {}
+            if "hide_viewport" in payload:
+                vis_props["hide_viewport"] = payload["hide_viewport"]
+            if "hide_render" in payload:
+                vis_props["hide_render"] = payload["hide_render"]
+            result = handler.write(col_name, vis_props, {})
+            result["success"] = True
+            return _ok(result=result, started=started)
+        elif action == "set_parent":
+            result = handler.link(
+                col_name,
+                DataType.COLLECTION,
+                payload.get("parent", ""),
+                False,
+                {},
+            )
+            if "error" in result:
+                return _error(code="link_failed", message=result["error"], started=started)
+            result["success"] = True
+            return _ok(result=result, started=started)
+    except KeyError:
+        return not_found_error("collection", col_name, started)
+    except (AttributeError, TypeError, RuntimeError, ValueError) as exc:
+        return operation_failed_error("manage_collection", exc, started)
     return _error(
         code="invalid_params",
         message=f"Unknown collection action: {action}",
