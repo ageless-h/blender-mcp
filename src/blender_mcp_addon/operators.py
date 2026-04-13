@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-"""Operators for Blender MCP addon."""
-
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -24,8 +22,6 @@ if bpy is not None:
     from bpy.types import Operator  # type: ignore
 
     class MCP_OT_start_server(Operator):
-        """Start the MCP socket server"""
-
         bl_idname = "mcp.start_server"
         bl_label = "Start MCP Server"
         bl_description = "Start the MCP socket server for AI communication"
@@ -46,8 +42,6 @@ if bpy is not None:
                 return {"CANCELLED"}
 
     class MCP_OT_stop_server(Operator):
-        """Stop the MCP socket server"""
-
         bl_idname = "mcp.stop_server"
         bl_label = "Stop MCP Server"
         bl_description = "Stop the MCP socket server"
@@ -67,8 +61,6 @@ if bpy is not None:
                 return {"CANCELLED"}
 
     class MCP_OT_clear_log(Operator):
-        """Clear the MCP activity log"""
-
         bl_idname = "mcp.clear_log"
         bl_label = "Clear Log"
         bl_description = "Clear all activity log entries"
@@ -79,26 +71,80 @@ if bpy is not None:
             self.report({"INFO"}, "Log cleared")
             return {"FINISHED"}
 
+    class MCP_OT_show_panel(Operator):
+        bl_idname = "mcp.show_panel"
+        bl_label = "Blender MCP"
+        bl_description = "Show MCP status panel with activity log"
+
+        def invoke(self, context: bpy.types.Context, event):
+            from .ui import populate_log_collection
+
+            populate_log_collection(context.scene.blender_mcp)
+            return context.window_manager.invoke_props_dialog(self, width=450)
+
+        def draw(self, context: bpy.types.Context):
+            from .ui import draw_popup
+
+            draw_popup(self.layout, context)
+
+        def execute(self, context: bpy.types.Context) -> set[str]:
+            return {"FINISHED"}
+
     classes = (
         MCP_OT_start_server,
         MCP_OT_stop_server,
         MCP_OT_clear_log,
+        MCP_OT_show_panel,
     )
 else:
     classes = ()
 
 
+addon_keymaps: list = []
+
+
+def _key_from_prefs() -> tuple:
+    if bpy is None:
+        return ("M", True, True, False)
+    prefs = bpy.context.preferences.addons.get("blender_mcp_addon")
+    if prefs is None:
+        return ("M", True, True, False)
+    p = prefs.preferences
+    return (p.hotkey_key, p.hotkey_ctrl, p.hotkey_shift, p.hotkey_alt)
+
+
 def register() -> None:
-    """Register operator classes."""
-    if bpy is None:  # pragma: no cover - safety for non-Blender environments
+    if bpy is None:  # pragma: no cover
         return
     for cls in classes:
         bpy.utils.register_class(cls)
 
+    wm = bpy.context.window_manager
+    if wm.keyconfigs.addon:
+        key, ctrl, shift, alt = _key_from_prefs()
+        km = wm.keyconfigs.addon.keymaps.new(name="Window", space_type="EMPTY")
+        kmi = km.keymap_items.new("mcp.show_panel", key, "PRESS", ctrl=ctrl, shift=shift, alt=alt)
+        addon_keymaps.append((km, kmi))
+
 
 def unregister() -> None:
-    """Unregister operator classes."""
-    if bpy is None:  # pragma: no cover - safety for non-Blender environments
+    if bpy is None:  # pragma: no cover
         return
+    for km, _kmi in addon_keymaps:
+        km.keymap_items.remove(_kmi)
+    addon_keymaps.clear()
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
+
+
+def refresh_keymap() -> None:
+    for km, _kmi in addon_keymaps:
+        km.keymap_items.remove(_kmi)
+    addon_keymaps.clear()
+
+    wm = bpy.context.window_manager
+    if wm.keyconfigs.addon:
+        key, ctrl, shift, alt = _key_from_prefs()
+        km = wm.keyconfigs.addon.keymaps.new(name="Window", space_type="EMPTY")
+        kmi = km.keymap_items.new("mcp.show_panel", key, "PRESS", ctrl=ctrl, shift=shift, alt=alt)
+        addon_keymaps.append((km, kmi))
