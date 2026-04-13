@@ -237,8 +237,7 @@ class BlenderProcessHarness:
                 if self._process.stderr:
                     remaining_stderr = self._process.stderr.read()
                     self._stderr.extend(remaining_stderr.splitlines())
-            except (OSError, UnicodeDecodeError):
-                # Ignore errors when reading output
+            except (OSError, UnicodeDecodeError, ValueError):
                 pass
 
             # Terminate the process
