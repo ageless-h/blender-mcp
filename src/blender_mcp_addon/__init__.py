@@ -25,7 +25,7 @@ from .server.socket_server import is_server_running, start_socket_server, stop_s
 bl_info = {
     "name": "Blender MCP",
     "author": "Blender MCP Contributors",
-    "version": (1, 0, 0),
+    "version": (1, 2, 0),
     "blender": (4, 2, 0),
     "category": "Development",
     "description": "MCP server integration for AI-assisted Blender automation",
@@ -40,11 +40,8 @@ def register() -> None:
         raise ImportError("bpy is not available. register() must be called inside Blender.")
     _logger.info("Registering Blender MCP addon")
 
-    from . import (
-        operators,  # Local import to avoid bpy dependency at module import time
-        ui,  # Local import; sidebar panel requires bpy
-    )
-    from .preferences import BlenderMCPPreferences  # Local import; requires bpy
+    from . import operators, ui
+    from .preferences import BlenderMCPPreferences
 
     bpy.utils.register_class(BlenderMCPPreferences)
     operators.register()
@@ -68,11 +65,8 @@ def unregister() -> None:
         raise ImportError("bpy is not available. unregister() must be called inside Blender.")
     _logger.info("Unregistering Blender MCP addon")
 
-    from . import (
-        operators,  # Local import to avoid bpy dependency at module import time
-        ui,  # Local import; sidebar panel requires bpy
-    )
-    from .preferences import BlenderMCPPreferences  # Local import; requires bpy
+    from . import operators, ui
+    from .preferences import BlenderMCPPreferences
 
     if is_server_running():
         _logger.info("Stopping MCP socket server")

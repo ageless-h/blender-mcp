@@ -5,7 +5,7 @@ import threading
 import time
 from dataclasses import dataclass
 
-_MAX_LOG_ENTRIES = 50
+_MAX_LOG_ENTRIES = 200
 _MAX_PREVIEW_CHARS = 500
 
 
@@ -51,6 +51,11 @@ class OperationLog:
             self._total_requests += 1
             if not ok:
                 self._total_errors += 1
+
+    @property
+    def entries(self) -> list[LogEntry]:
+        with self._lock:
+            return list(self._entries)
 
     def recent(self, count: int = 20) -> list[LogEntry]:
         with self._lock:

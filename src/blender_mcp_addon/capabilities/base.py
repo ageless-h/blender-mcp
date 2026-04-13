@@ -106,6 +106,10 @@ def _handle_get_scene(payload: dict[str, Any], started: float) -> dict[str, Any]
         mem_resp = info_query({"type": "memory"}, started=started)
         if mem_resp.get("ok"):
             result["memory"] = mem_resp.get("result", {})
+    if "node_types" in include:
+        nt_resp = info_query({"type": "node_types", "params": payload.get("params", {})}, started=started)
+        if nt_resp.get("ok"):
+            result["node_types"] = nt_resp.get("result", {})
     if "world" in include:
         try:
             import bpy  # type: ignore
