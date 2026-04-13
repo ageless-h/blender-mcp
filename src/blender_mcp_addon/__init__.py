@@ -25,7 +25,7 @@ from .server.socket_server import is_server_running, start_socket_server, stop_s
 bl_info = {
     "name": "Blender MCP",
     "author": "Blender MCP Contributors",
-    "version": (1, 0, 0),
+    "version": (1, 2, 0),
     "blender": (4, 2, 0),
     "category": "Development",
     "description": "MCP server integration for AI-assisted Blender automation",
