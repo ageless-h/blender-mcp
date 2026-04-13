@@ -90,26 +90,27 @@ if bpy is not None:
 
             # --- Activity Log ---
             layout.separator()
-            stats = operation_log.stats
-            stats_row = layout.row()
-            stats_row.label(
-                text=f"Requests: {stats['total']}  Errors: {stats['error']}",
-                icon="TEXT",
-            )
-            layout.prop(props, "show_log", text="Activity Log", icon="CONSOLE")
-            if props.show_log and running:
-                log_box = layout.box()
-                entries = operation_log.recent(count=props.log_lines)
-                if not entries:
-                    log_box.label(text="No activity yet", icon="INFO")
-                else:
-                    for entry in reversed(entries):
-                        icon = "CHECKMARK" if entry.ok else "ERROR"
-                        cap_short = entry.capability.replace("blender.", "")
-                        log_box.label(
-                            text=f"{cap_short}  {entry.duration_ms:.0f}ms",
-                            icon=icon,
-                        )
+            try:
+                stats = operation_log.stats
+                layout.label(
+                    text=f"Requests: {stats['total']}  Errors: {stats['errors']}",
+                    icon="TEXT",
+                )
+                if running:
+                    log_box = layout.box()
+                    entries = operation_log.recent(count=10)
+                    if not entries:
+                        log_box.label(text="No activity yet", icon="INFO")
+                    else:
+                        for entry in reversed(entries):
+                            icon = "CHECKMARK" if entry.ok else "ERROR"
+                            cap_short = entry.capability.replace("blender.", "")
+                            log_box.label(
+                                text=f"{cap_short}  {entry.duration_ms:.0f}ms",
+                                icon=icon,
+                            )
+            except Exception as exc:
+                layout.label(text=f"Log error: {exc}", icon="ERROR")
 
     classes = (
         BlenderMCPProperties,
