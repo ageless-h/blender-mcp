@@ -25,7 +25,7 @@ _shutdown_flag = threading.Event()
 _dispatch_queue: queue.Queue[tuple[dict, list, threading.Event, float]] = queue.Queue()
 _timer_registered = False
 
-_TIMER_INTERVAL = 0.05  # seconds between main-thread polls
+_TIMER_INTERVAL = 0.01  # seconds between main-thread polls
 _WATCHDOG_INTERVAL = 2.0  # seconds between watchdog checks
 _last_poll_time: float = 0.0
 

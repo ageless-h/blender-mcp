@@ -63,7 +63,7 @@ def main() -> None:
 
     while is_server_running():
         _main_thread_poll()
-        time.sleep(0.05)
+        time.sleep(0.01)
 
 
 if __name__ == "__main__":
