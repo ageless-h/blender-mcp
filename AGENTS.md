@@ -9,7 +9,7 @@ LLM Client ←MCP JSON-RPC→ blender_mcp (server) ←TCP socket→ blender_mcp_
 ```
 
 - **146 Python files**, **~22,500 lines**
-- **26 tools**, **10 prompts**, **29 registered handler classes**
+- **26 tools**, **10 prompts**, **37 registered handlers** (across 29 files)
 - **Blender**: 4.2 LTS / 4.5 LTS / 5.0+ / 5.1
 
 ## STRUCTURE

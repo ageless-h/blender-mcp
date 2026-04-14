@@ -1,13 +1,14 @@
 # tests — Test Suite
 
-unittest-based (NOT pytest). 18 addon tests, 7 schema tests, 5 integration tests, 2 MCP tests. All must pass without Blender installed (`MCP_ADAPTER=mock`).
+unittest-based (NOT pytest). 17 addon tests, 7 schema tests, 5 integration tests, 2 MCP tests. All must pass without Blender installed (`MCP_ADAPTER=mock`).
 
 ## STRUCTURE
 
 ```
 conftest.py                     # ROOT, SRC, TESTS paths; MCP_ADAPTER=mock fixture; src/ on sys.path
-addon/                          # 16 handler tests (mocked bpy)
+addon/                          # 17 handler tests (mocked bpy)
   test_animation_editor.py      # Keyframe/NLA/shape-key/driver (635 lines — largest test)
+  test_bug_regression.py        # Regression tests for 10 bugs from fix sprint
   test_capabilities_dispatcher.py  # Tool dispatch routing
   test_constraints_handler.py   # Constraint CRUD + move_up/move_down
   test_data_dispatcher.py       # Data type dispatch
