@@ -81,13 +81,9 @@ class MaterialHandler(BaseHandler):
                 if "alpha" in params:
                     principled.inputs["Alpha"].default_value = params["alpha"]
                 if "emission_color" in params:
-                    principled.inputs["Emission Color"].default_value = tuple(
-                        params["emission_color"]
-                    )
+                    principled.inputs["Emission Color"].default_value = tuple(params["emission_color"])
                 if "emission_strength" in params:
-                    principled.inputs["Emission Strength"].default_value = params[
-                        "emission_strength"
-                    ]
+                    principled.inputs["Emission Strength"].default_value = params["emission_strength"]
 
         return {
             "name": mat.name,
@@ -95,9 +91,7 @@ class MaterialHandler(BaseHandler):
             "use_nodes": mat.use_nodes,
         }
 
-    def read(
-        self, name: str, path: str | None, params: dict[str, Any]
-    ) -> dict[str, Any]:
+    def read(self, name: str, path: str | None, params: dict[str, Any]) -> dict[str, Any]:
         """Read material properties.
 
         Args:
@@ -134,22 +128,15 @@ class MaterialHandler(BaseHandler):
         if mat.use_nodes and mat.node_tree:
             principled = _find_principled(mat.node_tree.nodes)
             if principled:
-                result["base_color"] = list(
-                    principled.inputs["Base Color"].default_value
-                )
+                result["base_color"] = list(principled.inputs["Base Color"].default_value)
                 result["metallic"] = principled.inputs["Metallic"].default_value
                 result["roughness"] = principled.inputs["Roughness"].default_value
 
-            result["nodes"] = [
-                {"name": n.name, "type": n.type, "label": n.label}
-                for n in mat.node_tree.nodes
-            ]
+            result["nodes"] = [{"name": n.name, "type": n.type, "label": n.label} for n in mat.node_tree.nodes]
 
         return result
 
-    def write(
-        self, name: str, properties: dict[str, Any], params: dict[str, Any]
-    ) -> dict[str, Any]:
+    def write(self, name: str, properties: dict[str, Any], params: dict[str, Any]) -> dict[str, Any]:
         """Write properties to a material.
 
         Args:
@@ -250,9 +237,7 @@ class MaterialHandler(BaseHandler):
         import bpy  # type: ignore
 
         if target_type != DataType.OBJECT:
-            return {
-                "error": f"Materials can only be linked to objects, not {target_type.value}"
-            }
+            return {"error": f"Materials can only be linked to objects, not {target_type.value}"}
 
         mat = bpy.data.materials.get(source_name)
         if mat is None:
@@ -282,6 +267,10 @@ class MaterialHandler(BaseHandler):
                 "reason": "Slot index out of range",
             }
         else:
+            if obj.data is None:
+                return {
+                    "error": f"Object '{target_name}' has no data block — materials cannot be assigned to {obj.type} objects",
+                }
             # ensure slots
             while len(obj.material_slots) <= slot:
                 obj.data.materials.append(None)
