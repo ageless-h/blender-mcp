@@ -113,11 +113,14 @@ def constraints_manage(payload: dict[str, Any], *, started: float) -> dict[str, 
             if bone:
                 bpy.ops.object.mode_set(mode="POSE")
                 bone.bone.select = True
-            override = {"constraint": constraint_name}
-            if action == "move_up":
-                bpy.ops.constraint.move_up(override, constraint=constraint_name)
-            else:
-                bpy.ops.constraint.move_down(override, constraint=constraint_name)
+            ctx = {}
+            if bone:
+                ctx["active_pose_bone"] = bone
+            with bpy.context.temp_override(**ctx):
+                if action == "move_up":
+                    bpy.ops.constraint.move_up(constraint=constraint_name)
+                else:
+                    bpy.ops.constraint.move_down(constraint=constraint_name)
             return _ok(result={"action": action, "name": constraint_name}, started=started)
 
         else:
