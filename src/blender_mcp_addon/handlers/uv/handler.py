@@ -70,6 +70,13 @@ def uv_manage(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
         try:
             with bpy.context.temp_override(**ctx):
                 if action == "mark_seam":
+                    sel_mode = payload.get("selection_mode", "SHARP_EDGES")
+                    if sel_mode == "ALL_EDGES":
+                        bpy.ops.mesh.select_all(action="SELECT")
+                    elif sel_mode == "ANGLE_BASED":
+                        bpy.ops.mesh.select_by_perspective_image_outline()
+                    else:
+                        bpy.ops.mesh.edges_select_sharp(sharpness=0.0001)
                     bpy.ops.mesh.mark_seam(clear=False)
                     result_msg = "Seams marked on selected edges"
                 elif action == "clear_seam":
