@@ -312,7 +312,6 @@ class ObjectHandler(BaseHandler):
                 obj.scale = tuple(value)
             elif prop_path == "visible":
                 obj.hide_viewport = not value
-                obj.hide_render = not value
             elif prop_path == "selected":
                 obj.select_set(value)
             elif prop_path == "active":
