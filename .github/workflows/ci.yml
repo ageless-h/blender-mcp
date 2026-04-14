@@ -30,13 +30,4 @@ jobs:
       - name: Unit tests
         run: uv run python -m unittest discover -s tests -p "test_*.py"
 
-  schema:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v4
-      - name: Install dependencies
-        run: uv sync
-      - name: Schema validation tests
-        run: uv run python -m unittest discover -s tests/tools -p "test_*.py"
 
