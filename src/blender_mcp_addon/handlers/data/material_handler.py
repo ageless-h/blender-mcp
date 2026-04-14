@@ -269,7 +269,9 @@ class MaterialHandler(BaseHandler):
         else:
             if obj.data is None:
                 return {
-                    "error": f"Object '{target_name}' has no data block — materials cannot be assigned to {obj.type} objects",
+                    "error": (
+                        f"Object '{target_name}' has no data block — materials cannot be assigned to {obj.type} objects"
+                    ),
                 }
             # ensure slots
             while len(obj.material_slots) <= slot:
