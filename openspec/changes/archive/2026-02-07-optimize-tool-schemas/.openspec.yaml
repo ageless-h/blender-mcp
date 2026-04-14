@@ -1,7 +1,0 @@
-schema: spec-driven
-created: 2026-02-07
-status: implemented
-artifacts:
-  - proposal.md
-  - design.md
-  - tasks.md

@@ -1,37 +1,25 @@
 # Project Context
 
 ## Purpose
-Provide a minimal, secure MCP server surface for Blender automation.
+MCP server for AI-assisted Blender automation. Two-process architecture: MCP server (PyPI) talks to Blender addon over TCP.
 
 ## Tech Stack
-- Python 3.12
-- MCP server core
+- Python >=3.11
+- MCP protocol (stdio/SSE)
+- Zero runtime dependencies
 
-## Project Conventions
+## Architecture
+- `src/blender_mcp/` — MCP server (published to PyPI)
+- `src/blender_mcp_addon/` — Blender addon (runs inside Blender)
+- 26 tools, 10 prompts, 37 registered handlers
 
-### Code Style
-- Prefer explicit, readable code with minimal dependencies.
-- Use UTF-8 for file I/O.
+## Conventions
+- Ruff: line-length 120, select E/F/W/I
+- `from __future__ import annotations` in every file
+- unittest runner (NOT pytest)
+- See root `AGENTS.md` for full details
 
-### Architecture Patterns
-- Transport adapters are isolated from core server logic.
-- Security primitives live under `security/`.
-
-### Testing Strategy
-- Unittest-based unit and integration tests under `tests/`.
-- Integration tests must align to the documented plan.
-
-### CI Expectations
-- Lint, unit, and integration placeholder run on pull requests.
-
-### Git Workflow
-- Small, focused commits with English messages.
-
-## Domain Context
-- Blender automation via MCP requires strict allowlist and auditability.
-
-## Important Constraints
-- Avoid private Blender APIs.
-
-## External Dependencies
-- None required beyond standard Python for the minimal loop.
+## Constraints
+- Avoid private Blender APIs
+- Never import `blender_mcp_addon` from `blender_mcp` (separate processes)
+- All addon writes go through `_push_undo_step()`
