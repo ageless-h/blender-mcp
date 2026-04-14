@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Image handler for unified CRUD operations with base64 support."""
+
 from __future__ import annotations
 
 import base64
@@ -37,16 +38,18 @@ def image_list(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
         if name_pattern and not _fnmatch.fnmatch(image.name, name_pattern):
             continue
 
-        items.append({
-            "name": image.name,
-            "width": image.size[0],
-            "height": image.size[1],
-            "filepath": image.filepath,
-            "source": image.source,
-            "packed": image.packed_file is not None,
-            "colorspace": image.colorspace_settings.name if hasattr(image, "colorspace_settings") else "",
-            "users": image.users,
-        })
+        items.append(
+            {
+                "name": image.name,
+                "width": image.size[0],
+                "height": image.size[1],
+                "filepath": image.filepath,
+                "source": image.source,
+                "packed": image.packed_file is not None,
+                "colorspace": image.colorspace_settings.name if hasattr(image, "colorspace_settings") else "",
+                "users": image.users,
+            }
+        )
 
     return _ok(result={"images": items, "count": len(items)}, started=started)
 
@@ -184,12 +187,14 @@ class ImageHandler(BaseHandler):
             tmp_path = tmp.name
 
         try:
+            export_image = image
             if scale != 1.0:
                 width = int(image.size[0] * scale)
                 height = int(image.size[1] * scale)
-                image.scale(width, height)
+                export_image = image.copy()
+                export_image.scale(width, height)
 
-            image.save_render(tmp_path)
+            export_image.save_render(tmp_path)
 
             with open(tmp_path, "rb") as f:
                 data = f.read()
@@ -198,6 +203,8 @@ class ImageHandler(BaseHandler):
         finally:
             scene.render.image_settings.file_format = original_format
             scene.render.image_settings.quality = original_quality
+            if export_image != image:
+                bpy.data.images.remove(export_image)
             if os.path.exists(tmp_path):
                 os.remove(tmp_path)
 
@@ -279,12 +286,14 @@ class ImageHandler(BaseHandler):
         for image in bpy.data.images:
             if source_filter and image.source != source_filter:
                 continue
-            items.append({
-                "name": image.name,
-                "width": image.size[0],
-                "height": image.size[1],
-                "source": image.source,
-                "users": image.users,
-            })
+            items.append(
+                {
+                    "name": image.name,
+                    "width": image.size[0],
+                    "height": image.size[1],
+                    "source": image.source,
+                    "users": image.users,
+                }
+            )
 
         return {"items": items, "count": len(items)}
