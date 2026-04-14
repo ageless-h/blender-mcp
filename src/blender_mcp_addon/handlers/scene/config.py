@@ -89,7 +89,13 @@ def scene_setup(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
 
         # Timeline / FPS
         if "fps" in payload:
-            scene.render.fps = int(payload["fps"])
+            fps_value = payload["fps"]
+            if isinstance(fps_value, float) and fps_value != int(fps_value):
+                scene.render.fps = round(fps_value * 1000)
+                scene.render.fps_base = 1000
+            else:
+                scene.render.fps = int(fps_value)
+                scene.render.fps_base = 1
             modified.append("fps")
         if "frame_start" in payload:
             scene.frame_start = payload["frame_start"]
