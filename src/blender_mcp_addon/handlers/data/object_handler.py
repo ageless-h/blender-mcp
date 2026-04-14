@@ -248,7 +248,9 @@ class ObjectHandler(BaseHandler):
                 anim["has_action"] = ad.action is not None
                 if ad.action:
                     anim["action_name"] = ad.action.name
-                    anim["fcurves_count"] = len(ad.action.fcurves)
+                    from ..animation import iter_fcurves
+
+                    anim["fcurves_count"] = sum(1 for _ in iter_fcurves(ad.action))
                 anim["nla_tracks_count"] = len(ad.nla_tracks)
                 anim["drivers_count"] = len(ad.drivers)
             result["animation"] = anim
