@@ -233,11 +233,57 @@ def _add_effect(sed: Any, payload: dict[str, Any], started: float) -> dict[str, 
 
 def _add_transition(sed: Any, payload: dict[str, Any], started: float) -> dict[str, Any]:
     transition_type = payload.get("transition_type", "CROSS")
+    channel = payload.get("channel", 2)
+    frame_start = payload.get("frame_start")
+    transition_duration = payload.get("transition_duration", 10)
+
+    strip1_name = payload.get("strip1_name", "")
+    strip2_name = payload.get("strip2_name", "")
+
+    strip1 = sed.sequences.get(strip1_name) if strip1_name else None
+    strip2 = sed.sequences.get(strip2_name) if strip2_name else None
+
+    if not strip1 or not strip2:
+        return _error(
+            code="invalid_params",
+            message="strip1_name and strip2_name are required for transitions",
+            started=started,
+        )
+
+    if frame_start is None:
+        frame_start = int(strip2.frame_start)
+
+    try:
+        strip = sed.sequences.new_effect(
+            name=f"{transition_type}_Transition",
+            type=transition_type,
+            channel=channel,
+            frame_start=frame_start,
+            frame_end=frame_start + transition_duration,
+            seq1=strip1,
+            seq2=strip2,
+        )
+    except (AttributeError, RuntimeError, TypeError) as exc:
+        return _error(
+            code="operation_failed",
+            message=f"Failed to create {transition_type} transition: {exc}",
+            started=started,
+        )
+
+    if strip is None:
+        return _error(
+            code="operation_failed",
+            message=f"Blender returned null for {transition_type} transition",
+            started=started,
+        )
+
     return _ok(
         result={
             "action": "add_transition",
+            "name": strip.name,
             "type": transition_type,
-            "note": "Transition requires two adjacent strips to be selected in Blender UI",
+            "channel": strip.channel,
+            "frame_start": strip.frame_start,
         },
         started=started,
     )
