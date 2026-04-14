@@ -63,8 +63,8 @@ python -m examples.stdio_loop
 
 ## Architecture Decisions
 
-- Record decisions in OpenSpec change documents under `openspec/changes/`
 - See [docs/architecture/](docs/architecture/) for design documents
+- See root `AGENTS.md` for project conventions and architecture overview
 
 ## Reporting Issues
 

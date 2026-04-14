@@ -92,4 +92,4 @@ uv run python -m examples.stdio_loop                             # Example
 ageless-blender-mcp                                              # CLI entry point
 ```
 
-CI (`.github/workflows/ci.yml`): lint + schema + unit (3.11/3.12/3.13) — 5 jobs total.
+CI (`.github/workflows/ci.yml`): lint + unit (3.11/3.12/3.13) — 2 jobs.
