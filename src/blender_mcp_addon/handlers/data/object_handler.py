@@ -352,7 +352,25 @@ class ObjectHandler(BaseHandler):
         bpy.data.objects.remove(obj, do_unlink=True)
 
         if delete_data and obj_data:
-            collection = getattr(bpy.data, type(obj_data).bl_rna.identifier.lower() + "s", None)
+            from ..types import DATA_TYPE_TO_COLLECTION, DataType
+
+            _BL_ID_TO_DATATYPE = {
+                "Mesh": DataType.MESH,
+                "Camera": DataType.CAMERA,
+                "Light": DataType.LIGHT,
+                "Armature": DataType.ARMATURE,
+                "Curve": DataType.CURVE,
+                "Surface": DataType.SURFACE,
+                "MetaBall": DataType.METABALL,
+                "Text": DataType.TEXT,
+                "GreasePencil": DataType.GREASE_PENCIL,
+                "Lattice": DataType.LATTICE,
+                "Volume": DataType.VOLUME,
+            }
+            bl_id = obj_data.bl_rna.identifier
+            dt = _BL_ID_TO_DATATYPE.get(bl_id)
+            coll_name = DATA_TYPE_TO_COLLECTION.get(dt) if dt else None
+            collection = getattr(bpy.data, coll_name, None) if coll_name else None
             if collection and obj_data.name in collection:
                 collection.remove(obj_data)
 
