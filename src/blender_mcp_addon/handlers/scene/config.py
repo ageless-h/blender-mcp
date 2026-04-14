@@ -60,10 +60,15 @@ def scene_setup(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
         if "denoising" in payload:
             if scene.render.engine == "CYCLES":
                 scene.cycles.use_denoising = payload["denoising"]
-            modified.append("denoising")
-        if "denoiser" in payload and scene.render.engine == "CYCLES":
-            scene.cycles.denoiser = payload["denoiser"]
-            modified.append("denoiser")
+                modified.append("denoising")
+            else:
+                modified.append("denoising (skipped: only supported in Cycles)")
+        if "denoiser" in payload:
+            if scene.render.engine == "CYCLES":
+                scene.cycles.denoiser = payload["denoiser"]
+                modified.append("denoiser")
+            else:
+                modified.append("denoiser (skipped: only supported in Cycles)")
 
         # World background
         if "background_color" in payload:
