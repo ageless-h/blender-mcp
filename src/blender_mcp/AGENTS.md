@@ -1,6 +1,6 @@
 # blender_mcp — MCP Server Package
 
-Published to PyPI as `ageless-blender-mcp`. Standalone MCP server (stdio/SSE) that translates tool calls into TCP commands to the Blender addon. **154 Python files, 22,606 lines project-wide.**
+Published to PyPI as `ageless-blender-mcp`. Standalone MCP server (stdio/SSE) that translates tool calls into TCP commands to the Blender addon.
 
 ## STRUCTURE
 

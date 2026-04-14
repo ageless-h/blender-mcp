@@ -1,8 +1,8 @@
 # Roadmap
 
-> Last Updated: 2026-02-08
+> Last Updated: 2026-04-15
 
-This document outlines planned features and enhancements for Blender MCP.
+This document outlines planned features and enhancements for Blender MCP (current: v1.2.0).
 
 ---
 
@@ -140,11 +140,10 @@ Want to help implement these features?
 
 ## Version Planning
 
-| Version | Planned Features | Target Date |
-|---------|------------------|-------------|
-| v0.2.0 | batch_execute, MCP Resources | Q1 2026 |
-| v0.3.0 | WebSocket transport, MCP Progress | Q2 2026 |
-| v0.4.0 | PolyHaven integration | Q3 2026 |
-| v0.5.0 | Sketchfab integration | Q4 2026 |
+| Version | Planned Features | Status |
+|---------|------------------|--------|
+| v1.3.0 | batch_execute, MCP Resources | Planned |
+| v1.4.0 | WebSocket transport, MCP Progress | Planned |
+| v1.5.0 | External integrations (PolyHaven, Sketchfab) | Planned |
 
-*Note: Dates are estimates and subject to change based on community feedback and priorities.*
+*Priorities subject to change based on community feedback.*

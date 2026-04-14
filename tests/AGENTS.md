@@ -1,6 +1,6 @@
 # tests — Test Suite
 
-unittest-based (NOT pytest). 16 addon tests, 7 schema tests, 5 integration tests, 2 MCP tests. All must pass without Blender installed (`MCP_ADAPTER=mock`).
+unittest-based (NOT pytest). 18 addon tests, 7 schema tests, 5 integration tests, 2 MCP tests. All must pass without Blender installed (`MCP_ADAPTER=mock`).
 
 ## STRUCTURE
 
@@ -62,7 +62,7 @@ uv run python -m unittest tests/addon/test_response.py             # Single file
 uv run python -m unittest discover -s tests/tools -p "test_*.py"  # Schema only
 ```
 
-CI (`.github/workflows/ci.yml`): lint + schema + unit (3.11/3.12/3.13).
+CI (`.github/workflows/ci.yml`): lint + unit (3.11/3.12/3.13) — 2 jobs.
 
 ## ADDING TESTS
 

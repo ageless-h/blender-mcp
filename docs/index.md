@@ -36,12 +36,10 @@ For complete architecture details, see [tools/overview.md](tools/overview.md).
 | Topic | Doc |
 |-------|-----|
 | Architecture | [architecture/](architecture/) |
-| Security | [security/](security/) |
 | Versioning | [versioning/support-matrix.md](versioning/support-matrix.md) |
 | Testing | [testing/](testing/) |
+| Research | [research/](research/) |
 
 ## Development
 
-- [Project Structure](structure/top-level-layout.md)
-- [Code Layout](structure/code-layout.md)
 - [Contributing](../CONTRIBUTING.md)

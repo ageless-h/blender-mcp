@@ -4,17 +4,18 @@
 
 ### Support Scope
 - **LTS Versions**: Support the 2 most recent LTS releases (4.2, 4.5)
-- **Latest Stable**: Always support the current 5.x series
+- **Latest Stable**: Always support the current 5.x series (5.0, 5.1)
 - **Minimum Version**: Blender 4.2 LTS
 
 ### Support Timeline
-| Version | Status | Support Until | Notes |
-|---------|--------|---------------|-------|
-| 4.2 | ✅ LTS | 2026-07 | Current baseline |
-| 4.5 | ✅ LTS | 2027-07 | Latest LTS |
-| 5.0+ | ✅ Latest | Until next release | Current stable |
-| 3.6 | ❌ EOL | 2025-11 | Unsupported |
-| 4.0 | ❌ EOL | 2024 | Superseded by 4.2 LTS |
+| Version | Status | Notes |
+|---------|--------|-------|
+| 4.2 | ✅ LTS | Current baseline |
+| 4.5 | ✅ LTS | Latest LTS |
+| 5.0+ | ✅ Supported | Current stable |
+| 5.1 | ✅ Supported | Latest, actively tested |
+| 3.6 | ❌ EOL | Unsupported |
+| 4.0 | ❌ EOL | Superseded by 4.2 LTS |
 
 ## Capability Version Requirements
 
@@ -34,11 +35,9 @@ All capabilities require **Blender 4.2 or later**:
 
 ## Testing Status
 
-See `compatibility-results.json` for detailed test results.
-
 - **4.2 LTS**: ✅ All tests passing
-- **4.5 LTS**: ⏳ Testing pending
-- **5.0+**: ⏳ Basic compatibility testing pending
+- **5.1**: ✅ All tests passing (actively tested)
+- **4.5 LTS**: ⏳ Not tested in CI
 
 ## Update Rules
 
@@ -57,9 +56,6 @@ When dropping support for a version:
 
 ## CI Testing
 
-The CI matrix tests against:
-- Blender 4.2 LTS (full coverage)
-- Blender 4.5 LTS (full coverage, pending)
-- Blender 5.0+ (basic coverage, pending)
+The CI matrix tests Python 3.11/3.12/3.13 on ubuntu-latest.
 
-See `docs/testing/ci-matrix.md` for CI configuration details.
+See `.github/workflows/ci.yml` for CI configuration details.

@@ -232,18 +232,13 @@
 
 ## 文档索引
 
-### 新架构文档
+### 架构文档
 - [感知层工具 (Perception Layer)](./perception-layer.md)
 - [声明式写入层工具 (Declarative Write Layer)](./declarative-write-layer.md)
 - [命令式写入层工具 (Imperative Write Layer)](./imperative-write-layer.md)
 - [操作工具 (blender_execute_operator)](./operator-tool.md)
 - [脚本工具 (blender_execute_script)](./script-tool.md)
 - [数据类型枚举 (DataType)](./data-types.md)
-- [覆盖率分析](./coverage-analysis.md)
-
-### 旧文档（已废弃）
-- [数据工具 (data.*)](./data-tools.md) ⚠️ 已废弃
-- [信息工具 (info.query)](./info-tool.md) ⚠️ 已废弃
 
 ---
 
@@ -261,8 +256,6 @@
 - `operator_execute` → `blender_execute_operator`
 - `info_query` → 根据类型映射到各种 `blender_get_*` 工具
 - `script.execute` → `blender_execute_script`
-
-详细迁移文档：[docs/migration/tools-migration.md](../migration/tools-migration.md)
 
 ---
 
