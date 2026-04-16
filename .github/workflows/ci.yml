@@ -39,6 +39,7 @@ jobs:
         blender-version: ["4.2", "4.5", "5.0", "5.1"]
     steps:
       - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
 
       - name: Cache Blender archive
         uses: actions/cache@v4
