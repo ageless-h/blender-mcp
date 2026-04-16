@@ -74,9 +74,7 @@ class MCPServer:
 
         # Security modules — all configurable via environment variables
         audit_path = os.environ.get("MCP_AUDIT_LOG")
-        self._audit = (
-            JsonFileAuditLogger(audit_path) if audit_path else MemoryAuditLogger()
-        )
+        self._audit = JsonFileAuditLogger(audit_path) if audit_path else MemoryAuditLogger()
         self._allowlist = Allowlist(audit_logger=self._audit)
         if os.environ.get("MCP_ENABLE_SCRIPT_EXECUTE", "").lower() in (
             "1",
@@ -114,6 +112,49 @@ class MCPServer:
             tools.append(tool_entry)
         return {"tools": tools}
 
+    def _validate_schema(self, arguments: dict[str, Any], schema: dict[str, Any]) -> str | None:
+        """Lightweight schema validation (zero dependencies).
+
+        Returns error message if validation fails, None if OK.
+        """
+        if not schema:
+            return None
+
+        properties = schema.get("properties", {})
+        required = schema.get("required", [])
+
+        for req in required:
+            if req not in arguments:
+                return f"Missing required parameter: '{req}'"
+
+        for key, value in arguments.items():
+            if key not in properties:
+                continue
+
+            prop_schema = properties[key]
+            prop_type = prop_schema.get("type")
+
+            if prop_type == "string":
+                if not isinstance(value, str):
+                    return f"Parameter '{key}' must be a string"
+                if "enum" in prop_schema and value not in prop_schema["enum"]:
+                    allowed = ", ".join(repr(e) for e in prop_schema["enum"])
+                    return f"Parameter '{key}' must be one of: {allowed}"
+            elif prop_type == "number":
+                if not isinstance(value, (int, float)):
+                    return f"Parameter '{key}' must be a number"
+            elif prop_type == "integer":
+                if not isinstance(value, int):
+                    return f"Parameter '{key}' must be an integer"
+            elif prop_type == "boolean":
+                if not isinstance(value, bool):
+                    return f"Parameter '{key}' must be a boolean"
+            elif prop_type == "array":
+                if not isinstance(value, list):
+                    return f"Parameter '{key}' must be an array"
+
+        return None
+
     @telemetry_tool
     def tools_call(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         """Call a tool with flat parameters."""
@@ -132,11 +173,17 @@ class MCPServer:
         if not isinstance(arguments, dict):
             arguments = {}
 
-        # Look up tool definition for internal routing
         tool_def = get_tool(name)
         if tool_def is None:
             return {
                 "content": [{"type": "text", "text": f"Error: Unknown tool '{name}'"}],
+                "isError": True,
+            }
+
+        schema_validation_error = self._validate_schema(arguments, tool_def.get("inputSchema", {}))
+        if schema_validation_error:
+            return {
+                "content": [{"type": "text", "text": f"Error: {schema_validation_error}"}],
                 "isError": True,
             }
 
@@ -157,9 +204,7 @@ class MCPServer:
                 )
             )
             return {
-                "content": [
-                    {"type": "text", "text": f"Error: tool '{name}' is not allowed"}
-                ],
+                "content": [{"type": "text", "text": f"Error: tool '{name}' is not allowed"}],
                 "isError": True,
             }
 
@@ -194,9 +239,7 @@ class MCPServer:
                 )
             )
             return {
-                "content": [
-                    {"type": "text", "text": f"Error: rate limit exceeded for '{name}'"}
-                ],
+                "content": [{"type": "text", "text": f"Error: rate limit exceeded for '{name}'"}],
                 "isError": True,
             }
         # ── End security checks ───────────────────────────────
@@ -222,9 +265,7 @@ class MCPServer:
                 ]
             }
         else:
-            logger.warning(
-                "tools/call %s failed in %.0fms: %s", name, elapsed_ms, result.error
-            )
+            logger.warning("tools/call %s failed in %.0fms: %s", name, elapsed_ms, result.error)
             self._audit.record(
                 AuditEvent(
                     capability=internal_capability,
@@ -260,9 +301,7 @@ class MCPServer:
             )
         return {"prompts": prompts}
 
-    def prompts_get(
-        self, name: str, arguments: dict[str, str] | None = None
-    ) -> dict[str, Any]:
+    def prompts_get(self, name: str, arguments: dict[str, str] | None = None) -> dict[str, Any]:
         """Get a specific prompt with generated messages."""
         if not name or not isinstance(name, str):
             return {

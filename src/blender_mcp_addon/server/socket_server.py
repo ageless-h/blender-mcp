@@ -21,9 +21,12 @@ _server_socket: socket.socket | None = None
 _server_thread: threading.Thread | None = None
 _shutdown_flag = threading.Event()
 
+MAX_REQUEST_SIZE = 10 * 1024 * 1024  # 10MB max request size
+
 # Main-thread dispatch queue: items are (request, response_holder, done_event, timeout)
 _dispatch_queue: queue.Queue[tuple[dict, list, threading.Event, float]] = queue.Queue()
 _timer_registered = False
+_timer_lock = threading.Lock()
 
 _TIMER_INTERVAL = 0.01  # seconds between main-thread polls
 _WATCHDOG_INTERVAL = 2.0  # seconds between watchdog checks
@@ -159,39 +162,42 @@ def _handle_client(client_socket: socket.socket) -> None:
         _active_clients[client_id] = client_socket
     logger.info("Client connected (id=%d, total=%d)", client_id, len(_active_clients))
 
+    buffer = b""
     try:
         client_socket.settimeout(300.0)
 
         while not _shutdown_flag.is_set():
-            data = b""
-            while True:
-                try:
-                    chunk = client_socket.recv(4096)
-                except (socket.timeout, OSError):
-                    chunk = b""
-                if not chunk:
-                    return
-                data += chunk
-                if b"\n" in data:
-                    break
-
-            request_str = data.decode("utf-8").strip()
-            if not request_str:
-                continue
-
             try:
-                request = json.loads(request_str)
-            except json.JSONDecodeError:
-                response = {
-                    "ok": False,
-                    "result": None,
-                    "error": {"code": "parse_error", "message": "Invalid JSON"},
-                }
-                client_socket.sendall((json.dumps(response) + "\n").encode("utf-8"))
-                continue
+                chunk = client_socket.recv(65536)
+            except (socket.timeout, OSError):
+                chunk = b""
+            if not chunk:
+                return
 
-            response = _dispatch_to_main_thread(request)
-            client_socket.sendall((json.dumps(response, ensure_ascii=False) + "\n").encode("utf-8"))
+            buffer += chunk
+            if len(buffer) > MAX_REQUEST_SIZE:
+                logger.warning("Request exceeds max size (%d bytes), disconnecting client %d", len(buffer), client_id)
+                return
+
+            while b"\n" in buffer:
+                line, buffer = buffer.split(b"\n", 1)
+                request_str = line.decode("utf-8").strip()
+                if not request_str:
+                    continue
+
+                try:
+                    request = json.loads(request_str)
+                except json.JSONDecodeError:
+                    response = {
+                        "ok": False,
+                        "result": None,
+                        "error": {"code": "parse_error", "message": "Invalid JSON"},
+                    }
+                    client_socket.sendall((json.dumps(response) + "\n").encode("utf-8"))
+                    continue
+
+                response = _dispatch_to_main_thread(request)
+                client_socket.sendall((json.dumps(response, ensure_ascii=False) + "\n").encode("utf-8"))
 
     except (OSError, RuntimeError, ConnectionError) as exc:
         logger.debug("Client disconnected (id=%d): %s", client_id, exc)
@@ -268,17 +274,18 @@ def _main_thread_poll() -> float | None:
 
 def _ensure_timer_registered() -> None:
     """Register the main-thread poll timer if not already active."""
-    global _timer_registered
-    if _timer_registered:
-        return
-    try:
-        import bpy  # type: ignore
+    with _timer_lock:
+        global _timer_registered
+        if _timer_registered:
+            return
+        try:
+            import bpy  # type: ignore
 
-        bpy.app.timers.register(_main_thread_poll, first_interval=_TIMER_INTERVAL, persistent=True)
-        _timer_registered = True
-        logger.debug("Main-thread dispatch timer registered")
-    except (AttributeError, RuntimeError, ImportError) as exc:
-        logger.error("Failed to register dispatch timer: %s", exc)
+            bpy.app.timers.register(_main_thread_poll, first_interval=_TIMER_INTERVAL, persistent=True)
+            _timer_registered = True
+            logger.debug("Main-thread dispatch timer registered")
+        except (AttributeError, RuntimeError, ImportError) as exc:
+            logger.error("Failed to register dispatch timer: %s", exc)
 
 
 def _ensure_watchdog_registered() -> None:
@@ -294,20 +301,21 @@ def _ensure_watchdog_registered() -> None:
 
 def _unregister_timer() -> None:
     """Unregister the main-thread poll timer."""
-    global _timer_registered
-    if not _timer_registered:
-        return
-    try:
-        import bpy  # type: ignore
+    with _timer_lock:
+        global _timer_registered
+        if not _timer_registered:
+            return
+        try:
+            import bpy  # type: ignore
 
-        if bpy.app.timers.is_registered(_main_thread_poll):
-            bpy.app.timers.unregister(_main_thread_poll)
-        if bpy.app.timers.is_registered(_watchdog_poll):
-            bpy.app.timers.unregister(_watchdog_poll)
-        _timer_registered = False
-        logger.debug("Main-thread dispatch timer unregistered")
-    except (AttributeError, RuntimeError, ImportError) as exc:
-        logger.debug("Error unregistering dispatch timer: %s", exc)
+            if bpy.app.timers.is_registered(_main_thread_poll):
+                bpy.app.timers.unregister(_main_thread_poll)
+            if bpy.app.timers.is_registered(_watchdog_poll):
+                bpy.app.timers.unregister(_watchdog_poll)
+            _timer_registered = False
+            logger.debug("Main-thread dispatch timer unregistered")
+        except (AttributeError, RuntimeError, ImportError) as exc:
+            logger.debug("Error unregistering dispatch timer: %s", exc)
 
 
 def _watchdog_poll() -> float | None:

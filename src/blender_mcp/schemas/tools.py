@@ -747,7 +747,11 @@ _DECLARATIVE_TOOLS = [
                     "enum": ["VIDEO", "IMAGE", "AUDIO", "TEXT", "COLOR", "ADJUSTMENT"],
                     "description": "Type of strip to add (for add_strip action).",
                 },
-                "filepath": {"type": "string", "description": "File path for VIDEO/IMAGE/AUDIO strips."},
+                "filepath": {
+                    "type": "string",
+                    "description": "File path for VIDEO/IMAGE/AUDIO strips.",
+                    "maxLength": 4096,
+                },
                 "channel": {"type": "integer", "minimum": 1, "description": "VSE channel number."},
                 "frame_start": {"type": "integer", "description": "Start frame of the strip."},
                 "frame_end": {"type": "integer", "description": "End frame of the strip."},
@@ -920,7 +924,7 @@ _IMPERATIVE_TOOLS = [
         annotations={
             "title": "Modify Object",
             "readOnlyHint": False,
-            "destructiveHint": False,
+            "destructiveHint": True,
             "idempotentHint": False,
             "openWorldHint": False,
         },
@@ -970,7 +974,7 @@ _IMPERATIVE_TOOLS = [
         annotations={
             "title": "Manage Material",
             "readOnlyHint": False,
-            "destructiveHint": False,
+            "destructiveHint": True,
             "idempotentHint": False,
             "openWorldHint": False,
         },
@@ -1048,7 +1052,7 @@ _IMPERATIVE_TOOLS = [
         annotations={
             "title": "Manage Modifier",
             "readOnlyHint": False,
-            "destructiveHint": False,
+            "destructiveHint": True,
             "idempotentHint": False,
             "openWorldHint": False,
         },
@@ -1096,7 +1100,7 @@ _IMPERATIVE_TOOLS = [
         annotations={
             "title": "Manage Collection",
             "readOnlyHint": False,
-            "destructiveHint": False,
+            "destructiveHint": True,
             "idempotentHint": False,
             "openWorldHint": False,
         },
@@ -1165,7 +1169,7 @@ _IMPERATIVE_TOOLS = [
         annotations={
             "title": "Manage UV Mapping",
             "readOnlyHint": False,
-            "destructiveHint": False,
+            "destructiveHint": True,
             "idempotentHint": False,
             "openWorldHint": False,
         },
@@ -1231,7 +1235,7 @@ _IMPERATIVE_TOOLS = [
         annotations={
             "title": "Manage Constraints",
             "readOnlyHint": False,
-            "destructiveHint": False,
+            "destructiveHint": True,
             "idempotentHint": False,
             "openWorldHint": False,
         },
@@ -1283,7 +1287,7 @@ _IMPERATIVE_TOOLS = [
         annotations={
             "title": "Manage Physics",
             "readOnlyHint": False,
-            "destructiveHint": False,
+            "destructiveHint": True,
             "idempotentHint": False,
             "openWorldHint": False,
         },
@@ -1393,6 +1397,7 @@ _FALLBACK_TOOLS = [
                 "code": {
                     "type": "string",
                     "description": "Python code to execute. Has access to bpy, mathutils, and all Blender modules.",
+                    "maxLength": 65536,
                 },
             },
             "required": ["code"],
@@ -1444,6 +1449,7 @@ _FALLBACK_TOOLS = [
                 "filepath": {
                     "type": "string",
                     "description": "Absolute file path for import source or export destination.",
+                    "maxLength": 4096,
                 },
                 "settings": {"type": "object", "description": "Format-specific settings."},
             },
