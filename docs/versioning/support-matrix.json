@@ -74,7 +74,8 @@
   "ci_matrix": {
     "platforms": ["linux-x64", "macos-arm64", "windows-x64"],
     "versions": ["4.2", "4.5", "5.0", "5.1"],
-    "trigger": ["push", "pull_request"]
+    "trigger": ["push", "pull_request"],
+    "note": "Blender integration tests run locally, not in CI"
   },
   "last_updated": "2026-04-16"
 }
