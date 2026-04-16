@@ -36,7 +36,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libxrender1 libxxf86vm1 libgl1-mesa-glx libxi6
+          sudo apt-get install -y libxrender1 libxxf86vm1 libgl1 libxi6 xvfb
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -56,6 +56,7 @@ jobs:
         run: |
           python scripts/ci_install_blender.py $BLENDER_VERSION $BLENDER_PLATFORM
           BLENDER_EXE=$(python scripts/ci_install_blender.py $BLENDER_VERSION $BLENDER_PLATFORM | tail -1)
+          if [ "$RUNNER_OS" = "Linux" ]; then Xvfb :99 -screen 0 1280x720x24 & export DISPLAY=:99; fi
           python scripts/ci_run_blender_tests.py "$BLENDER_EXE"
 
       - name: Test Blender 4.5
@@ -64,6 +65,7 @@ jobs:
         run: |
           python scripts/ci_install_blender.py 4.5 $BLENDER_PLATFORM
           BLENDER_EXE=$(python scripts/ci_install_blender.py 4.5 $BLENDER_PLATFORM | tail -1)
+          if [ "$RUNNER_OS" = "Linux" ]; then Xvfb :99 -screen 0 1280x720x24 & export DISPLAY=:99; fi
           python scripts/ci_run_blender_tests.py "$BLENDER_EXE"
 
       - name: Test Blender 5.0
@@ -72,6 +74,7 @@ jobs:
         run: |
           python scripts/ci_install_blender.py 5.0 $BLENDER_PLATFORM
           BLENDER_EXE=$(python scripts/ci_install_blender.py 5.0 $BLENDER_PLATFORM | tail -1)
+          if [ "$RUNNER_OS" = "Linux" ]; then Xvfb :99 -screen 0 1280x720x24 & export DISPLAY=:99; fi
           python scripts/ci_run_blender_tests.py "$BLENDER_EXE"
 
       - name: Upload results

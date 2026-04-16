@@ -44,6 +44,7 @@ def _detect_blender_version(exe_path: str) -> tuple[int, ...]:
 class TestAll26Tools(unittest.TestCase):
     harness: BlenderProcessHarness  # type: ignore[assignment]
     blender_version: tuple[int, ...] = (0, 0, 0)
+    _failed_prerequisites: set[str] = set()
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -54,6 +55,7 @@ class TestAll26Tools(unittest.TestCase):
         cls.harness._server_script = _LAUNCH_SCRIPT
         if not cls.harness.start():
             raise RuntimeError("Failed to start Blender process")
+        cls._failed_prerequisites = set()
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -68,9 +70,40 @@ class TestAll26Tools(unittest.TestCase):
         )
 
     def _assert_ok(self, r: dict) -> dict:
+        if not r.get("ok"):
+            self._print_blender_diag()
         self.assertTrue(r["ok"], f"{r.get('error')}")
         self.assertIn("result", r)
         return r["result"]
+
+    def _print_blender_diag(self) -> None:
+        try:
+            diag = self.harness.send_request(
+                {
+                    "capability": "blender.execute_script",
+                    "payload": {
+                        "code": (
+                            "import bpy\n"
+                            "text = bpy.data.texts.get('__mcp_diag__')\n"
+                            "_mcp_print(text.as_string() if text else 'no __mcp_diag__ text block')"
+                        )
+                    },
+                }
+            )
+            if diag.get("ok"):
+                output = diag.get("result", {}).get("output", "")
+                if output:
+                    print(f"\n[Blender diag]\n{output}")
+        except Exception:
+            pass
+
+    def _require(self, *objects: str) -> None:
+        missing = [o for o in objects if o in self.__class__._failed_prerequisites]
+        if missing:
+            self.skipTest(f"Skipped: prerequisite object(s) failed to create: {', '.join(missing)}")
+
+    def _mark_failed(self, *objects: str) -> None:
+        self.__class__._failed_prerequisites.update(objects)
 
     # ----------------------------------------------------------------
     # 1. Connection
@@ -129,77 +162,83 @@ class TestAll26Tools(unittest.TestCase):
     # ----------------------------------------------------------------
 
     def test_08_create_object_cube(self) -> None:
-        self._assert_ok(
-            self._req(
-                "blender.create_object",
-                {
-                    "name": "T_Cube",
-                    "object_type": "MESH",
-                    "primitive": "cube",
-                    "location": [1, 0, 0],
-                },
-            )
+        r = self._req(
+            "blender.create_object",
+            {
+                "name": "T_Cube",
+                "object_type": "MESH",
+                "primitive": "cube",
+                "location": [1, 0, 0],
+            },
         )
+        if not r.get("ok"):
+            self._mark_failed("T_Cube")
+        self._assert_ok(r)
 
     def test_09_create_object_sphere(self) -> None:
-        self._assert_ok(
-            self._req(
-                "blender.create_object",
-                {
-                    "name": "T_Sphere",
-                    "object_type": "MESH",
-                    "primitive": "sphere",
-                    "segments": 16,
-                    "location": [2, 0, 0],
-                },
-            )
+        r = self._req(
+            "blender.create_object",
+            {
+                "name": "T_Sphere",
+                "object_type": "MESH",
+                "primitive": "sphere",
+                "segments": 16,
+                "location": [2, 0, 0],
+            },
         )
+        if not r.get("ok"):
+            self._mark_failed("T_Sphere")
+        self._assert_ok(r)
 
     def test_10_create_object_light(self) -> None:
-        self._assert_ok(
-            self._req(
-                "blender.create_object",
-                {
-                    "name": "T_Light",
-                    "object_type": "LIGHT",
-                    "light_type": "POINT",
-                    "energy": 500,
-                    "color": [0.9, 0.9, 1.0],
-                    "location": [3, 0, 2],
-                },
-            )
+        r = self._req(
+            "blender.create_object",
+            {
+                "name": "T_Light",
+                "object_type": "LIGHT",
+                "light_type": "POINT",
+                "energy": 500,
+                "color": [0.9, 0.9, 1.0],
+                "location": [3, 0, 2],
+            },
         )
+        if not r.get("ok"):
+            self._mark_failed("T_Light")
+        self._assert_ok(r)
 
     def test_11_create_object_camera(self) -> None:
-        self._assert_ok(
-            self._req(
-                "blender.create_object",
-                {
-                    "name": "T_Camera",
-                    "object_type": "CAMERA",
-                    "lens": 50,
-                    "location": [0, -5, 2],
-                },
-            )
+        r = self._req(
+            "blender.create_object",
+            {
+                "name": "T_Camera",
+                "object_type": "CAMERA",
+                "lens": 50,
+                "location": [0, -5, 2],
+            },
         )
+        if not r.get("ok"):
+            self._mark_failed("T_Camera")
+        self._assert_ok(r)
 
     def test_12_create_object_armature(self) -> None:
-        self._assert_ok(
-            self._req(
-                "blender.create_object",
-                {
-                    "name": "T_Armature",
-                    "object_type": "ARMATURE",
-                    "location": [0, 0, 0],
-                },
-            )
+        r = self._req(
+            "blender.create_object",
+            {
+                "name": "T_Armature",
+                "object_type": "ARMATURE",
+                "location": [0, 0, 0],
+            },
         )
+        if not r.get("ok"):
+            self._mark_failed("T_Armature")
+        self._assert_ok(r)
 
     # ----------------------------------------------------------------
     # 4. Read created objects
     # ----------------------------------------------------------------
 
     def test_13_get_object_data_full(self) -> None:
+        self._require("T_Cube")
         result = self._assert_ok(
             self._req(
                 "blender.get_object_data",
@@ -223,6 +262,7 @@ class TestAll26Tools(unittest.TestCase):
         self.assertEqual(result["name"], "T_Cube")
 
     def test_14_get_armature_data(self) -> None:
+        self._require("T_Armature")
         self._assert_ok(
             self._req(
                 "blender.get_armature_data",
@@ -238,6 +278,7 @@ class TestAll26Tools(unittest.TestCase):
     # ----------------------------------------------------------------
 
     def test_15_modify_object(self) -> None:
+        self._require("T_Cube")
         self._assert_ok(
             self._req(
                 "blender.modify_object",
@@ -251,20 +292,23 @@ class TestAll26Tools(unittest.TestCase):
         )
 
     def test_16_manage_material_create(self) -> None:
-        self._assert_ok(
-            self._req(
-                "blender.manage_material",
-                {
-                    "action": "create",
-                    "name": "T_Mat",
-                    "base_color": [0.8, 0.2, 0.2, 1.0],
-                    "metallic": 0.5,
-                    "roughness": 0.3,
-                },
-            )
+        self._require("T_Cube")
+        r = self._req(
+            "blender.manage_material",
+            {
+                "action": "create",
+                "name": "T_Mat",
+                "base_color": [0.8, 0.2, 0.2, 1.0],
+                "metallic": 0.5,
+                "roughness": 0.3,
+            },
         )
+        if not r.get("ok"):
+            self._mark_failed("T_Mat")
+        self._assert_ok(r)
 
     def test_17_manage_material_assign(self) -> None:
+        self._require("T_Cube", "T_Mat")
         self._assert_ok(
             self._req(
                 "blender.manage_material",
@@ -277,6 +321,7 @@ class TestAll26Tools(unittest.TestCase):
         )
 
     def test_18_manage_modifier_add(self) -> None:
+        self._require("T_Cube")
         self._assert_ok(
             self._req(
                 "blender.manage_modifier",
@@ -291,6 +336,7 @@ class TestAll26Tools(unittest.TestCase):
         )
 
     def test_19_manage_collection(self) -> None:
+        self._require("T_Sphere")
         self._assert_ok(
             self._req(
                 "blender.manage_collection",
@@ -313,6 +359,7 @@ class TestAll26Tools(unittest.TestCase):
         )
 
     def test_20_manage_constraints(self) -> None:
+        self._require("T_Sphere", "T_Cube")
         self._assert_ok(
             self._req(
                 "blender.manage_constraints",
@@ -330,6 +377,7 @@ class TestAll26Tools(unittest.TestCase):
     # ----------------------------------------------------------------
 
     def test_21_get_node_tree(self) -> None:
+        self._require("T_Mat")
         result = self._assert_ok(
             self._req(
                 "blender.get_node_tree",
@@ -344,6 +392,7 @@ class TestAll26Tools(unittest.TestCase):
         self.assertIn("nodes", result)
 
     def test_22_edit_nodes(self) -> None:
+        self._require("T_Mat")
         self._assert_ok(
             self._req(
                 "blender.edit_nodes",
@@ -374,6 +423,7 @@ class TestAll26Tools(unittest.TestCase):
     # ----------------------------------------------------------------
 
     def test_23_edit_animation(self) -> None:
+        self._require("T_Cube")
         self._assert_ok(
             self._req(
                 "blender.edit_animation",
@@ -402,6 +452,7 @@ class TestAll26Tools(unittest.TestCase):
         )
 
     def test_24_get_animation_data(self) -> None:
+        self._require("T_Cube")
         self._assert_ok(
             self._req(
                 "blender.get_animation_data",
@@ -433,6 +484,7 @@ class TestAll26Tools(unittest.TestCase):
     # ----------------------------------------------------------------
 
     def test_26_manage_uv(self) -> None:
+        self._require("T_Cube")
         self._assert_ok(
             self._req(
                 "blender.manage_uv",
@@ -468,6 +520,7 @@ class TestAll26Tools(unittest.TestCase):
     # ----------------------------------------------------------------
 
     def test_28_manage_physics(self) -> None:
+        self._require("T_Cube")
         self._assert_ok(
             self._req(
                 "blender.manage_physics",
@@ -536,6 +589,7 @@ class TestAll26Tools(unittest.TestCase):
     # ----------------------------------------------------------------
 
     def test_33_layered_animation_blender_50(self) -> None:
+        self._require("T_Cube")
         if self.blender_version < (5, 0):
             self.skipTest(
                 f"Layered animation requires Blender 5.0+, got {'.'.join(str(v) for v in self.blender_version)}"
@@ -548,6 +602,43 @@ class TestAll26Tools(unittest.TestCase):
             )
         )
         self.assertIn("fcurves", result)
+
+    # ----------------------------------------------------------------
+    # 13c. Version-boundary API assertions
+    # ----------------------------------------------------------------
+
+    def test_33b_version_render_engine_name(self) -> None:
+        result = self._assert_ok(self._req("blender.get_scene", {"include": ["render"]}))
+        engine = result.get("render", {}).get("engine", "")
+        if self.blender_version >= (5, 0):
+            self.assertNotEqual(
+                engine,
+                "BLENDER_EEVEE_NEXT",
+                f"Blender {self.blender_version}: engine should be BLENDER_EEVEE on 5.x, got {engine!r}",
+            )
+        else:
+            self.assertNotEqual(
+                engine,
+                "BLENDER_EEVEE",
+                f"Blender {self.blender_version}: engine should be BLENDER_EEVEE_NEXT on 4.x, got {engine!r}",
+            )
+
+    def test_33c_version_vse_strips_api(self) -> None:
+        r = self._req(
+            "blender.edit_sequencer",
+            {
+                "action": "add_strip",
+                "strip_type": "COLOR",
+                "channel": 2,
+                "frame_start": 50,
+                "frame_end": 80,
+                "color": [0, 1, 0],
+            },
+        )
+        self.assertTrue(
+            r["ok"],
+            f"VSE add_strip failed on Blender {self.blender_version}: {r.get('error')}",
+        )
 
     # ----------------------------------------------------------------
     # 14. Cleanup

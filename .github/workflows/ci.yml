@@ -49,7 +49,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libxrender1 libxxf86vm1 libgl1-mesa-glx libxi6
+          sudo apt-get install -y libxrender1 libxxf86vm1 libgl1 libxi6 xvfb
 
       - name: Install Blender ${{ matrix.blender-version }}
         id: install-blender
@@ -65,11 +65,15 @@ jobs:
       - name: Run Blender integration tests
         env:
           BLENDER_EXECUTABLE: ${{ steps.install-blender.outputs.blender_exe }}
-        run: python scripts/ci_run_blender_tests.py "$BLENDER_EXECUTABLE"
+        run: |
+          Xvfb :99 -screen 0 1280x720x24 &
+          export DISPLAY=:99
+          python scripts/ci_run_blender_tests.py "$BLENDER_EXECUTABLE"
 
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: blender-test-results-${{ matrix.blender-version }}
+          path: docs/versioning/compatibility-results.json
           retention-days: 30
