@@ -321,6 +321,21 @@ class TestAll26Tools(unittest.TestCase):
             )
         )
 
+    def test_15d_modify_object_parent(self) -> None:
+        self._require("T_Empty", "T_Cube")
+        self._assert_ok(
+            self._req(
+                "blender.modify_object",
+                {"name": "T_Empty", "parent": "T_Cube"},
+            )
+        )
+        self._assert_ok(
+            self._req(
+                "blender.modify_object",
+                {"name": "T_Empty", "parent": None},
+            )
+        )
+
     def test_16_manage_material_create(self) -> None:
         self._require("T_Cube")
         r = self._req(
@@ -793,6 +808,23 @@ class TestAll26Tools(unittest.TestCase):
                 },
             )
         )
+
+    def test_23f_edit_animation_add_nla_strip(self) -> None:
+        self._require("T_Cube")
+        r = self._req(
+            "blender.edit_animation",
+            {
+                "action": "add_nla_strip",
+                "object_name": "T_Cube",
+                "nla_action": "CubeAction",
+                "nla_start_frame": 50,
+            },
+        )
+        if not r.get("ok"):
+            err = r.get("error", {})
+            if isinstance(err, dict) and err.get("code") == "not_found":
+                self.skipTest("CubeAction not available (keyframe action name varies by Blender version)")
+        self._assert_ok(r)
 
     def test_24_get_animation_data(self) -> None:
         self._require("T_Cube")
