@@ -18,7 +18,7 @@ from ._blender_harness import BlenderProcessHarness, find_free_port
 
 _LAUNCH_SCRIPT = Path(__file__).parent.parent.parent.parent / "src" / "blender_mcp_addon" / "server" / "_launch.py"
 
-_TEST_OBJECTS = ["T_Cube", "T_Sphere", "T_Light", "T_Camera", "T_Armature"]
+_TEST_OBJECTS = ["T_Cube", "T_Sphere", "T_Light", "T_Camera", "T_Armature", "T_Empty", "T_Curve"]
 
 
 def _has_blender() -> bool:
@@ -307,6 +307,20 @@ class TestAll26Tools(unittest.TestCase):
             self._mark_failed("T_Mat")
         self._assert_ok(r)
 
+    def test_16b_manage_material_edit(self) -> None:
+        self._require("T_Mat")
+        self._assert_ok(
+            self._req(
+                "blender.manage_material",
+                {
+                    "action": "edit",
+                    "name": "T_Mat",
+                    "roughness": 0.7,
+                    "metallic": 0.2,
+                },
+            )
+        )
+
     def test_17_manage_material_assign(self) -> None:
         self._require("T_Cube", "T_Mat")
         self._assert_ok(
@@ -320,6 +334,32 @@ class TestAll26Tools(unittest.TestCase):
             )
         )
 
+    def test_08b_create_object_empty(self) -> None:
+        r = self._req(
+            "blender.create_object",
+            {
+                "name": "T_Empty",
+                "object_type": "EMPTY",
+                "location": [4, 0, 0],
+            },
+        )
+        if not r.get("ok"):
+            self._mark_failed("T_Empty")
+        self._assert_ok(r)
+
+    def test_08c_create_object_curve(self) -> None:
+        r = self._req(
+            "blender.create_object",
+            {
+                "name": "T_Curve",
+                "object_type": "CURVE",
+                "location": [5, 0, 0],
+            },
+        )
+        if not r.get("ok"):
+            self._mark_failed("T_Curve")
+        self._assert_ok(r)
+
     def test_18_manage_modifier_add(self) -> None:
         self._require("T_Cube")
         self._assert_ok(
@@ -331,6 +371,33 @@ class TestAll26Tools(unittest.TestCase):
                     "modifier_name": "SubD",
                     "modifier_type": "SUBSURF",
                     "settings": {"levels": 2},
+                },
+            )
+        )
+
+    def test_18b_manage_modifier_configure(self) -> None:
+        self._require("T_Cube")
+        self._assert_ok(
+            self._req(
+                "blender.manage_modifier",
+                {
+                    "action": "configure",
+                    "object_name": "T_Cube",
+                    "modifier_name": "SubD",
+                    "settings": {"levels": 3},
+                },
+            )
+        )
+
+    def test_18c_manage_modifier_remove(self) -> None:
+        self._require("T_Cube")
+        self._assert_ok(
+            self._req(
+                "blender.manage_modifier",
+                {
+                    "action": "remove",
+                    "object_name": "T_Cube",
+                    "modifier_name": "SubD",
                 },
             )
         )
@@ -358,6 +425,19 @@ class TestAll26Tools(unittest.TestCase):
             )
         )
 
+    def test_19b_manage_collection_visibility(self) -> None:
+        self._assert_ok(
+            self._req(
+                "blender.manage_collection",
+                {
+                    "action": "set_visibility",
+                    "collection_name": "T_Collection",
+                    "hide_viewport": False,
+                    "hide_render": False,
+                },
+            )
+        )
+
     def test_20_manage_constraints(self) -> None:
         self._require("T_Sphere", "T_Cube")
         self._assert_ok(
@@ -368,6 +448,19 @@ class TestAll26Tools(unittest.TestCase):
                     "target_name": "T_Sphere",
                     "constraint_type": "TRACK_TO",
                     "settings": {"target": "T_Cube"},
+                },
+            )
+        )
+
+    def test_20b_manage_constraints_remove(self) -> None:
+        self._require("T_Sphere")
+        self._assert_ok(
+            self._req(
+                "blender.manage_constraints",
+                {
+                    "action": "remove",
+                    "target_name": "T_Sphere",
+                    "constraint_name": "Track To",
                 },
             )
         )
@@ -451,6 +544,21 @@ class TestAll26Tools(unittest.TestCase):
             )
         )
 
+    def test_23b_edit_animation_delete_keyframe(self) -> None:
+        self._require("T_Cube")
+        self._assert_ok(
+            self._req(
+                "blender.edit_animation",
+                {
+                    "action": "delete_keyframe",
+                    "object_name": "T_Cube",
+                    "data_path": "location",
+                    "index": 0,
+                    "frame": 24,
+                },
+            )
+        )
+
     def test_24_get_animation_data(self) -> None:
         self._require("T_Cube")
         self._assert_ok(
@@ -514,6 +622,27 @@ class TestAll26Tools(unittest.TestCase):
             },
         )
         self.assertTrue(r["ok"], f"edit_sequencer failed: {r.get('error')}")
+
+    def test_27b_edit_sequencer_modify_strip(self) -> None:
+        r = self._req(
+            "blender.edit_sequencer",
+            {
+                "action": "modify_strip",
+                "strip_name": "Color",
+                "settings": {"blend_alpha": 0.8},
+            },
+        )
+        self.assertTrue(r["ok"], f"edit_sequencer modify_strip failed: {r.get('error')}")
+
+    def test_27c_edit_sequencer_delete_strip(self) -> None:
+        r = self._req(
+            "blender.edit_sequencer",
+            {
+                "action": "delete_strip",
+                "strip_name": "Color",
+            },
+        )
+        self.assertTrue(r["ok"], f"edit_sequencer delete_strip failed: {r.get('error')}")
 
     # ----------------------------------------------------------------
     # 11. Physics
