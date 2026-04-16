@@ -430,6 +430,47 @@ class TestAll26Tools(unittest.TestCase):
             )
         )
 
+    def test_18d_manage_modifier_move_and_apply(self) -> None:
+        self._require("T_Cube")
+        for name, typ in [("SubD_A", "SUBSURF"), ("Bevel_B", "BEVEL")]:
+            self._assert_ok(
+                self._req(
+                    "blender.manage_modifier",
+                    {
+                        "action": "add",
+                        "object_name": "T_Cube",
+                        "modifier_name": name,
+                        "modifier_type": typ,
+                        "settings": {},
+                    },
+                )
+            )
+        self._assert_ok(
+            self._req(
+                "blender.manage_modifier",
+                {
+                    "action": "move_up",
+                    "object_name": "T_Cube",
+                    "modifier_name": "Bevel_B",
+                },
+            )
+        )
+        self._assert_ok(
+            self._req(
+                "blender.manage_modifier",
+                {
+                    "action": "move_down",
+                    "object_name": "T_Cube",
+                    "modifier_name": "Bevel_B",
+                },
+            )
+        )
+        for name in ["SubD_A", "Bevel_B"]:
+            self._req(
+                "blender.manage_modifier",
+                {"action": "remove", "object_name": "T_Cube", "modifier_name": name},
+            )
+
     def test_19_manage_collection(self) -> None:
         self._require("T_Sphere")
         self._assert_ok(
@@ -493,7 +534,44 @@ class TestAll26Tools(unittest.TestCase):
             )
         )
 
-    def test_20b_manage_constraints_remove(self) -> None:
+    def test_20b_manage_constraints_configure(self) -> None:
+        self._require("T_Sphere", "T_Cube")
+        self._assert_ok(
+            self._req(
+                "blender.manage_constraints",
+                {
+                    "action": "configure",
+                    "target_name": "T_Sphere",
+                    "constraint_name": "Track To",
+                    "settings": {"target": "T_Cube"},
+                },
+            )
+        )
+
+    def test_20c_manage_constraints_enable_disable(self) -> None:
+        self._require("T_Sphere")
+        self._assert_ok(
+            self._req(
+                "blender.manage_constraints",
+                {
+                    "action": "disable",
+                    "target_name": "T_Sphere",
+                    "constraint_name": "Track To",
+                },
+            )
+        )
+        self._assert_ok(
+            self._req(
+                "blender.manage_constraints",
+                {
+                    "action": "enable",
+                    "target_name": "T_Sphere",
+                    "constraint_name": "Track To",
+                },
+            )
+        )
+
+    def test_20d_manage_constraints_remove(self) -> None:
         self._require("T_Sphere")
         self._assert_ok(
             self._req(
@@ -669,6 +747,17 @@ class TestAll26Tools(unittest.TestCase):
                     "action": "set_frame_range",
                     "frame_start": 1,
                     "frame_end": 250,
+                },
+            )
+        )
+
+    def test_23d_edit_animation_set_frame(self) -> None:
+        self._assert_ok(
+            self._req(
+                "blender.edit_animation",
+                {
+                    "action": "set_frame",
+                    "frame": 12,
                 },
             )
         )
