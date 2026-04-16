@@ -15,8 +15,8 @@ from blender_mcp.prompts.registry import (
 
 
 class TestPromptsRegistry(unittest.TestCase):
-    def test_blender_prompts_has_10_prompts(self):
-        self.assertEqual(len(BLENDER_PROMPTS), 10)
+    def test_blender_prompts_has_13_prompts(self):
+        self.assertEqual(len(BLENDER_PROMPTS), 13)
 
     def test_all_prompts_have_required_fields(self):
         for name, prompt in BLENDER_PROMPTS.items():
@@ -38,7 +38,7 @@ class TestPromptsRegistry(unittest.TestCase):
 
     def test_list_prompts_returns_all(self):
         prompts = list_prompts()
-        self.assertEqual(len(prompts), 10)
+        self.assertEqual(len(prompts), 13)
         names = {p["name"] for p in prompts}
         expected = {
             "blender-scene-setup",
@@ -51,6 +51,9 @@ class TestPromptsRegistry(unittest.TestCase):
             "blender-usage-strategy",
             "blender-resource-strategy",
             "blender-debugging-strategy",
+            "blender-uv-texturing",
+            "blender-rigging",
+            "blender-physics",
         }
         self.assertEqual(names, expected)
 

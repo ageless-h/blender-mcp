@@ -116,24 +116,39 @@ class MCPRegistrationTest(unittest.TestCase):
         # All 26 tools in the new architecture
         expected_tools = [
             # Perception (11)
-            "blender_get_objects", "blender_get_object_data", "blender_get_node_tree",
-            "blender_get_animation_data", "blender_get_materials", "blender_get_scene",
-            "blender_get_collections", "blender_get_armature_data", "blender_get_images",
-            "blender_capture_viewport", "blender_get_selection",
+            "blender_get_objects",
+            "blender_get_object_data",
+            "blender_get_node_tree",
+            "blender_get_animation_data",
+            "blender_get_materials",
+            "blender_get_scene",
+            "blender_get_collections",
+            "blender_get_armature_data",
+            "blender_get_images",
+            "blender_capture_viewport",
+            "blender_get_selection",
             # Declarative (3)
-            "blender_edit_nodes", "blender_edit_animation", "blender_edit_sequencer",
+            "blender_edit_nodes",
+            "blender_edit_animation",
+            "blender_edit_sequencer",
             # Imperative (9)
-            "blender_create_object", "blender_modify_object", "blender_manage_material",
-            "blender_manage_modifier", "blender_manage_collection", "blender_manage_uv",
-            "blender_manage_constraints", "blender_manage_physics", "blender_setup_scene",
+            "blender_create_object",
+            "blender_modify_object",
+            "blender_manage_material",
+            "blender_manage_modifier",
+            "blender_manage_collection",
+            "blender_manage_uv",
+            "blender_manage_constraints",
+            "blender_manage_physics",
+            "blender_setup_scene",
             # Fallback (3)
-            "blender_execute_operator", "blender_execute_script", "blender_import_export",
+            "blender_execute_operator",
+            "blender_execute_script",
+            "blender_import_export",
         ]
 
         for tool in expected_tools:
-            self.assertIn(
-                tool, tool_names, f"Tool '{tool}' should be present"
-            )
+            self.assertIn(tool, tool_names, f"Tool '{tool}' should be present")
 
         self.assertEqual(len(tools), 26, "Should have exactly 26 tools")
 
@@ -142,12 +157,8 @@ class MCPRegistrationTest(unittest.TestCase):
         # Test initialize response
         init_response = self._initialize()
 
-        self.assertEqual(
-            init_response.get("jsonrpc"), "2.0", "Response should have jsonrpc: 2.0"
-        )
-        self.assertEqual(
-            init_response.get("id"), 1, "Response id should match request id"
-        )
+        self.assertEqual(init_response.get("jsonrpc"), "2.0", "Response should have jsonrpc: 2.0")
+        self.assertEqual(init_response.get("id"), 1, "Response id should match request id")
 
         # Response should have either result or error, not both
         has_result = "result" in init_response
@@ -160,12 +171,8 @@ class MCPRegistrationTest(unittest.TestCase):
         # Test tools/list response
         tools_response = self._tools_list()
 
-        self.assertEqual(
-            tools_response.get("jsonrpc"), "2.0", "Response should have jsonrpc: 2.0"
-        )
-        self.assertEqual(
-            tools_response.get("id"), 2, "Response id should match request id"
-        )
+        self.assertEqual(tools_response.get("jsonrpc"), "2.0", "Response should have jsonrpc: 2.0")
+        self.assertEqual(tools_response.get("id"), 2, "Response id should match request id")
 
     def test_tools_call_uses_mock_adapter(self):
         """Test that tools/call works with mock adapter (no Blender required)."""
@@ -222,11 +229,10 @@ class MCPRegistrationTest(unittest.TestCase):
             schema = tool["inputSchema"]
             self.assertEqual(schema["type"], "object", f"Tool '{tool['name']}' schema should be object")
             props = schema.get("properties", {})
-            self.assertNotIn("payload", props,
-                f"Tool '{tool['name']}' should NOT have payload wrapper")
+            self.assertNotIn("payload", props, f"Tool '{tool['name']}' should NOT have payload wrapper")
             self.assertFalse(
                 schema.get("additionalProperties", True),
-                f"Tool '{tool['name']}' should have additionalProperties=false"
+                f"Tool '{tool['name']}' should have additionalProperties=false",
             )
 
     def test_perception_tools_are_readonly(self):
@@ -235,22 +241,27 @@ class MCPRegistrationTest(unittest.TestCase):
         tools = response["result"]["tools"]
 
         perception_tools = [
-            "blender_get_objects", "blender_get_object_data", "blender_get_node_tree",
-            "blender_get_animation_data", "blender_get_materials", "blender_get_scene",
-            "blender_get_collections", "blender_get_armature_data", "blender_get_images",
-            "blender_capture_viewport", "blender_get_selection",
+            "blender_get_objects",
+            "blender_get_object_data",
+            "blender_get_node_tree",
+            "blender_get_animation_data",
+            "blender_get_materials",
+            "blender_get_scene",
+            "blender_get_collections",
+            "blender_get_armature_data",
+            "blender_get_images",
+            "blender_capture_viewport",
+            "blender_get_selection",
         ]
 
         tool_map = {t["name"]: t for t in tools}
         for name in perception_tools:
             tool = tool_map[name]
             self.assertTrue(
-                tool["annotations"]["readOnlyHint"],
-                f"Perception tool '{name}' should have readOnlyHint=true"
+                tool["annotations"]["readOnlyHint"], f"Perception tool '{name}' should have readOnlyHint=true"
             )
             self.assertTrue(
-                tool["annotations"]["idempotentHint"],
-                f"Perception tool '{name}' should have idempotentHint=true"
+                tool["annotations"]["idempotentHint"], f"Perception tool '{name}' should have idempotentHint=true"
             )
 
     def test_initialize_includes_prompts_capability(self):
@@ -261,7 +272,7 @@ class MCPRegistrationTest(unittest.TestCase):
         self.assertIn("prompts", capabilities, "Should advertise prompts capability")
 
     def test_prompts_list(self):
-        """Test that prompts/list returns 7 workflow prompts."""
+        """Test that prompts/list returns 13 prompts."""
         request = {
             "jsonrpc": "2.0",
             "id": 10,
@@ -271,14 +282,23 @@ class MCPRegistrationTest(unittest.TestCase):
         response = self._send_request(request)
         self.assertIn("result", response)
         prompts = response["result"]["prompts"]
-        self.assertEqual(len(prompts), 10, "Should have 10 prompts (7 workflow + 3 strategy)")
+        self.assertEqual(len(prompts), 13, "Should have 13 prompts (7 workflow + 3 strategy + 3 domain)")
 
         prompt_names = {p["name"] for p in prompts}
         expected = {
-            "blender-scene-setup", "blender-material-create", "blender-model-asset",
-            "blender-animate", "blender-composite", "blender-render-output",
+            "blender-scene-setup",
+            "blender-material-create",
+            "blender-model-asset",
+            "blender-animate",
+            "blender-composite",
+            "blender-render-output",
             "blender-diagnose",
-            "blender-usage-strategy", "blender-resource-strategy", "blender-debugging-strategy",
+            "blender-usage-strategy",
+            "blender-resource-strategy",
+            "blender-debugging-strategy",
+            "blender-uv-texturing",
+            "blender-rigging",
+            "blender-physics",
         }
         self.assertEqual(prompt_names, expected)
 
@@ -307,13 +327,11 @@ class MCPRegistrationTest(unittest.TestCase):
 
         # blender_execute_operator should reference specialized tools
         desc = tool_map["blender_execute_operator"]["description"]
-        self.assertIn("blender_manage_uv", desc,
-            "execute_operator should cross-reference blender_manage_uv")
+        self.assertIn("blender_manage_uv", desc, "execute_operator should cross-reference blender_manage_uv")
 
         # blender_manage_material should reference blender_edit_nodes
         desc = tool_map["blender_manage_material"]["description"]
-        self.assertIn("blender_edit_nodes", desc,
-            "manage_material should cross-reference blender_edit_nodes")
+        self.assertIn("blender_edit_nodes", desc, "manage_material should cross-reference blender_edit_nodes")
 
 
 if __name__ == "__main__":

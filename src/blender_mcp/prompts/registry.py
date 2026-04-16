@@ -109,6 +109,41 @@ BLENDER_PROMPTS: dict[str, dict[str, Any]] = {
         "description": "Common error troubleshooting workflow for Blender MCP operations.",
         "arguments": [],
     },
+    "blender-uv-texturing": {
+        "name": "blender-uv-texturing",
+        "title": "UV Unwrapping and Texturing",
+        "description": "Guide through UV unwrapping and texture mapping workflow.",
+        "arguments": [
+            {"name": "object_name", "description": "Target object for UV unwrapping", "required": True},
+            {
+                "name": "uv_method",
+                "description": "UV method: smart_project, unwrap, cube_projection, cylinder_projection",
+                "required": False,
+            },
+        ],
+    },
+    "blender-rigging": {
+        "name": "blender-rigging",
+        "title": "Rigging and Armature Setup",
+        "description": "Guide through armature creation and bone constraint setup.",
+        "arguments": [
+            {"name": "target_object", "description": "Object to rig (mesh)", "required": True},
+            {"name": "rig_type", "description": "Rig type: biped, quadruped, mechanical, custom", "required": False},
+        ],
+    },
+    "blender-physics": {
+        "name": "blender-physics",
+        "title": "Physics Simulation Setup",
+        "description": "Guide through physics simulation configuration and baking.",
+        "arguments": [
+            {
+                "name": "physics_type",
+                "description": "Physics type: rigid_body, cloth, soft_body, fluid, particle",
+                "required": True,
+            },
+            {"name": "target_object", "description": "Object to apply physics to", "required": True},
+        ],
+    },
 }
 
 
@@ -386,6 +421,135 @@ def _debugging_strategy_messages(args: dict[str, str]) -> list[dict[str, Any]]:
     ]
 
 
+def _uv_texturing_messages(args: dict[str, str]) -> list[dict[str, Any]]:
+    obj_name = args.get("object_name", "the object")
+    uv_method = args.get("uv_method", "smart_project")
+    return [
+        {
+            "role": "user",
+            "content": {
+                "type": "text",
+                "text": (
+                    f"Set up UV mapping for '{obj_name}' using {uv_method} method.\n\n"
+                    "## UV Workflow\n\n"
+                    "1. **Check object** — Call `blender_get_object_data` with include=['summary'] "
+                    f"to verify '{obj_name}' exists and is a mesh.\n\n"
+                    "2. **Enter edit mode** — Use `blender_execute_operator` with operator='object.mode_set' "
+                    "and params={'mode': 'EDIT'}.\n\n"
+                    f"3. **Apply UV method** — Use `blender_manage_uv` with action='{uv_method}':\n"
+                    "   - `smart_project`: Best for complex organic shapes\n"
+                    "   - `unwrap`: Requires marked seams, best for organic shapes\n"
+                    "   - `cube_projection`: Good for architectural/box shapes\n"
+                    "   - `cylinder_projection`: Good for cylindrical objects\n\n"
+                    "4. **Mark seams** (if unwrap) — Use `blender_manage_uv` with action='mark_seam' "
+                    "and edge_selection to define UV islands.\n\n"
+                    "5. **Pack UVs** — Use `blender_manage_uv` with action='pack' to optimize UV layout.\n\n"
+                    "6. **Create material** — Use `blender_manage_material` to create "
+                    "a material with texture slots.\n\n"
+                    "7. **Assign material** — Use `blender_manage_material` with action='assign'.\n\n"
+                    "## Common Pitfalls\n\n"
+                    "- **Non-mesh objects**: UV only works on mesh objects. Check object type first.\n"
+                    "- **No UV layer**: Some primitives may not have UV data. Create with `action='create_layer'`.\n"
+                    "- **Overlapping UVs**: Use pack_islands to separate overlapping UV islands.\n"
+                    "- **Seam placement**: For unwrap, seams should define logical texture boundaries."
+                ),
+            },
+        }
+    ]
+
+
+def _rigging_messages(args: dict[str, str]) -> list[dict[str, Any]]:
+    target = args.get("target_object", "the mesh")
+    rig_type = args.get("rig_type", "biped")
+    return [
+        {
+            "role": "user",
+            "content": {
+                "type": "text",
+                "text": (
+                    f"Create a {rig_type} rig for '{target}'.\n\n"
+                    "## Rigging Workflow\n\n"
+                    "1. **Check mesh** — Call `blender_get_object_data` to verify the mesh structure "
+                    "and vertex groups.\n\n"
+                    "2. **Create armature** — Use `blender_create_object` with object_type=ARMATURE.\n\n"
+                    "3. **Enter pose/edit mode** — Use `blender_execute_operator` with operator='object.mode_set'.\n\n"
+                    "4. **Add bones** — In edit mode, use `blender_execute_operator` with "
+                    "operator='armature.bone_primitive_add' for each bone.\n\n"
+                    "5. **Name bones** — Use `blender_modify_object` to rename bones meaningfully "
+                    "(e.g., 'spine', 'arm_L', 'leg_R').\n\n"
+                    "6. **Parent mesh to armature** — Use `blender_modify_object` with parent and "
+                    "parent_type='ARMATURE' to bind mesh.\n\n"
+                    "7. **Add constraints** — Use `blender_manage_constraints` with target_type='BONE' "
+                    "for IK, copy rotation, etc.\n\n"
+                    "8. **Test rig** — Call `blender_get_armature_data` to verify bone hierarchy "
+                    "and constraint setup.\n\n"
+                    "## Common Constraints\n\n"
+                    "- **IK (Inverse Kinematics)**: action='add', constraint_type='IK', "
+                    "target_bone and chain_count settings\n"
+                    "- **Copy Rotation**: For bone rotation mirroring\n"
+                    "- **Limit Rotation**: To restrict bone movement range\n"
+                    "- **Track To**: For bone aiming (eyes, poles)\n\n"
+                    "## Weight Painting\n\n"
+                    "Weight painting is best done manually in Blender. Use `blender_execute_operator` "
+                    "with operator='object.mode_set' params={'mode': 'WEIGHT_PAINT'} to enter weight paint mode."
+                ),
+            },
+        }
+    ]
+
+
+def _physics_messages(args: dict[str, str]) -> list[dict[str, Any]]:
+    physics_type = args.get("physics_type", "rigid_body")
+    target = args.get("target_object", "the object")
+    return [
+        {
+            "role": "user",
+            "content": {
+                "type": "text",
+                "text": (
+                    f"Set up {physics_type} physics for '{target}'.\n\n"
+                    "## Physics Types and Workflow\n\n"
+                    f"### {physics_type.capitalize()} Setup\n\n"
+                    "1. **Check object** — Call `blender_get_object_data` to verify object exists.\n\n"
+                    "2. **Add physics** — Use `blender_manage_physics`:\n"
+                    f"   - action='add', physics_type='{physics_type.upper()}'\n"
+                    "   - For rigid_body: type='ACTIVE' or 'PASSIVE'\n"
+                    "   - For cloth: settings for tension, compression, damping\n"
+                    "   - For fluid: domain/flow type, cache settings\n\n"
+                    "3. **Configure settings** — Use `blender_manage_physics` with action='configure' "
+                    "to adjust physics parameters.\n\n"
+                    "4. **Set up collision** — For Rigid Body, use `blender_manage_physics` "
+                    "with collision_shape ('BOX', 'SPHERE', 'MESH', 'CONVEX_HULL').\n\n"
+                    "5. **Bake simulation** — Use `blender_manage_physics` with action='bake' "
+                    "to compute and cache the simulation.\n\n"
+                    "6. **Verify** — Call `blender_capture_viewport` to preview physics.\n\n"
+                    "## Physics Type Details\n\n"
+                    "### Rigid Body\n"
+                    "- Active objects move, Passive objects are obstacles\n"
+                    "- Use MESH collision for accurate, CONVEX_HULL for fast\n"
+                    "- Adjust mass, friction, bounce for realistic behavior\n\n"
+                    "### Cloth\n"
+                    "- Requires pinned vertex group for stability\n"
+                    "- Adjust pressure for inflated cloth\n"
+                    "- Use self-collision for realistic folding\n\n"
+                    "### Soft Body\n"
+                    "- Good for jelly, rubber, flesh\n"
+                    "- Adjust stiffness and damping\n"
+                    "- Use goal vertex group to anchor parts\n\n"
+                    "### Fluid\n"
+                    "- Domain: large bounding box for simulation\n"
+                    "- Flow: emitter, effector, or collision objects\n"
+                    "- Cache: bake before rendering\n\n"
+                    "### Particle\n"
+                    "- Hair, grass, debris, etc.\n"
+                    "- Configure emission rate, lifetime, physics\n"
+                    "- Use force fields for wind, turbulence"
+                ),
+            },
+        }
+    ]
+
+
 _PROMPT_HANDLERS = {
     "blender-scene-setup": _scene_setup_messages,
     "blender-material-create": _material_create_messages,
@@ -397,6 +561,9 @@ _PROMPT_HANDLERS = {
     "blender-usage-strategy": _usage_strategy_messages,
     "blender-resource-strategy": _resource_strategy_messages,
     "blender-debugging-strategy": _debugging_strategy_messages,
+    "blender-uv-texturing": _uv_texturing_messages,
+    "blender-rigging": _rigging_messages,
+    "blender-physics": _physics_messages,
 }
 
 
