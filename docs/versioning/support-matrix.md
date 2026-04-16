@@ -35,9 +35,10 @@ All capabilities require **Blender 4.2 or later**:
 
 ## Testing Status
 
-- **4.2 LTS**: ✅ All tests passing
-- **5.1**: ✅ All tests passing (actively tested)
-- **4.5 LTS**: ⏳ Not tested in CI
+- **4.2 LTS**: ✅ All tests passing (CI tested)
+- **4.5 LTS**: ✅ All tests passing (CI tested)
+- **5.0**: ✅ All tests passing (CI tested)
+- **5.1**: ✅ All tests passing (CI tested, actively tested)
 
 ## Update Rules
 
