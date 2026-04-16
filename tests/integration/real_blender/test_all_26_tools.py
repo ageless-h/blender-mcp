@@ -18,7 +18,7 @@ from ._blender_harness import BlenderProcessHarness, find_free_port
 
 _LAUNCH_SCRIPT = Path(__file__).parent.parent.parent.parent / "src" / "blender_mcp_addon" / "server" / "_launch.py"
 
-_TEST_OBJECTS = ["T_Cube", "T_Sphere", "T_Light", "T_Camera", "T_Armature", "T_Empty", "T_Curve"]
+_TEST_OBJECTS = ["T_Cube", "T_Sphere", "T_Light", "T_Camera", "T_Armature", "T_Empty", "T_Curve", "T_Text"]
 
 
 def _has_blender() -> bool:
@@ -360,6 +360,19 @@ class TestAll26Tools(unittest.TestCase):
             self._mark_failed("T_Curve")
         self._assert_ok(r)
 
+    def test_08d_create_object_text(self) -> None:
+        r = self._req(
+            "blender.create_object",
+            {
+                "name": "T_Text",
+                "object_type": "TEXT",
+                "location": [6, 0, 0],
+            },
+        )
+        if not r.get("ok"):
+            self._mark_failed("T_Text")
+        self._assert_ok(r)
+
     def test_18_manage_modifier_add(self) -> None:
         self._require("T_Cube")
         self._assert_ok(
@@ -434,6 +447,19 @@ class TestAll26Tools(unittest.TestCase):
                     "collection_name": "T_Collection",
                     "hide_viewport": False,
                     "hide_render": False,
+                },
+            )
+        )
+
+    def test_19c_manage_collection_unlink_object(self) -> None:
+        self._require("T_Sphere")
+        self._assert_ok(
+            self._req(
+                "blender.manage_collection",
+                {
+                    "action": "unlink_object",
+                    "collection_name": "T_Collection",
+                    "object_name": "T_Sphere",
                 },
             )
         )
@@ -559,6 +585,18 @@ class TestAll26Tools(unittest.TestCase):
             )
         )
 
+    def test_23c_edit_animation_set_frame_range(self) -> None:
+        self._assert_ok(
+            self._req(
+                "blender.edit_animation",
+                {
+                    "action": "set_frame_range",
+                    "frame_start": 1,
+                    "frame_end": 250,
+                },
+            )
+        )
+
     def test_24_get_animation_data(self) -> None:
         self._require("T_Cube")
         self._assert_ok(
@@ -644,6 +682,19 @@ class TestAll26Tools(unittest.TestCase):
         )
         self.assertTrue(r["ok"], f"edit_sequencer delete_strip failed: {r.get('error')}")
 
+    def test_27d_edit_sequencer_add_effect(self) -> None:
+        r = self._req(
+            "blender.edit_sequencer",
+            {
+                "action": "add_strip",
+                "strip_type": "ADJUSTMENT",
+                "channel": 3,
+                "frame_start": 1,
+                "frame_end": 50,
+            },
+        )
+        self.assertTrue(r["ok"], f"edit_sequencer add ADJUSTMENT strip failed: {r.get('error')}")
+
     # ----------------------------------------------------------------
     # 11. Physics
     # ----------------------------------------------------------------
@@ -658,6 +709,33 @@ class TestAll26Tools(unittest.TestCase):
                     "object_name": "T_Cube",
                     "physics_type": "RIGID_BODY",
                     "settings": {"mass": 1.0},
+                },
+            )
+        )
+
+    def test_28b_manage_physics_configure(self) -> None:
+        self._require("T_Cube")
+        self._assert_ok(
+            self._req(
+                "blender.manage_physics",
+                {
+                    "action": "configure",
+                    "object_name": "T_Cube",
+                    "physics_type": "RIGID_BODY",
+                    "settings": {"mass": 2.5},
+                },
+            )
+        )
+
+    def test_28c_manage_physics_remove(self) -> None:
+        self._require("T_Cube")
+        self._assert_ok(
+            self._req(
+                "blender.manage_physics",
+                {
+                    "action": "remove",
+                    "object_name": "T_Cube",
+                    "physics_type": "RIGID_BODY",
                 },
             )
         )
@@ -703,6 +781,31 @@ class TestAll26Tools(unittest.TestCase):
                 )
             )
             self.assertTrue(os.path.exists(filepath), "Exported STL file not found")
+
+    def test_31b_import_export_import(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            export_path = os.path.join(tmpdir, "t_roundtrip.stl")
+            self._assert_ok(
+                self._req(
+                    "blender.import_export",
+                    {
+                        "action": "export",
+                        "format": "STL",
+                        "filepath": export_path,
+                    },
+                )
+            )
+            self.assertTrue(os.path.exists(export_path), "Export file missing before import test")
+            self._assert_ok(
+                self._req(
+                    "blender.import_export",
+                    {
+                        "action": "import",
+                        "format": "STL",
+                        "filepath": export_path,
+                    },
+                )
+            )
 
     # ----------------------------------------------------------------
     # 13. Viewport
