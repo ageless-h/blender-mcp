@@ -36,7 +36,7 @@ def _make_handler():
 class TestCreateObjectParamPassing(unittest.TestCase):
     """Verify blender.create_object passes params correctly to handler.create."""
 
-    @patch("blender_mcp_addon.capabilities.base.HandlerRegistry.get")
+    @patch("blender_mcp_addon.capabilities.imperative.HandlerRegistry.get")
     def test_mesh_cube_params_nested(self, mock_get):
         handler = _make_handler()
         mock_get.return_value = handler
@@ -61,7 +61,7 @@ class TestCreateObjectParamPassing(unittest.TestCase):
         self.assertEqual(params["primitive"], "cube")
         self.assertEqual(params["size"], 2.0)
 
-    @patch("blender_mcp_addon.capabilities.base.HandlerRegistry.get")
+    @patch("blender_mcp_addon.capabilities.imperative.HandlerRegistry.get")
     def test_light_params_nested(self, mock_get):
         handler = _make_handler()
         mock_get.return_value = handler
@@ -84,7 +84,7 @@ class TestCreateObjectParamPassing(unittest.TestCase):
         self.assertEqual(params["energy"], 5.0)
         self.assertEqual(params["color"], [1, 0.9, 0.8])
 
-    @patch("blender_mcp_addon.capabilities.base.HandlerRegistry.get")
+    @patch("blender_mcp_addon.capabilities.imperative.HandlerRegistry.get")
     def test_camera_params_nested(self, mock_get):
         handler = _make_handler()
         mock_get.return_value = handler
@@ -106,7 +106,7 @@ class TestCreateObjectParamPassing(unittest.TestCase):
         self.assertEqual(params["clip_start"], 0.1)
         self.assertEqual(params["clip_end"], 500)
 
-    @patch("blender_mcp_addon.capabilities.base.HandlerRegistry.get")
+    @patch("blender_mcp_addon.capabilities.imperative.HandlerRegistry.get")
     def test_transform_params_nested(self, mock_get):
         handler = _make_handler()
         mock_get.return_value = handler
@@ -127,7 +127,7 @@ class TestCreateObjectParamPassing(unittest.TestCase):
         self.assertEqual(params["rotation"], [0, 0, 1.57])
         self.assertEqual(params["scale"], [2, 2, 2])
 
-    @patch("blender_mcp_addon.capabilities.base.HandlerRegistry.get")
+    @patch("blender_mcp_addon.capabilities.imperative.HandlerRegistry.get")
     def test_collection_param_nested(self, mock_get):
         handler = _make_handler()
         mock_get.return_value = handler
@@ -146,7 +146,7 @@ class TestCreateObjectParamPassing(unittest.TestCase):
         self.assertEqual(params["primitive"], "plane")
         self.assertEqual(params["collection"], "MyCol")
 
-    @patch("blender_mcp_addon.capabilities.base.HandlerRegistry.get")
+    @patch("blender_mcp_addon.capabilities.imperative.HandlerRegistry.get")
     def test_name_not_in_params(self, mock_get):
         """name should be the first arg to handler.create, not duplicated inside params."""
         handler = _make_handler()
@@ -165,7 +165,7 @@ class TestCreateObjectParamPassing(unittest.TestCase):
         self.assertEqual(args[0], "Test")
         self.assertNotIn("name", args[1])
 
-    @patch("blender_mcp_addon.capabilities.base.HandlerRegistry.get")
+    @patch("blender_mcp_addon.capabilities.imperative.HandlerRegistry.get")
     def test_payload_not_mutated(self, mock_get):
         """Original payload dict must not be mutated by dispatch."""
         handler = _make_handler()
@@ -186,7 +186,7 @@ class TestCreateObjectParamPassing(unittest.TestCase):
 class TestManageModifierParamPassing(unittest.TestCase):
     """Verify blender.manage_modifier calls handler methods correctly."""
 
-    @patch("blender_mcp_addon.capabilities.base.HandlerRegistry.get")
+    @patch("blender_mcp_addon.capabilities.imperative.HandlerRegistry.get")
     def test_add_params_nested(self, mock_get):
         handler = _make_handler()
         mock_get.return_value = handler
@@ -213,7 +213,7 @@ class TestManageModifierParamPassing(unittest.TestCase):
             },
         )
 
-    @patch("blender_mcp_addon.capabilities.base.HandlerRegistry.get")
+    @patch("blender_mcp_addon.capabilities.imperative.HandlerRegistry.get")
     def test_remove_params_nested(self, mock_get):
         handler = _make_handler()
         mock_get.return_value = handler
@@ -230,7 +230,7 @@ class TestManageModifierParamPassing(unittest.TestCase):
 
         handler.delete.assert_called_once_with("Sub", {"object": "Cube"})
 
-    @patch("blender_mcp_addon.capabilities.base.HandlerRegistry.get")
+    @patch("blender_mcp_addon.capabilities.imperative.HandlerRegistry.get")
     def test_configure_properties_and_params(self, mock_get):
         handler = _make_handler()
         mock_get.return_value = handler
@@ -252,7 +252,7 @@ class TestManageModifierParamPassing(unittest.TestCase):
 class TestManageCollectionParamPassing(unittest.TestCase):
     """Verify blender.manage_collection calls handler methods correctly."""
 
-    @patch("blender_mcp_addon.capabilities.base.HandlerRegistry.get")
+    @patch("blender_mcp_addon.capabilities.imperative.HandlerRegistry.get")
     def test_create_params_nested(self, mock_get):
         handler = _make_handler()
         mock_get.return_value = handler
@@ -277,7 +277,7 @@ class TestManageCollectionParamPassing(unittest.TestCase):
             },
         )
 
-    @patch("blender_mcp_addon.capabilities.base.HandlerRegistry.get")
+    @patch("blender_mcp_addon.capabilities.imperative.HandlerRegistry.get")
     def test_create_no_optional_params(self, mock_get):
         handler = _make_handler()
         mock_get.return_value = handler
@@ -293,7 +293,7 @@ class TestManageCollectionParamPassing(unittest.TestCase):
 
         handler.create.assert_called_once_with("Empty", {})
 
-    @patch("blender_mcp_addon.capabilities.base.HandlerRegistry.get")
+    @patch("blender_mcp_addon.capabilities.imperative.HandlerRegistry.get")
     def test_set_visibility_properties_nested(self, mock_get):
         handler = _make_handler()
         mock_get.return_value = handler
@@ -322,7 +322,7 @@ class TestManageCollectionParamPassing(unittest.TestCase):
 class TestManageCollectionLinkParamPassing(unittest.TestCase):
     """Verify blender.manage_collection link/unlink/set_parent use handler.link correctly."""
 
-    @patch("blender_mcp_addon.capabilities.base.HandlerRegistry.get")
+    @patch("blender_mcp_addon.capabilities.imperative.HandlerRegistry.get")
     def test_link_object_source_target(self, mock_get):
         handler = _make_handler()
         mock_get.return_value = handler
@@ -345,7 +345,7 @@ class TestManageCollectionLinkParamPassing(unittest.TestCase):
             {},
         )
 
-    @patch("blender_mcp_addon.capabilities.base.HandlerRegistry.get")
+    @patch("blender_mcp_addon.capabilities.imperative.HandlerRegistry.get")
     def test_unlink_object_source_target(self, mock_get):
         handler = _make_handler()
         mock_get.return_value = handler
@@ -368,7 +368,7 @@ class TestManageCollectionLinkParamPassing(unittest.TestCase):
             {},
         )
 
-    @patch("blender_mcp_addon.capabilities.base.HandlerRegistry.get")
+    @patch("blender_mcp_addon.capabilities.imperative.HandlerRegistry.get")
     def test_set_parent_source_target(self, mock_get):
         handler = _make_handler()
         mock_get.return_value = handler
@@ -395,7 +395,7 @@ class TestManageCollectionLinkParamPassing(unittest.TestCase):
 class TestManageMaterialParamPassing(unittest.TestCase):
     """Verify blender.manage_material calls handler methods correctly."""
 
-    @patch("blender_mcp_addon.capabilities.base.HandlerRegistry.get")
+    @patch("blender_mcp_addon.capabilities.imperative.HandlerRegistry.get")
     def test_create_params_nested(self, mock_get):
         handler = _make_handler()
         mock_get.return_value = handler
@@ -422,7 +422,7 @@ class TestManageMaterialParamPassing(unittest.TestCase):
             },
         )
 
-    @patch("blender_mcp_addon.capabilities.base.HandlerRegistry.get")
+    @patch("blender_mcp_addon.capabilities.imperative.HandlerRegistry.get")
     def test_assign_source_target(self, mock_get):
         handler = _make_handler()
         mock_get.return_value = handler
@@ -446,7 +446,7 @@ class TestManageMaterialParamPassing(unittest.TestCase):
             {"slot": 0},
         )
 
-    @patch("blender_mcp_addon.capabilities.base.HandlerRegistry.get")
+    @patch("blender_mcp_addon.capabilities.imperative.HandlerRegistry.get")
     def test_unassign_source_target(self, mock_get):
         handler = _make_handler()
         mock_get.return_value = handler

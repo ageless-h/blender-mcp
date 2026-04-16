@@ -58,7 +58,15 @@ class MCPServer:
       2. Guardrails — payload size / depth / blocked-list
       3. Rate limit — per-capability sliding window
       4. Audit log  — record every call and outcome
+
+    Progress notifications:
+      The server supports MCP progress notifications via the notifications/progress
+      method. Clients can include a progressToken in the _meta field of their
+      request, and the server will send progress updates during long-running
+      operations.
     """
+
+    _notification_callback: Any = None
 
     def __post_init__(self) -> None:
         # Adapter — created once, reused for all requests
@@ -97,6 +105,51 @@ class MCPServer:
                     pass
         window = float(os.environ.get("MCP_RATE_WINDOW_SECONDS", "60"))
         self._rate_limiter = RateLimiter(rate_cfg, window_seconds=window)
+        self._active_progress_tokens: dict[str | int, dict[str, Any]] = {}
+
+    def _send_notification(self, notification: dict[str, Any]) -> None:
+        """Send a JSON-RPC notification to the client.
+
+        For stdio transport, this writes to stdout.
+        For SSE/HTTP transport, this would use the callback.
+        """
+        if self._notification_callback is not None:
+            self._notification_callback(notification)
+        else:
+            print(json.dumps(notification, ensure_ascii=False))
+            sys.stdout.flush()
+
+    def send_progress(
+        self,
+        progress_token: str | int,
+        progress: float,
+        total: float | None = None,
+        message: str | None = None,
+    ) -> None:
+        """Send a progress notification to the client.
+
+        Args:
+            progress_token: The token from the client's request _meta field
+            progress: Current progress value (must be non-decreasing)
+            total: Optional total value for progress calculation
+            message: Optional human-readable progress message
+        """
+        params: dict[str, Any] = {
+            "progressToken": progress_token,
+            "progress": progress,
+        }
+        if total is not None:
+            params["total"] = total
+        if message is not None:
+            params["message"] = message
+
+        self._send_notification(
+            {
+                "jsonrpc": "2.0",
+                "method": "notifications/progress",
+                "params": params,
+            }
+        )
 
     def tools_list(self) -> dict[str, Any]:
         """List all 26 available tools with full schemas and annotations."""
@@ -156,8 +209,19 @@ class MCPServer:
         return None
 
     @telemetry_tool
-    def tools_call(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
-        """Call a tool with flat parameters."""
+    def tools_call(
+        self,
+        name: str,
+        arguments: dict[str, Any],
+        progress_token: str | int | None = None,
+    ) -> dict[str, Any]:
+        """Call a tool with flat parameters.
+
+        Args:
+            name: Tool name (e.g., 'blender_get_objects')
+            arguments: Tool arguments as a flat dict
+            progress_token: Optional token for progress notifications
+        """
         call_start = time.perf_counter()
 
         if not name or not isinstance(name, str):
@@ -318,13 +382,23 @@ class MCPServer:
         return result
 
     def handle_request(self, request: dict[str, Any]) -> dict[str, Any] | None:
-        """Handle an MCP JSON-RPC request."""
+        """Handle an MCP JSON-RPC request.
+
+        Supports progress notifications: clients can include a progressToken
+        in the _meta field, which will be used for progress updates during
+        long-running operations.
+        """
         method = request.get("method")
         params = request.get("params", {})
         req_id = request.get("id")
 
         # Handle notifications (no response expected)
         if method and method.startswith("notifications/"):
+            if method == "notifications/cancelled":
+                token = params.get("requestId")
+                if token in self._active_progress_tokens:
+                    del self._active_progress_tokens[token]
+                    logger.info("Request %s cancelled by client", token)
             return None
 
         if method == "tools/list":
@@ -334,7 +408,21 @@ class MCPServer:
         elif method == "tools/call":
             name = params.get("name")
             arguments = params.get("arguments", {})
-            result = self.tools_call(name, arguments)
+
+            meta = params.get("_meta", {})
+            progress_token = meta.get("progressToken")
+
+            if progress_token is not None:
+                self._active_progress_tokens[progress_token] = {
+                    "tool": name,
+                    "started": time.time(),
+                }
+
+            result = self.tools_call(name, arguments, progress_token=progress_token)
+
+            if progress_token is not None:
+                self._active_progress_tokens.pop(progress_token, None)
+
             return {"jsonrpc": "2.0", "id": req_id, "result": result}
 
         elif method == "prompts/list":
