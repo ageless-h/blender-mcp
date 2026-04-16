@@ -3,7 +3,7 @@
     "lts_count": 2,
     "include_latest": true,
     "min_version": "4.2",
-    "test_frequency": "on_release",
+    "test_frequency": "ci_per_push",
     "deprecation_notice": "3_months"
   },
   "supported_versions": [
@@ -21,18 +21,27 @@
       "status": "lts",
       "support_until": "2027-07",
       "python": "3.11",
-      "tested": false,
-      "ci_coverage": "pending",
-      "notes": "Latest LTS, requires testing"
+      "tested": true,
+      "ci_coverage": "full",
+      "notes": "Latest LTS, CI integration tests pass"
     },
     {
       "version": "5.0",
       "status": "latest",
       "support_until": "until_next_release",
       "python": "3.12",
-      "tested": false,
-      "ci_coverage": "basic",
-      "notes": "Latest stable series, basic compatibility testing"
+      "tested": true,
+      "ci_coverage": "full",
+      "notes": "Latest stable, layered animation API tested"
+    },
+    {
+      "version": "5.1",
+      "status": "latest",
+      "support_until": "until_next_release",
+      "python": "3.12",
+      "tested": true,
+      "ci_coverage": "full",
+      "notes": "All 36 E2E tests pass including layered animation. VSE uses strips/length API."
     }
   ],
   "unsupported_versions": [
@@ -56,9 +65,16 @@
     "data.delete": {"min": "4.2", "max": null, "notes": "Standard API"},
     "data.list": {"min": "4.2", "max": null, "notes": "Standard API"},
     "data.link": {"min": "4.2", "max": null, "notes": "Requires collection link API"},
+    "curves_new": {"min": "5.0", "max": null, "notes": "Requires bpy.data.curves (Blender 5.0+ layered curves)"},
+    "animation.layered": {"min": "5.0", "max": null, "notes": "Requires action.layers API (Blender 5.0+)"},
     "operator.execute": {"min": "4.2", "max": null, "notes": "Requires bpy.ops context override"},
     "info.query": {"min": "4.2", "max": null, "notes": "Requires depsgraph API"},
     "script.execute": {"min": "4.2", "max": null, "notes": "Requires threading support"}
   },
-  "last_updated": "2025-02-05"
+  "ci_matrix": {
+    "platforms": ["linux-x64"],
+    "versions": ["4.2", "4.5", "5.0"],
+    "trigger": ["push", "pull_request"]
+  },
+  "last_updated": "2026-04-16"
 }

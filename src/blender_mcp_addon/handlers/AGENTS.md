@@ -47,6 +47,7 @@ script/executor.py     # Arbitrary Python in Blender
 - **Never** mutate original images → copy first, clean up in `finally`
 - **Never** use dict arg for context overrides → `temp_override()` (Blender 4.2+)
 - **Never** set `hide_render` on visibility toggle → only `hide_viewport`
+- **Never** access `bpy.data.curves` without `_curves_available()` guard (Blender 5.0+ only)
 - Fractional FPS → use `fps_base=1000`
 - All writes → `_push_undo_step()` for Ctrl+Z
 

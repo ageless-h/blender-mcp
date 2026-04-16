@@ -33,7 +33,10 @@ tools/                          # 7 schema validation tests
   test_perception_tools.py      # Perception tool schemas
 integration/
   real_blender/                 # E2E tests (require live Blender)
-    test_all_26_tools.py        # 549 lines — comprehensive tool test
+    _blender_harness.py          # BlenderProcess harness (subprocess + socket)
+    _config.py                   # Load blender-paths.json or BLENDER_EXECUTABLE
+    test_all_26_tools.py          # 35+ tests, version-aware (5.0+ layered animation)
+    test_real_capabilities.py     # pytest-based multi-version parametrized tests
 mcp/                           # MCP protocol tests
 ```
 
@@ -44,8 +47,11 @@ mcp/                           # MCP protocol tests
 | Test a handler | `addon/test_<handler>.py` | Mock bpy, check `response["ok"]` |
 | Validate tool schemas | `tools/test_schema_validation.py` | JSON Schema validity + annotations |
 | Real Blender E2E | `integration/real_blender/` | Requires Blender running |
+| Version-specific test | `integration/real_blender/test_all_26_tools.py` | `blender_version` skip guards |
 | MCP protocol tests | `mcp/` | JSON-RPC dispatch |
 | Add test fixture | `conftest.py` | Session-scoped, `use_mock_adapter` |
+| CI Blender install | `scripts/ci_install_blender.py` | Download + cache Blender for CI |
+| CI test runner | `scripts/ci_run_blender_tests.py` | Run E2E via socket in background mode |
 
 ## CONVENTIONS
 
@@ -54,6 +60,7 @@ mcp/                           # MCP protocol tests
 - **bpy mocking**: `MCP_ADAPTER=mock` env var → `MockAdapter` selected
 - **Assertions**: Check `response["ok"]` is `True`/`False`, then `response["result"]` or `response["error"]`
 - **Root-level tests**: `test_adapters.py`, `test_allowlist.py`, `test_guardrails.py`, etc. — test MCP server logic
+- **Version guards**: Handlers use `hasattr(bpy.data, "curves")` for 5.0+ features; tests use `self.skipTest()` with `blender_version` checks
 
 ## COMMANDS
 
@@ -61,14 +68,28 @@ mcp/                           # MCP protocol tests
 uv run python -m unittest discover -s tests -p "test_*.py"        # All tests
 uv run python -m unittest tests/addon/test_response.py             # Single file
 uv run python -m unittest discover -s tests/tools -p "test_*.py"  # Schema only
+python scripts/ci_install_blender.py 4.2 linux-x64                # Download Blender for CI
+python scripts/ci_run_blender_tests.py /path/to/blender           # E2E with real Blender
 ```
 
-CI (`.github/workflows/ci.yml`): lint + unit (3.11/3.12/3.13) — 2 jobs.
+CI (`.github/workflows/ci.yml`): lint + unit (3.11/3.12/3.13) + blender-integration (4.2/4.5/5.0 on Linux).
 
 ## ADDING TESTS
 
 - Addon handler → `tests/addon/test_<name>.py` (mock bpy)
 - Schema validation → `tests/tools/test_<name>.py`
 - Real Blender E2E → `tests/integration/real_blender/` (needs live Blender)
+- Version-specific → Add `self.skipTest(f"Requires Blender X.Y+")` guard with `self.blender_version` check
 - MCP protocol → `tests/mcp/`
-- **All tests must pass without Blender installed** (mock mode)
+- **All unit tests must pass without Blender installed** (mock mode)
+
+## CI BLENDER INTEGRATION
+
+The `blender-integration` job downloads Blender from `download.blender.org`, caches the archive, and runs E2E tests via `scripts/ci_run_blender_tests.py`.
+
+Matrix: `blender-version: ["4.2", "4.5", "5.0"]` on `ubuntu-latest`.
+
+To add a new Blender version:
+1. Add it to the CI matrix in `.github/workflows/ci.yml`
+2. Add the full version (e.g., "4.2.12") to `KNOWN_PATCHES` in `scripts/ci_install_blender.py`
+3. Update `docs/versioning/support-matrix.json`

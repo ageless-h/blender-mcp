@@ -43,7 +43,7 @@ tests/                      # See tests/AGENTS.md
   conftest.py               # src/ on sys.path, MCP_ADAPTER=mock fixture
   addon/ tools/ integration/ mcp/
 docs/                       # capabilities/, testing/, clients/, architecture/
-scripts/                    # Build/release helpers (check_compatibility, validate_boundary)
+scripts/                    # Build/release helpers + CI scripts (check_compatibility, ci_install_blender, ci_run_blender_tests, validate_boundary)
 examples/                   # stdio_loop.py
 ```
 
@@ -63,12 +63,15 @@ examples/                   # stdio_loop.py
 ## ANTI-PATTERNS
 
 - **Never** compute bpy.data collection name from `bl_rna.identifier.lower()+"s"` — use `DATA_TYPE_TO_COLLECTION`
-- **Never** access `action.fcurves` directly — use `iter_fcurves(action)` from `animation/__init__.py` (Blender 5.1 compat)
+- **Never** access `action.fcurves` directly — use `iter_fcurves(action)` from `animation/__init__.py` (Blender 5.0+ compat)
 - **Never** skip `obj.data is not None` check before data property access (Empty objects)
 - **Never** mutate original images — copy first, clean up in `finally`
 - **Never** use dict positional arg for context overrides — use `temp_override()` (Blender 4.2+)
 - **Never** set `hide_render` when toggling visibility — only `hide_viewport`
 - **Never** import `blender_mcp_addon` from `blender_mcp` (separate processes)
+- **Never** access `bpy.data.curves` without `_curves_available()` guard (Blender 5.0+ only)
+- **Never** use `hasattr(sed, "strips")` to detect 5.0+ VSE API — Blender 4.5 also has `sed.strips` as an alias; check `bpy.app.version >= (5, 0)` instead
+- **Never** use `frame_end=` in `new_effect()` for Blender 5.0+ VSE — use `length=` (frame_end - frame_start); see `_new_effect_kwargs()` in `sequencer/editor.py`
 
 ## CONVENTIONS
 
@@ -88,6 +91,8 @@ uv run python -m unittest discover -s tests -p "test_*.py"       # Tests (CI use
 uv run pytest tests/                                             # Tests (also works — conftest uses pytest fixtures)
 uv run ruff check src/ tests/                                    # Lint
 uv run python -m examples.stdio_loop                             # Run stdio example
+python scripts/ci_install_blender.py 4.2 linux-x64              # Download Blender for local testing
+python scripts/ci_run_blender_tests.py /path/to/blender         # E2E tests with real Blender
 ```
 
-CI (`.github/workflows/ci.yml`): lint + unit (3.11/3.12/3.13) — 2 jobs.
+CI (`.github/workflows/ci.yml`): lint + unit (3.11/3.12/3.13) + blender-integration (4.2/4.5/5.0 on Linux).

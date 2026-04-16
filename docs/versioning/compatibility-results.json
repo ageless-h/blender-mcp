@@ -80,8 +80,61 @@
           "test_multiple_requests_same_harness"
         ]
       }
+    },
+    {
+      "version": "5.1.0",
+      "status": "pass",
+      "checked_at": "2026-04-16",
+      "ci": true,
+      "tests": {
+        "integration": "pass",
+        "e2e_26_tools": "pass"
+      },
+      "test_count": 36,
+      "passed": 36,
+      "failed": 0,
+      "skipped": 0,
+      "platform": "macos-arm64",
+      "path": "/Applications/Blender.app/Contents/MacOS/Blender",
+      "errors": []
+    },
+    {
+      "version": "4.5.1",
+      "status": "pass",
+      "checked_at": "2026-04-16",
+      "ci": true,
+      "tests": {
+        "integration": "pass",
+        "e2e_26_tools": "pass"
+      },
+      "test_count": 36,
+      "passed": 35,
+      "failed": 0,
+      "skipped": 1,
+      "skipped_reasons": ["test_33_layered_animation_blender_50: requires Blender 5.0+"],
+      "platform": "macos-arm64",
+      "path": ".ci_blender_cache/blender-4.5.1-macos-arm64/Blender.app/Contents/MacOS/Blender",
+      "errors": []
+    },
+    {
+      "version": "4.2.12",
+      "status": "pass",
+      "checked_at": "2026-04-16",
+      "ci": true,
+      "tests": {
+        "integration": "pass",
+        "e2e_26_tools": "pass"
+      },
+      "test_count": 36,
+      "passed": 35,
+      "failed": 0,
+      "skipped": 1,
+      "skipped_reasons": ["test_33_layered_animation_blender_50: requires Blender 5.0+"],
+      "platform": "macos-arm64",
+      "path": ".ci_blender_cache/blender-4.2.12-macos-arm64/Blender.app/Contents/MacOS/Blender",
+      "errors": []
     }
   ],
   "known_issues": [],
-  "last_updated": "2025-02-05"
+  "last_updated": "2026-04-16"
 }
