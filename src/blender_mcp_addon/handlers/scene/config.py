@@ -11,6 +11,22 @@ from ..response import _error, _ok, bpy_unavailable_error, check_bpy_available
 logger = logging.getLogger(__name__)
 
 
+_EEVEE_ALIASES = {"BLENDER_EEVEE", "BLENDER_EEVEE_NEXT", "EEVEE", "EEVEE_NEXT"}
+
+
+def _resolve_engine_name(bpy: Any, engine: str) -> str:
+    if engine not in _EEVEE_ALIASES:
+        return engine
+    prop = bpy.context.scene.render.bl_rna.properties.get("engine")
+    if prop is None:
+        return engine
+    available = {item.identifier for item in prop.enum_items}
+    for candidate in ("BLENDER_EEVEE_NEXT", "BLENDER_EEVEE"):
+        if candidate in available:
+            return candidate
+    return engine
+
+
 def scene_setup(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
     """Configure scene-level settings."""
     available, bpy = check_bpy_available()
@@ -23,7 +39,9 @@ def scene_setup(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
     try:
         # Render engine
         if "engine" in payload:
-            scene.render.engine = payload["engine"]
+            engine = payload["engine"]
+            engine = _resolve_engine_name(bpy, engine)
+            scene.render.engine = engine
             modified.append("engine")
 
         # Render samples

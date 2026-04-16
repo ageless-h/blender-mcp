@@ -417,7 +417,10 @@ def _handle_manage_collection(payload: dict[str, Any], started: float) -> dict[s
             result["success"] = True
             return _ok(result=result, started=started)
         elif action in ("link_object", "unlink_object"):
-            result = handler.link(
+            obj_handler = HandlerRegistry.get(DataType.OBJECT)
+            if obj_handler is None:
+                return _error(code="unsupported_type", message="object handler not available", started=started)
+            result = obj_handler.link(
                 payload.get("object_name", ""),
                 DataType.COLLECTION,
                 col_name,

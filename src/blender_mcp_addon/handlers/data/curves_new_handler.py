@@ -9,41 +9,33 @@ from ..base import BaseHandler
 from ..registry import HandlerRegistry
 from ..types import DataType
 
+_CURVES_UNAVAILABLE_MSG = "curves_new requires Blender 5.0+ (bpy.data.curves not available)"
+
+
+def _curves_available() -> bool:
+    try:
+        import bpy  # type: ignore
+
+        return hasattr(bpy.data, "curves")
+    except ImportError:
+        return False
+
 
 @HandlerRegistry.register
 class CurvesNewHandler(BaseHandler):
-    """Handler for Blender new curves data type (bpy.data.curves - Blender 5.0+ system)."""
-
     data_type = DataType.CURVES_NEW
 
     def create(self, name: str, params: dict[str, Any]) -> dict[str, Any]:
-        """Create a new curves object (Blender 5.0+).
-
-        Args:
-            name: Name for new curves
-            params: Creation parameters
-
-        Returns:
-            Dict with created curves info
-        """
+        if not _curves_available():
+            return {"ok": False, "error": {"code": "unsupported_type", "message": _CURVES_UNAVAILABLE_MSG}}
         import bpy  # type: ignore
 
         curves = bpy.data.curves.new(name=name)
         return {"name": curves.name}
 
-    def read(
-        self, name: str, path: str | None, params: dict[str, Any]
-    ) -> dict[str, Any]:
-        """Read curves properties.
-
-        Args:
-            name: Name of curves
-            path: Optional property path
-            params: Read parameters
-
-        Returns:
-            Dict with curves properties
-        """
+    def read(self, name: str, path: str | None, params: dict[str, Any]) -> dict[str, Any]:
+        if not _curves_available():
+            return {"ok": False, "error": {"code": "unsupported_type", "message": _CURVES_UNAVAILABLE_MSG}}
         import bpy  # type: ignore
 
         curves = bpy.data.curves.get(name)
@@ -60,19 +52,9 @@ class CurvesNewHandler(BaseHandler):
             "resolution_v": curves.resolution_v,
         }
 
-    def write(
-        self, name: str, properties: dict[str, Any], params: dict[str, Any]
-    ) -> dict[str, Any]:
-        """Write properties to curves.
-
-        Args:
-            name: Name of curves
-            properties: Dict of property paths to values
-            params: Write parameters
-
-        Returns:
-            Dict with modified properties list
-        """
+    def write(self, name: str, properties: dict[str, Any], params: dict[str, Any]) -> dict[str, Any]:
+        if not _curves_available():
+            return {"ok": False, "error": {"code": "unsupported_type", "message": _CURVES_UNAVAILABLE_MSG}}
         import bpy  # type: ignore
 
         curves = bpy.data.curves.get(name)
@@ -86,15 +68,8 @@ class CurvesNewHandler(BaseHandler):
         return {"name": name, "modified": modified}
 
     def delete(self, name: str, params: dict[str, Any]) -> dict[str, Any]:
-        """Delete curves.
-
-        Args:
-            name: Name of curves to delete
-            params: Deletion parameters
-
-        Returns:
-            Dict with deleted curves name
-        """
+        if not _curves_available():
+            return {"ok": False, "error": {"code": "unsupported_type", "message": _CURVES_UNAVAILABLE_MSG}}
         import bpy  # type: ignore
 
         curves = bpy.data.curves.get(name)
@@ -105,17 +80,9 @@ class CurvesNewHandler(BaseHandler):
         return {"deleted": name}
 
     def list_items(self, filter_params: dict[str, Any] | None) -> dict[str, Any]:
-        """List all curves.
-
-        Args:
-            filter_params: Optional filter criteria
-
-        Returns:
-            Dict with items list
-        """
+        if not _curves_available():
+            return {"ok": False, "error": {"code": "unsupported_type", "message": _CURVES_UNAVAILABLE_MSG}}
         import bpy  # type: ignore
 
-        items = [
-            {"name": c.name, "resolution_u": c.resolution_u} for c in bpy.data.curves
-        ]
+        items = [{"name": c.name, "resolution_u": c.resolution_u} for c in bpy.data.curves]
         return {"items": items, "count": len(items)}
