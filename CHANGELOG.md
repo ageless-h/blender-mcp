@@ -20,6 +20,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.0] - 2026-04-16
+
+### Security
+- **JSON stream processing fix**: Socket server now properly buffers and parses complete JSON messages, preventing partial message attacks.
+- **Request size limit**: Added 10MB max request size to prevent memory exhaustion attacks.
+- **Thread-safe timer registration**: Added `_timer_lock` to prevent race conditions in timer registration.
+- **Lightweight schema validation**: Added `_validate_schema()` method for basic request structure checking.
+- **Rate limiter defaults**: Added `default_limit=120` req/min and `cleanup_expired()` method for memory management.
+- **Input constraints**: Added `maxLength` for filepath (4096) and code (65536) parameters.
+- **Audit log rotation**: Logs rotate at 10MB with max 5 backup files.
+
+### Fixed
+- **destructiveHint annotations**: Corrected 6 tools that were incorrectly marked as non-destructive.
+- **Tool annotation accuracy**: All 26 tools now have correct readOnlyHint/destructiveHint/idempotentHint.
+
+### Testing
+- **Coverage improvement**: 77% coverage (up from 73%), exceeding 75% target.
+- **Boundary tests**: 24 new tests for edge cases (unicode, empty values, long messages).
+- **Concurrency tests**: 6 new tests for thread safety under high contention.
+- **Version compatibility tests**: 19 new tests for version parsing and capability availability.
+- **Total tests**: 464 (up from 329).
+
+### CI/CD
+- **Coverage job**: New coverage job with 75% fail-under threshold.
+- **Blender integration matrix**: Tests run on Blender 4.2/4.5/5.0.
+- **PyPI publish workflow**: Automated publishing on release, TestPyPI support for pre-release testing.
+- **Auto-version tagging**: Automatic git tag creation when version changes.
+
+### Documentation
+- **Support matrix**: Updated to include Blender 5.1, expanded platform support (linux/macos/windows).
+
+---
+
 ## [1.2.0] - 2026-04-14
 
 ### Added
