@@ -1,0 +1,83 @@
+name: Blender Matrix
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      blender_versions:
+        description: "Blender versions to test (comma-separated)"
+        required: false
+        default: "4.2,4.5,5.0"
+
+jobs:
+  blender-integration-matrix:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux-x64
+          - os: macos-latest
+            platform: macos-arm64
+          - os: windows-latest
+            platform: windows-x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Blender archives
+        uses: actions/cache@v4
+        with:
+          path: .ci_blender_cache
+          key: blender-${{ github.event.inputs.blender_versions || '4.2,4.5,5.0' }}-${{ matrix.platform }}-v1
+
+      - name: Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxrender1 libxxf86vm1 libgl1-mesa-glx libxi6
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Test Blender 4.2
+        env:
+          BLENDER_VERSION: "4.2"
+          BLENDER_PLATFORM: ${{ matrix.platform }}
+        run: |
+          python scripts/ci_install_blender.py $BLENDER_VERSION $BLENDER_PLATFORM
+          BLENDER_EXE=$(python scripts/ci_install_blender.py $BLENDER_VERSION $BLENDER_PLATFORM | tail -1)
+          python scripts/ci_run_blender_tests.py "$BLENDER_EXE"
+
+      - name: Test Blender 4.5
+        env:
+          BLENDER_PLATFORM: ${{ matrix.platform }}
+        run: |
+          python scripts/ci_install_blender.py 4.5 $BLENDER_PLATFORM
+          BLENDER_EXE=$(python scripts/ci_install_blender.py 4.5 $BLENDER_PLATFORM | tail -1)
+          python scripts/ci_run_blender_tests.py "$BLENDER_EXE"
+
+      - name: Test Blender 5.0
+        env:
+          BLENDER_PLATFORM: ${{ matrix.platform }}
+        run: |
+          python scripts/ci_install_blender.py 5.0 $BLENDER_PLATFORM
+          BLENDER_EXE=$(python scripts/ci_install_blender.py 5.0 $BLENDER_PLATFORM | tail -1)
+          python scripts/ci_run_blender_tests.py "$BLENDER_EXE"
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: blender-results-${{ matrix.platform }}
+          path: docs/versioning/compatibility-results.json
+          retention-days: 30

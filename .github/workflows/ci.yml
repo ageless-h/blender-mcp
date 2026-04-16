@@ -30,4 +30,46 @@ jobs:
       - name: Unit tests
         run: uv run python -m unittest discover -s tests -p "test_*.py"
 
+  blender-integration:
+    needs: [lint, unit]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        blender-version: ["4.2", "4.5", "5.0"]
+    steps:
+      - uses: actions/checkout@v4
 
+      - name: Cache Blender archive
+        uses: actions/cache@v4
+        with:
+          path: .ci_blender_cache
+          key: blender-${{ matrix.blender-version }}-linux-v1
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxrender1 libxxf86vm1 libgl1-mesa-glx libxi6
+
+      - name: Install Blender ${{ matrix.blender-version }}
+        id: install-blender
+        run: |
+          BLENDER_EXE=$(python scripts/ci_install_blender.py ${{ matrix.blender-version }} linux-x64 | tail -1)
+          echo "blender_exe=$BLENDER_EXE" >> $GITHUB_OUTPUT
+          echo "Installed Blender: $BLENDER_EXE"
+          $BLENDER_EXE --version
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run Blender integration tests
+        env:
+          BLENDER_EXECUTABLE: ${{ steps.install-blender.outputs.blender_exe }}
+        run: python scripts/ci_run_blender_tests.py "$BLENDER_EXECUTABLE"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: blender-test-results-${{ matrix.blender-version }}
+          retention-days: 30

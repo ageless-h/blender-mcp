@@ -43,6 +43,9 @@ htmlcov/
 # Blender test configuration (user-specific paths)
 tests/blender-paths.json
 
+# CI Blender binary cache (downloaded, not committed)
+.ci_blender_cache/
+
 # Type checking
 .mypy_cache/
 .dmypy.json
