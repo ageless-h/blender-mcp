@@ -27,12 +27,12 @@
     },
     {
       "version": "5.0",
-      "status": "latest",
+      "status": "stable",
       "support_until": "until_next_release",
       "python": "3.12",
       "tested": true,
       "ci_coverage": "full",
-      "notes": "Latest stable, layered animation API tested"
+      "notes": "Stable release, layered animation API tested"
     },
     {
       "version": "5.1",
@@ -41,7 +41,7 @@
       "python": "3.12",
       "tested": true,
       "ci_coverage": "full",
-      "notes": "All 36 E2E tests pass including layered animation. VSE uses strips/length API."
+      "notes": "Latest release, all 36 E2E tests pass including layered animation. VSE uses strips/length API."
     }
   ],
   "unsupported_versions": [

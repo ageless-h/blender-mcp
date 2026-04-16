@@ -144,7 +144,7 @@ class MCPServer:
                 if not isinstance(value, (int, float)):
                     return f"Parameter '{key}' must be a number"
             elif prop_type == "integer":
-                if not isinstance(value, int):
+                if not isinstance(value, int) or isinstance(value, bool):
                     return f"Parameter '{key}' must be an integer"
             elif prop_type == "boolean":
                 if not isinstance(value, bool):

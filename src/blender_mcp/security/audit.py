@@ -3,12 +3,14 @@ from __future__ import annotations
 
 import os
 import threading
+from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 MAX_LOG_SIZE = 10 * 1024 * 1024  # 10MB
 MAX_LOG_FILES = 5
+MAX_MEMORY_EVENTS = 1000
 
 
 @dataclass(frozen=True)
@@ -26,19 +28,24 @@ class AuditLogger:
 
 
 class MemoryAuditLogger(AuditLogger):
-    def __init__(self) -> None:
-        self.events: List[AuditEvent] = []
+    def __init__(self, max_events: int = MAX_MEMORY_EVENTS) -> None:
+        self._events: deque[AuditEvent] = deque(maxlen=max_events)
         self._lock = threading.Lock()
+
+    @property
+    def events(self) -> list[AuditEvent]:
+        with self._lock:
+            return list(self._events)
 
     def record(self, event: AuditEvent) -> None:
         with self._lock:
-            self.events.append(event)
+            self._events.append(event)
 
     def export_json(self, file_path: str) -> None:
         import json
 
         with self._lock:
-            snapshot = list(self.events)
+            snapshot = list(self._events)
         with open(file_path, "w", encoding="utf-8") as handle:
             json.dump(
                 [event.__dict__ for event in snapshot],
@@ -63,7 +70,6 @@ class JsonFileAuditLogger(AuditLogger):
                 handle.write("\n")
 
     def _rotate_if_needed(self) -> None:
-        """Rotate log file if it exceeds MAX_LOG_SIZE."""
         try:
             size = os.path.getsize(self._file_path)
         except OSError:
@@ -71,6 +77,12 @@ class JsonFileAuditLogger(AuditLogger):
 
         if size < MAX_LOG_SIZE:
             return
+
+        if os.path.exists(f"{self._file_path}.{MAX_LOG_FILES}"):
+            try:
+                os.remove(f"{self._file_path}.{MAX_LOG_FILES}")
+            except OSError:
+                pass
 
         for i in range(MAX_LOG_FILES - 1, 0, -1):
             old_path = f"{self._file_path}.{i}"

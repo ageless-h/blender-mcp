@@ -640,7 +640,7 @@ _DECLARATIVE_TOOLS = [
         annotations={
             "title": "Edit Node Tree",
             "readOnlyHint": False,
-            "destructiveHint": False,
+            "destructiveHint": True,
             "idempotentHint": False,
             "openWorldHint": False,
         },
@@ -720,7 +720,7 @@ _DECLARATIVE_TOOLS = [
         annotations={
             "title": "Edit Animation",
             "readOnlyHint": False,
-            "destructiveHint": False,
+            "destructiveHint": True,
             "idempotentHint": False,
             "openWorldHint": False,
         },
@@ -787,7 +787,7 @@ _DECLARATIVE_TOOLS = [
         annotations={
             "title": "Edit Video Sequencer",
             "readOnlyHint": False,
-            "destructiveHint": False,
+            "destructiveHint": True,
             "idempotentHint": False,
             "openWorldHint": False,
         },
@@ -1377,7 +1377,7 @@ _FALLBACK_TOOLS = [
         annotations={
             "title": "Execute Operator",
             "readOnlyHint": False,
-            "destructiveHint": False,
+            "destructiveHint": True,
             "idempotentHint": False,
             "openWorldHint": False,
         },

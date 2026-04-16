@@ -15,7 +15,7 @@ from blender_mcp.prompts.registry import (
 
 
 class TestPromptsRegistry(unittest.TestCase):
-    def test_bleender_prompts_has_10_prompts(self):
+    def test_blender_prompts_has_10_prompts(self):
         self.assertEqual(len(BLENDER_PROMPTS), 10)
 
     def test_all_prompts_have_required_fields(self):
