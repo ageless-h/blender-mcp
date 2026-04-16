@@ -1,0 +1,35 @@
+name: Version Tag
+
+on:
+  push:
+    branches: ["main", "master"]
+    paths:
+      - 'src/blender_mcp/__init__.py'
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    if: github.repository == 'ageless-h/blender-mcp'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Check for version change
+        id: version
+        run: |
+          git diff HEAD~1 HEAD -- src/blender_mcp/__init__.py | grep -q "__version__" || echo "no_version_change=true" >> $GITHUB_OUTPUT
+      - name: Extract version
+        if: steps.version.outputs.no_version_change != 'true'
+        id: extract
+        run: |
+          VERSION=$(grep '__version__' src/blender_mcp/__init__.py | sed 's/.*"\([^"]*\)".*/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+      - name: Create tag
+        if: steps.version.outputs.no_version_change != 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "v${{ steps.extract.outputs.version }}" -m "Release v${{ steps.extract.outputs.version }}"
+          git push origin "v${{ steps.extract.outputs.version }}"
