@@ -141,13 +141,16 @@ class ModifierHandler(BaseHandler):
         """
         container, actual_prop = self._resolve_property_container(modifier, prop_name)
 
-        if isinstance(container, (list, tuple)) and isinstance(actual_prop, int):
-            # Handle array access (e.g., use_axis[0])
-            container[actual_prop] = value
-            return True
+        if isinstance(actual_prop, int):
+            try:
+                container[actual_prop] = value
+                return True
+            except (TypeError, KeyError, IndexError):
+                pass
 
-        if hasattr(container, str(actual_prop)):
-            setattr(container, str(actual_prop), value)
+        prop_name_str = str(actual_prop)
+        if hasattr(container, prop_name_str):
+            setattr(container, prop_name_str, value)
             return True
 
         return False
