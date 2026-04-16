@@ -9,6 +9,7 @@ Run via:
 from __future__ import annotations
 
 import os
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -24,13 +25,30 @@ def _has_blender() -> bool:
     return bool(os.environ.get("BLENDER_EXECUTABLE"))
 
 
+def _detect_blender_version(exe_path: str) -> tuple[int, ...]:
+    result = subprocess.run(
+        [exe_path, "--version"],
+        capture_output=True,
+        text=True,
+        timeout=15,
+        check=False,
+    )
+    for line in result.stdout.strip().split("\n"):
+        if line.startswith("Blender "):
+            parts = line.split()[1].split(".")
+            return tuple(int(p) for p in parts[:3])
+    return (0, 0, 0)
+
+
 @unittest.skipUnless(_has_blender(), "BLENDER_EXECUTABLE not set")
 class TestAll26Tools(unittest.TestCase):
     harness: BlenderProcessHarness  # type: ignore[assignment]
+    blender_version: tuple[int, ...] = (0, 0, 0)
 
     @classmethod
     def setUpClass(cls) -> None:
         blender_path = os.environ["BLENDER_EXECUTABLE"]
+        cls.blender_version = _detect_blender_version(blender_path)
         port = find_free_port()
         cls.harness = BlenderProcessHarness(blender_path, port=port)
         cls.harness._server_script = _LAUNCH_SCRIPT
@@ -514,15 +532,33 @@ class TestAll26Tools(unittest.TestCase):
             self.assertIn("result", r)
 
     # ----------------------------------------------------------------
+    # 13b. Version-specific tests (Blender 5.0+)
+    # ----------------------------------------------------------------
+
+    def test_33_layered_animation_blender_50(self) -> None:
+        if self.blender_version < (5, 0):
+            self.skipTest(
+                f"Layered animation requires Blender 5.0+, got {'.'.join(str(v) for v in self.blender_version)}"
+            )
+
+        result = self._assert_ok(
+            self._req(
+                "blender.get_animation_data",
+                {"target": "T_Cube", "include": ["fcurves"]},
+            )
+        )
+        self.assertIn("fcurves", result)
+
+    # ----------------------------------------------------------------
     # 14. Cleanup
     # ----------------------------------------------------------------
 
-    def test_33_cleanup_delete_test_objects(self) -> None:
+    def test_34_cleanup_delete_test_objects(self) -> None:
         for name in _TEST_OBJECTS:
             r = self._req("blender.modify_object", {"name": name, "delete": True})
             self.assertTrue(r["ok"], f"Failed to delete {name}: {r.get('error')}")
 
-    def test_34_cleanup_collection(self) -> None:
+    def test_35_cleanup_collection(self) -> None:
         self._assert_ok(
             self._req(
                 "blender.manage_collection",
@@ -533,7 +569,7 @@ class TestAll26Tools(unittest.TestCase):
             )
         )
 
-    def test_35_cleanup_material(self) -> None:
+    def test_36_cleanup_material(self) -> None:
         self._assert_ok(
             self._req(
                 "blender.manage_material",
