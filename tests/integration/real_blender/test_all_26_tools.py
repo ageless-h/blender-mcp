@@ -306,6 +306,21 @@ class TestAll26Tools(unittest.TestCase):
             )
         )
 
+    def test_15c_modify_object_rename(self) -> None:
+        self._require("T_Empty")
+        self._assert_ok(
+            self._req(
+                "blender.modify_object",
+                {"name": "T_Empty", "new_name": "T_Empty_Renamed"},
+            )
+        )
+        self._assert_ok(
+            self._req(
+                "blender.modify_object",
+                {"name": "T_Empty_Renamed", "new_name": "T_Empty"},
+            )
+        )
+
     def test_16_manage_material_create(self) -> None:
         self._require("T_Cube")
         r = self._req(
@@ -762,6 +777,23 @@ class TestAll26Tools(unittest.TestCase):
             )
         )
 
+    def test_23e_edit_animation_modify_keyframe(self) -> None:
+        self._require("T_Cube")
+        self._assert_ok(
+            self._req(
+                "blender.edit_animation",
+                {
+                    "action": "modify_keyframe",
+                    "object_name": "T_Cube",
+                    "data_path": "location",
+                    "index": 0,
+                    "frame": 1,
+                    "value": 7.0,
+                    "interpolation": "LINEAR",
+                },
+            )
+        )
+
     def test_24_get_animation_data(self) -> None:
         self._require("T_Cube")
         self._assert_ok(
@@ -859,6 +891,50 @@ class TestAll26Tools(unittest.TestCase):
             },
         )
         self.assertTrue(r["ok"], f"edit_sequencer add ADJUSTMENT strip failed: {r.get('error')}")
+
+    def test_27e_edit_sequencer_move_strip(self) -> None:
+        r = self._req(
+            "blender.edit_sequencer",
+            {
+                "action": "move_strip",
+                "strip_name": "Adjustment",
+                "frame_start": 5,
+            },
+        )
+        self.assertTrue(r["ok"], f"edit_sequencer move_strip failed: {r.get('error')}")
+
+    def test_27f_edit_sequencer_add_transition(self) -> None:
+        if self.blender_version >= (5, 1):
+            self.skipTest("VSE strip creation broken in Blender 5.1 timer context")
+        for strip_name, ch, fs, fe, color in [
+            ("TCol_A", 1, 1, 30, [0, 1, 0]),
+            ("TCol_B", 1, 20, 50, [0, 0, 1]),
+        ]:
+            r = self._req(
+                "blender.edit_sequencer",
+                {
+                    "action": "add_strip",
+                    "strip_type": "COLOR",
+                    "channel": ch,
+                    "frame_start": fs,
+                    "frame_end": fe,
+                    "color": color,
+                },
+            )
+            self.assertTrue(r["ok"], f"add_strip {strip_name} failed: {r.get('error')}")
+        r = self._req(
+            "blender.edit_sequencer",
+            {
+                "action": "add_transition",
+                "transition_type": "CROSS",
+                "channel": 2,
+                "strip1_name": "Color",
+                "strip2_name": "Color.001",
+                "frame_start": 20,
+                "transition_duration": 10,
+            },
+        )
+        self.assertTrue(r["ok"], f"edit_sequencer add_transition failed: {r.get('error')}")
 
     # ----------------------------------------------------------------
     # 11. Physics
