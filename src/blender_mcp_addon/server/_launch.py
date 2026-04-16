@@ -34,7 +34,7 @@ def main() -> None:
     """Register the addon modules and start the socket server."""
     # Ensure the addon's parent directory is on sys.path so that
     # `blender_mcp_addon` can be imported even without a full install.
-    addon_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    addon_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     src_root = os.path.dirname(addon_root)
     if src_root not in sys.path:
         sys.path.insert(0, src_root)
