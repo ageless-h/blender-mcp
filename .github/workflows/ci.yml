@@ -29,3 +29,45 @@ jobs:
         run: uv sync --python ${{ matrix.python-version }}
       - name: Unit tests
         run: uv run python -m unittest discover -s tests -p "test_*.py"
+
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - name: Install dependencies
+        run: uv sync
+      - name: Run coverage
+        run: |
+          MCP_ADAPTER=mock uv run coverage run -m unittest discover -s tests -p "test_*.py"
+          uv run coverage report --fail-under=75
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: .coverage
+
+  blender-integration:
+    needs: [lint, unit]
+    strategy:
+      fail-fast: false
+      matrix:
+        blender-version: ["4.2", "4.5", "5.0"]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - name: Install dependencies
+        run: uv sync
+      - name: Cache Blender
+        id: cache-blender
+        uses: actions/cache@v4
+        with:
+          path: .ci_blender_cache
+          key: blender-${{ matrix.blender-version }}-linux-x64
+      - name: Download Blender
+        run: |
+          BLENDER_PATH=$(python scripts/ci_install_blender.py ${{ matrix.blender-version }} linux-x64)
+          echo "BLENDER_EXECUTABLE=$BLENDER_PATH" >> $GITHUB_ENV
+      - name: Run Blender integration tests
+        run: python scripts/ci_run_blender_tests.py $BLENDER_EXECUTABLE
