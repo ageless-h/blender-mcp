@@ -572,7 +572,7 @@ class TestAll26Tools(unittest.TestCase):
                 {
                     "action": "configure",
                     "target_name": "T_Sphere",
-                    "constraint_name": "Track To",
+                    "constraint_name": "TRACK_TO",
                     "settings": {"target": "T_Cube"},
                 },
             )
@@ -586,7 +586,7 @@ class TestAll26Tools(unittest.TestCase):
                 {
                     "action": "disable",
                     "target_name": "T_Sphere",
-                    "constraint_name": "Track To",
+                    "constraint_name": "TRACK_TO",
                 },
             )
         )
@@ -596,7 +596,7 @@ class TestAll26Tools(unittest.TestCase):
                 {
                     "action": "enable",
                     "target_name": "T_Sphere",
-                    "constraint_name": "Track To",
+                    "constraint_name": "TRACK_TO",
                 },
             )
         )
@@ -609,7 +609,7 @@ class TestAll26Tools(unittest.TestCase):
                 {
                     "action": "remove",
                     "target_name": "T_Sphere",
-                    "constraint_name": "Track To",
+                    "constraint_name": "TRACK_TO",
                 },
             )
         )
