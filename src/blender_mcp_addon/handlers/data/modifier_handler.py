@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Modifier handler for attached type access."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -8,12 +9,148 @@ from ..base import BaseHandler
 from ..registry import HandlerRegistry
 from ..types import DataType
 
+# Mapping of modifier types to their property containers.
+# Some modifiers have properties nested in sub-objects (e.g., physics modifiers).
+# Format: {modifier_type: {property_name: (container_path, target_property_name)}}
+# container_path uses dot notation for nested access, e.g., "settings" or "settings.point_cache"
+# For direct properties with name mapping, container_path is empty string ""
+MODIFIER_PROPERTY_PATHS: dict[str, dict[str, tuple[str, str]]] = {
+    "CLOTH": {
+        # Cloth properties are in modifier.settings
+        "mass": ("settings", "mass"),
+        "tension_stiffness": ("settings", "tension_stiffness"),
+        "compression_stiffness": ("settings", "compression_stiffness"),
+        "shear_stiffness": ("settings", "shear_stiffness"),
+        "bending_stiffness": ("settings", "bending_stiffness"),
+        "damping": ("settings", "damping"),
+        "air_damping": ("settings", "air_damping"),
+        "vel_damping": ("settings", "vel_damping"),
+        "density_target": ("settings", "density_target"),
+        "density_strength": ("settings", "density_strength"),
+        "voxel_cell_size": ("settings", "voxel_cell_size"),
+        "pin_stiffness": ("settings", "pin_stiffness"),
+        "shrink_min": ("settings", "shrink_min"),
+        "shrink_max": ("settings", "shrink_max"),
+        "use_internal_springs": ("settings", "use_internal_springs"),
+        "use_pressure": ("settings", "use_pressure"),
+        "use_sewing_springs": ("settings", "use_sewing_springs"),
+    },
+    "SOFT_BODY": {
+        # Soft body properties are in modifier.settings
+        "mass": ("settings", "mass"),
+        "speed": ("settings", "speed"),
+        "friction": ("settings", "friction"),
+        "use_goal": ("settings", "use_goal"),
+        "use_edges": ("settings", "use_edges"),
+        "use_stiff_quads": ("settings", "use_stiff_quads"),
+        "pull": ("settings", "pull"),
+        "push": ("settings", "push"),
+        "damping": ("settings", "damping"),
+        "spring_stiffness": ("settings", "spring_stiffness"),
+        "aero": ("settings", "aero"),
+        "bend": ("settings", "bend"),
+        "collision_type": ("settings", "collision_type"),
+        "ball_size": ("settings", "ball_size"),
+        "ball_stiff": ("settings", "ball_stiff"),
+        "ball_damp": ("settings", "ball_damp"),
+        "effector_weights": ("settings", "effector_weights"),
+    },
+    "FLUID": {
+        # Fluid properties are in modifier.settings
+        "domain_type": ("settings", "domain_type"),
+        "fluid_type": ("settings", "fluid_type"),
+    },
+    "WAVE": {
+        # Wave properties: amplitude -> height, wavelength -> width (name mapping)
+        "amplitude": ("", "height"),
+        "wavelength": ("", "width"),
+    },
+}
+
+# MIRROR modifier axis properties changed in Blender 5.0+
+# Old API (4.x): modifier.use_x, modifier.use_y, modifier.use_z
+# New API (5.0+): modifier.use_axis[0], modifier.use_axis[1], modifier.use_axis[2]
+MIRROR_AXIS_PROPERTIES = ("use_x", "use_y", "use_z")
+
+
+def _get_blender_version() -> tuple[int, int, int]:
+    """Get Blender version as tuple (major, minor, patch)."""
+    try:
+        import bpy  # type: ignore
+
+        return bpy.app.version
+    except ImportError:
+        return (0, 0, 0)
+
 
 @HandlerRegistry.register
 class ModifierHandler(BaseHandler):
     """Handler for modifier attached type (object.modifiers access)."""
 
     data_type = DataType.MODIFIER
+
+    def _resolve_property_container(self, modifier: Any, prop_name: str) -> tuple[Any, str]:
+        """Resolve the correct container and property name for a modifier property.
+
+        Some modifiers have properties nested in sub-objects (e.g., physics modifiers).
+        This method handles the resolution transparently.
+
+        Args:
+            modifier: The modifier object
+            prop_name: The property name to set
+
+        Returns:
+            Tuple of (container_object, actual_property_name)
+        """
+        mod_type = modifier.type
+
+        # Handle MIRROR axis properties for Blender 5.0+
+        if mod_type == "MIRROR" and prop_name in MIRROR_AXIS_PROPERTIES:
+            version = _get_blender_version()
+            if version >= (5, 0, 0):
+                # Blender 5.0+ uses use_axis array
+                axis_index = MIRROR_AXIS_PROPERTIES.index(prop_name)
+                return modifier.use_axis, axis_index
+            # Blender 4.x uses use_x, use_y, use_z directly
+            return modifier, prop_name
+
+        # Check for known nested property paths
+        if mod_type in MODIFIER_PROPERTY_PATHS:
+            path_map = MODIFIER_PROPERTY_PATHS[mod_type]
+            if prop_name in path_map:
+                container_path, target_prop = path_map[prop_name]
+                if container_path:
+                    container = self._get_nested_attr(modifier, container_path)
+                else:
+                    container = modifier
+                return container, target_prop
+
+        # Default: property is directly on modifier
+        return modifier, prop_name
+
+    def _set_modifier_property(self, modifier: Any, prop_name: str, value: Any) -> bool:
+        """Set a property on a modifier, handling nested containers.
+
+        Args:
+            modifier: The modifier object
+            prop_name: The property name to set
+            value: The value to set
+
+        Returns:
+            True if property was set successfully
+        """
+        container, actual_prop = self._resolve_property_container(modifier, prop_name)
+
+        if isinstance(container, (list, tuple)) and isinstance(actual_prop, int):
+            # Handle array access (e.g., use_axis[0])
+            container[actual_prop] = value
+            return True
+
+        if hasattr(container, str(actual_prop)):
+            setattr(container, str(actual_prop), value)
+            return True
+
+        return False
 
     def create(self, name: str, params: dict[str, Any]) -> dict[str, Any]:
         """Create a new modifier on an object.
@@ -42,8 +179,7 @@ class ModifierHandler(BaseHandler):
 
         settings = params.get("settings", {})
         for key, value in settings.items():
-            if hasattr(modifier, key):
-                setattr(modifier, key, value)
+            self._set_modifier_property(modifier, key, value)
 
         return {
             "name": modifier.name,
@@ -143,11 +279,7 @@ class ModifierHandler(BaseHandler):
 
         modified = []
         for prop_path, value in properties.items():
-            if hasattr(modifier, prop_path):
-                setattr(modifier, prop_path, value)
-                modified.append(prop_path)
-            else:
-                self._set_nested_attr(modifier, prop_path, value)
+            if self._set_modifier_property(modifier, prop_path, value):
                 modified.append(prop_path)
 
         return {"name": name, "object": object_name, "modified": modified}
@@ -209,11 +341,13 @@ class ModifierHandler(BaseHandler):
         for modifier in obj.modifiers:
             if type_filter and modifier.type != type_filter.upper():
                 continue
-            items.append({
-                "name": modifier.name,
-                "type": modifier.type,
-                "show_viewport": modifier.show_viewport,
-                "show_render": modifier.show_render,
-            })
+            items.append(
+                {
+                    "name": modifier.name,
+                    "type": modifier.type,
+                    "show_viewport": modifier.show_viewport,
+                    "show_render": modifier.show_render,
+                }
+            )
 
         return {"items": items, "count": len(items), "object": object_name}
