@@ -291,6 +291,21 @@ class TestAll26Tools(unittest.TestCase):
             )
         )
 
+    def test_15b_modify_object_visibility(self) -> None:
+        self._require("T_Sphere")
+        self._assert_ok(
+            self._req(
+                "blender.modify_object",
+                {"name": "T_Sphere", "visible": False},
+            )
+        )
+        self._assert_ok(
+            self._req(
+                "blender.modify_object",
+                {"name": "T_Sphere", "visible": True},
+            )
+        )
+
     def test_16_manage_material_create(self) -> None:
         self._require("T_Cube")
         r = self._req(
@@ -532,6 +547,67 @@ class TestAll26Tools(unittest.TestCase):
                             "property": "noise_dimensions",
                             "value": "3D",
                         },
+                    ],
+                },
+            )
+        )
+
+    def test_22b_edit_nodes_connect(self) -> None:
+        self._require("T_Mat")
+        self._assert_ok(
+            self._req(
+                "blender.edit_nodes",
+                {
+                    "tree_type": "SHADER",
+                    "context": "OBJECT",
+                    "target": "T_Mat",
+                    "operations": [
+                        {
+                            "action": "connect",
+                            "from_node": "T_NoiseNode",
+                            "from_socket": "Color",
+                            "to_node": "Principled BSDF",
+                            "to_socket": "Base Color",
+                        }
+                    ],
+                },
+            )
+        )
+
+    def test_22c_edit_nodes_disconnect(self) -> None:
+        self._require("T_Mat")
+        self._assert_ok(
+            self._req(
+                "blender.edit_nodes",
+                {
+                    "tree_type": "SHADER",
+                    "context": "OBJECT",
+                    "target": "T_Mat",
+                    "operations": [
+                        {
+                            "action": "disconnect",
+                            "node": "Principled BSDF",
+                            "input": "Base Color",
+                        }
+                    ],
+                },
+            )
+        )
+
+    def test_22d_edit_nodes_remove_node(self) -> None:
+        self._require("T_Mat")
+        self._assert_ok(
+            self._req(
+                "blender.edit_nodes",
+                {
+                    "tree_type": "SHADER",
+                    "context": "OBJECT",
+                    "target": "T_Mat",
+                    "operations": [
+                        {
+                            "action": "remove_node",
+                            "node": "T_NoiseNode",
+                        }
                     ],
                 },
             )
