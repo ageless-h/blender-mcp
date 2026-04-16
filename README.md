@@ -79,6 +79,41 @@ Blender MCP uses a **four-layer tool architecture** with **26 specialized tools*
 - **Undo Support**: All write operations push to Blender's undo stack — Ctrl+Z works correctly.
 - **Localized Blender Support**: Works in any Blender language. Uses English display names like `"Principled BSDF"` and they resolve to localized names automatically.
 - **Error Reporting**: Detailed error messages from the addon are surfaced in MCP tool responses.
+- **Progress Notifications**: MCP progress notifications for long-running operations (render, import/export). Clients can include `progressToken` in `_meta` field to receive real-time progress updates.
+
+### Progress Notifications
+
+Blender MCP supports MCP progress notifications for long-running operations. To receive progress updates:
+
+```json
+// Client request with progressToken
+{
+  "method": "tools/call",
+  "params": {
+    "name": "blender_render_scene",
+    "arguments": {"output_path": "/tmp/render.png"},
+    "_meta": {"progressToken": "render-123"}
+  }
+}
+
+// Server sends progress notifications
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/progress",
+  "params": {
+    "progressToken": "render-123",
+    "progress": 50,
+    "total": 100,
+    "message": "Rendering frame 50/100"
+  }
+}
+```
+
+**Safety features**:
+- Rate limited to 100ms minimum interval between notifications
+- Progress messages truncated to 1000 characters
+- Maximum 100 concurrent progress tokens
+- Thread-safe notification output
 
 ### Known Limitations (Blender 5.1)
 
@@ -267,6 +302,41 @@ Blender MCP 采用**四层工具架构**，**26 个专用工具**按意图组织
 - **撤销支持**：所有写入操作自动推入 Blender 撤销栈 — Ctrl+Z 正确回退。
 - **本地化支持**：支持任何语言的 Blender。使用英文显示名如 `"Principled BSDF"` 会自动解析为本地化名称。
 - **错误报告**：插件详细错误信息在 MCP 工具响应中可见。
+- **进度通知**：支持长时间运行操作（渲染、导入导出）的 MCP 进度通知。客户端可在 `_meta` 字段中包含 `progressToken` 以接收实时进度更新。
+
+### 进度通知
+
+Blender MCP 支持长时间运行操作的 MCP 进度通知。接收进度更新：
+
+```json
+// 客户端请求携带 progressToken
+{
+  "method": "tools/call",
+  "params": {
+    "name": "blender_render_scene",
+    "arguments": {"output_path": "/tmp/render.png"},
+    "_meta": {"progressToken": "render-123"}
+  }
+}
+
+// 服务端发送进度通知
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/progress",
+  "params": {
+    "progressToken": "render-123",
+    "progress": 50,
+    "total": 100,
+    "message": "正在渲染第 50/100 帧"
+  }
+}
+```
+
+**安全特性**：
+- 频率限制：通知间隔最小 100ms
+- 进度消息截断至 1000 字符
+- 最多 100 个并发进度 token
+- 线程安全的通知输出
 
 ### 已知限制（Blender 5.1）
 
