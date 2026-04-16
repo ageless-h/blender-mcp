@@ -12,9 +12,7 @@ from blender_mcp.adapters.types import AdapterResult
 logger = logging.getLogger(__name__)
 
 _FRIENDLY_ERRORS: Dict[str, str] = {
-    "adapter_timeout": (
-        "Command timed out. Try simplifying the request or breaking it into smaller steps."
-    ),
+    "adapter_timeout": ("Command timed out. Try simplifying the request or breaking it into smaller steps."),
     "adapter_unavailable": (
         "Cannot connect to Blender. "
         "Please ensure the Blender MCP addon is enabled and the server is started "
@@ -26,8 +24,7 @@ _FRIENDLY_ERRORS: Dict[str, str] = {
         "Try restarting the server in Blender."
     ),
     "adapter_invalid_response": (
-        "Blender returned an invalid response that could not be parsed. "
-        "Try restarting the addon server."
+        "Blender returned an invalid response that could not be parsed. Try restarting the addon server."
     ),
 }
 
@@ -96,29 +93,26 @@ class SocketAdapter:
     def _execute_once(self, capability: str, payload: Dict[str, Any]) -> AdapterResult:
         """Execute a single attempt via socket connection to Blender addon."""
         started = time.perf_counter()
-        logger.debug(
-            "Connecting to %s:%d for capability=%s", self.host, self.port, capability
-        )
+        logger.debug("Connecting to %s:%d for capability=%s", self.host, self.port, capability)
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 sock.settimeout(self.timeout)
                 sock.connect((self.host, self.port))
                 logger.debug("Connected to %s:%d", self.host, self.port)
 
-                request = json.dumps(
-                    {"capability": capability, "payload": payload}, ensure_ascii=False
-                )
+                request = json.dumps({"capability": capability, "payload": payload}, ensure_ascii=False)
                 sock.sendall((request + "\n").encode("utf-8"))
 
-                response_data = b""
+                response_chunks = []
                 while True:
-                    chunk = sock.recv(4096)
+                    chunk = sock.recv(65536)
                     if not chunk:
                         break
-                    response_data += chunk
-                    if b"\n" in response_data:
+                    response_chunks.append(chunk)
+                    if b"\n" in chunk:
                         break
 
+                response_data = b"".join(response_chunks)
                 elapsed_ms = (time.perf_counter() - started) * 1000.0
                 logger.debug("Response received in %.1fms", elapsed_ms)
 
