@@ -12,9 +12,10 @@ import json
 import logging
 import os
 import sys
+import threading
 import time
-from dataclasses import dataclass
-from typing import Any
+from dataclasses import dataclass, field
+from typing import Any, Callable
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +68,11 @@ class MCPServer:
     """
 
     _notification_callback: Any = None
+    _notification_lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
+    _last_progress_time: dict[str | int, float] = field(default_factory=dict, repr=False)
+    _progress_rate_limit_ms: float = 100.0
+    _progress_message_max_chars: int = 1000
+    _max_active_tokens: int = 100
 
     def __post_init__(self) -> None:
         # Adapter — created once, reused for all requests
@@ -110,14 +116,16 @@ class MCPServer:
     def _send_notification(self, notification: dict[str, Any]) -> None:
         """Send a JSON-RPC notification to the client.
 
+        Thread-safe: uses a lock to prevent interleaved output.
         For stdio transport, this writes to stdout.
         For SSE/HTTP transport, this would use the callback.
         """
-        if self._notification_callback is not None:
-            self._notification_callback(notification)
-        else:
-            print(json.dumps(notification, ensure_ascii=False))
-            sys.stdout.flush()
+        with self._notification_lock:
+            if self._notification_callback is not None:
+                self._notification_callback(notification)
+            else:
+                print(json.dumps(notification, ensure_ascii=False))
+                sys.stdout.flush()
 
     def send_progress(
         self,
@@ -125,7 +133,7 @@ class MCPServer:
         progress: float,
         total: float | None = None,
         message: str | None = None,
-    ) -> None:
+    ) -> bool:
         """Send a progress notification to the client.
 
         Args:
@@ -133,7 +141,23 @@ class MCPServer:
             progress: Current progress value (must be non-decreasing)
             total: Optional total value for progress calculation
             message: Optional human-readable progress message
+
+        Returns:
+            True if notification was sent, False if rate-limited or token not active
         """
+        if progress_token not in self._active_progress_tokens:
+            return False
+
+        now = time.time()
+        last_time = self._last_progress_time.get(progress_token, 0.0)
+        if (now - last_time) * 1000 < self._progress_rate_limit_ms:
+            return False
+
+        if message is not None and len(message) > self._progress_message_max_chars:
+            message = message[: self._progress_message_max_chars - 3] + "..."
+
+        self._last_progress_time[progress_token] = now
+
         params: dict[str, Any] = {
             "progressToken": progress_token,
             "progress": progress,
@@ -150,6 +174,7 @@ class MCPServer:
                 "params": params,
             }
         )
+        return True
 
     def tools_list(self) -> dict[str, Any]:
         """List all 26 available tools with full schemas and annotations."""
@@ -308,7 +333,13 @@ class MCPServer:
             }
         # ── End security checks ───────────────────────────────
 
-        result = self._adapter.execute(internal_capability, payload)
+        progress_callback: Callable[[float, float | None, str | None], None] | None = None
+        if progress_token is not None:
+
+            def progress_callback(progress: float, total: float | None, message: str | None) -> None:
+                self.send_progress(progress_token, progress, total, message)
+
+        result = self._adapter.execute(internal_capability, payload, progress_callback)
         elapsed_ms = (time.perf_counter() - call_start) * 1000.0
 
         if result.ok:
@@ -398,6 +429,7 @@ class MCPServer:
                 token = params.get("requestId")
                 if token in self._active_progress_tokens:
                     del self._active_progress_tokens[token]
+                    self._last_progress_time.pop(token, None)
                     logger.info("Request %s cancelled by client", token)
             return None
 
@@ -413,17 +445,25 @@ class MCPServer:
             progress_token = meta.get("progressToken")
 
             if progress_token is not None:
+                if len(self._active_progress_tokens) >= self._max_active_tokens:
+                    logger.warning("Max progress tokens reached, rejecting new token")
+                    return {
+                        "jsonrpc": "2.0",
+                        "id": req_id,
+                        "error": {"code": -32604, "message": "Too many concurrent operations"},
+                    }
                 self._active_progress_tokens[progress_token] = {
                     "tool": name,
                     "started": time.time(),
                 }
 
-            result = self.tools_call(name, arguments, progress_token=progress_token)
-
-            if progress_token is not None:
-                self._active_progress_tokens.pop(progress_token, None)
-
-            return {"jsonrpc": "2.0", "id": req_id, "result": result}
+            try:
+                result = self.tools_call(name, arguments, progress_token=progress_token)
+                return {"jsonrpc": "2.0", "id": req_id, "result": result}
+            finally:
+                if progress_token is not None:
+                    self._active_progress_tokens.pop(progress_token, None)
+                    self._last_progress_time.pop(progress_token, None)
 
         elif method == "prompts/list":
             result = self.prompts_list()

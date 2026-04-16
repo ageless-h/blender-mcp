@@ -5,7 +5,7 @@ import json
 import logging
 import socket
 import time
-from typing import Any, Dict
+from typing import Any, Callable, Dict
 
 from blender_mcp.adapters.types import AdapterResult
 
@@ -56,8 +56,23 @@ class SocketAdapter:
         self.max_retries = max_retries
         self.retry_base_delay = retry_base_delay
 
-    def execute(self, capability: str, payload: Dict[str, Any]) -> AdapterResult:
-        """Execute a capability with automatic retry on transient errors."""
+    def execute(
+        self,
+        capability: str,
+        payload: Dict[str, Any],
+        progress_callback: Callable[[float, float | None, str | None], None] | None = None,
+    ) -> AdapterResult:
+        """Execute a capability with automatic retry on transient errors.
+
+        Args:
+            capability: The capability to execute
+            payload: The payload for the capability
+            progress_callback: Optional callback for progress updates.
+                Note: For socket adapter, progress updates require the Blender
+                addon to send progress messages back. This callback is stored
+                for potential future use with bidirectional communication.
+        """
+        self._progress_callback = progress_callback
         last_result: AdapterResult | None = None
 
         for attempt in range(self.max_retries):

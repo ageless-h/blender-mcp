@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 """Base capability dispatcher and helpers.
 
-Routes internal capabilities (data.*, operator.execute, info.query,
-script.execute) and new blender.* capabilities from the 26-tool architecture.
+Routes blender.* capabilities through a four-tier handler architecture:
+- Perception: 11 read-only tools
+- Declarative: 3 node/animation/sequencer editors
+- Imperative: 9 object/material/modifier/etc managers
+- Fallback: 3 operator/script/import_export handlers
 """
 
 from __future__ import annotations
@@ -30,18 +33,17 @@ _CAPABILITY_HANDLERS: dict[str, Callable[[dict[str, Any], float], dict[str, Any]
 
 
 def _dispatch_new_capability(capability: str, payload: dict[str, Any], started: float) -> dict[str, Any]:
-    """Dispatch new blender.* capabilities via registry lookup.
+    """Dispatch blender.* capabilities via four-tier handler registry.
 
-    Maps the 26 new tool internal capabilities to handler calls.
-    Many new tools reuse existing handlers with parameter transformations.
-    New handlers that require bpy are imported lazily.
+    Handlers are organized by layer: Perception, Declarative, Imperative, Fallback.
+    Each handler is imported lazily if it requires bpy access.
     """
     handler = _CAPABILITY_HANDLERS.get(capability)
     if handler is not None:
         return handler(payload, started)
     return _error(
         code="unsupported_capability",
-        message=f"new capability '{capability}' not yet implemented",
+        message=f"capability '{capability}' not found in handler registry",
         data={"capability": capability},
         started=started,
     )
