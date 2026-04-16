@@ -11,6 +11,33 @@ from ..response import _error, _ok, bpy_unavailable_error, check_bpy_available
 logger = logging.getLogger(__name__)
 
 
+def _strips(sed: Any) -> Any:
+    return sed.strips if hasattr(sed, "strips") else sed.sequences
+
+
+def _use_length_param() -> bool:
+    try:
+        import bpy as _bpy
+
+        return _bpy.app.version >= (5, 0)
+    except Exception:
+        return False
+
+
+def _new_effect_kwargs(
+    sed: Any, name: str, effect_type: str, channel: int, frame_start: int, frame_end: int, **extra: Any
+) -> Any:
+    strips = _strips(sed)
+    if _use_length_param():
+        length = frame_end - frame_start
+        return strips.new_effect(
+            name=name, type=effect_type, channel=channel, frame_start=frame_start, length=length, **extra
+        )
+    return strips.new_effect(
+        name=name, type=effect_type, channel=channel, frame_start=frame_start, frame_end=frame_end, **extra
+    )
+
+
 def sequencer_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
     """Edit the Video Sequence Editor based on action parameter."""
     available, bpy = check_bpy_available()
@@ -79,24 +106,12 @@ def _add_strip(bpy: Any, sed: Any, payload: dict[str, Any], started: float) -> d
     strip: Any = None
     if strip_type == "COLOR":
         frame_end = payload.get("frame_end", frame_start + 100)
-        strip = sed.sequences.new_effect(
-            name=payload.get("strip_name", "Color"),
-            type="COLOR",
-            channel=channel,
-            frame_start=frame_start,
-            frame_end=frame_end,
-        )
+        strip = _new_effect_kwargs(sed, payload.get("strip_name", "Color"), "COLOR", channel, frame_start, frame_end)
         if strip and payload.get("color"):
             strip.color = tuple(payload["color"][:3])
     elif strip_type == "TEXT":
         frame_end = payload.get("frame_end", frame_start + 100)
-        strip = sed.sequences.new_effect(
-            name=payload.get("strip_name", "Text"),
-            type="TEXT",
-            channel=channel,
-            frame_start=frame_start,
-            frame_end=frame_end,
-        )
+        strip = _new_effect_kwargs(sed, payload.get("strip_name", "Text"), "TEXT", channel, frame_start, frame_end)
         if strip:
             if payload.get("text"):
                 strip.text = payload["text"]
@@ -106,12 +121,8 @@ def _add_strip(bpy: Any, sed: Any, payload: dict[str, Any], started: float) -> d
                 strip.color = tuple(payload["color"][:3])
     elif strip_type == "ADJUSTMENT":
         frame_end = payload.get("frame_end", frame_start + 100)
-        strip = sed.sequences.new_effect(
-            name=payload.get("strip_name", "Adjustment"),
-            type="ADJUSTMENT",
-            channel=channel,
-            frame_start=frame_start,
-            frame_end=frame_end,
+        strip = _new_effect_kwargs(
+            sed, payload.get("strip_name", "Adjustment"), "ADJUSTMENT", channel, frame_start, frame_end
         )
     elif strip_type in ("VIDEO", "IMAGE", "AUDIO"):
         filepath = payload.get("filepath", "")
@@ -122,21 +133,21 @@ def _add_strip(bpy: Any, sed: Any, payload: dict[str, Any], started: float) -> d
                 started=started,
             )
         if strip_type == "VIDEO":
-            strip = sed.sequences.new_movie(
+            strip = _strips(sed).new_movie(
                 name=payload.get("strip_name", "Movie"),
                 filepath=filepath,
                 channel=channel,
                 frame_start=frame_start,
             )
         elif strip_type == "IMAGE":
-            strip = sed.sequences.new_image(
+            strip = _strips(sed).new_image(
                 name=payload.get("strip_name", "Image"),
                 filepath=filepath,
                 channel=channel,
                 frame_start=frame_start,
             )
         else:
-            strip = sed.sequences.new_sound(
+            strip = _strips(sed).new_sound(
                 name=payload.get("strip_name", "Sound"),
                 filepath=filepath,
                 channel=channel,
@@ -178,7 +189,7 @@ def _add_strip(bpy: Any, sed: Any, payload: dict[str, Any], started: float) -> d
 
 def _modify_strip(sed: Any, payload: dict[str, Any], started: float) -> dict[str, Any]:
     strip_name = payload.get("strip_name", "")
-    strip = sed.sequences.get(strip_name)
+    strip = _strips(sed).get(strip_name)
     if not strip:
         return _error(code="not_found", message=f"Strip '{strip_name}' not found", started=started)
 
@@ -192,10 +203,10 @@ def _modify_strip(sed: Any, payload: dict[str, Any], started: float) -> dict[str
 
 def _delete_strip(sed: Any, payload: dict[str, Any], started: float) -> dict[str, Any]:
     strip_name = payload.get("strip_name", "")
-    strip = sed.sequences.get(strip_name)
+    strip = _strips(sed).get(strip_name)
     if not strip:
         return _error(code="not_found", message=f"Strip '{strip_name}' not found", started=started)
-    sed.sequences.remove(strip)
+    _strips(sed).remove(strip)
     return _ok(result={"action": "delete_strip", "removed": strip_name}, started=started)
 
 
@@ -206,19 +217,9 @@ def _add_effect(sed: Any, payload: dict[str, Any], started: float) -> dict[str, 
     frame_start = payload.get("frame_start", 1)
     frame_end = payload.get("frame_end", frame_start + 100)
 
-    input_strip = sed.sequences.get(strip_name) if strip_name else None
-
-    kwargs: dict[str, Any] = {
-        "name": f"{effect_type}_Effect",
-        "type": effect_type,
-        "channel": channel,
-        "frame_start": frame_start,
-        "frame_end": frame_end,
-    }
-    if input_strip:
-        kwargs["seq1"] = input_strip
-
-    strip = sed.sequences.new_effect(**kwargs)
+    input_strip = _strips(sed).get(strip_name) if strip_name else None
+    extra = {"seq1": input_strip} if input_strip else {}
+    strip = _new_effect_kwargs(sed, f"{effect_type}_Effect", effect_type, channel, frame_start, frame_end, **extra)
     if strip is None:
         return _error(
             code="operation_failed",
@@ -240,8 +241,8 @@ def _add_transition(sed: Any, payload: dict[str, Any], started: float) -> dict[s
     strip1_name = payload.get("strip1_name", "")
     strip2_name = payload.get("strip2_name", "")
 
-    strip1 = sed.sequences.get(strip1_name) if strip1_name else None
-    strip2 = sed.sequences.get(strip2_name) if strip2_name else None
+    strip1 = _strips(sed).get(strip1_name) if strip1_name else None
+    strip2 = _strips(sed).get(strip2_name) if strip2_name else None
 
     if not strip1 or not strip2:
         return _error(
@@ -254,12 +255,13 @@ def _add_transition(sed: Any, payload: dict[str, Any], started: float) -> dict[s
         frame_start = int(strip2.frame_start)
 
     try:
-        strip = sed.sequences.new_effect(
-            name=f"{transition_type}_Transition",
-            type=transition_type,
-            channel=channel,
-            frame_start=frame_start,
-            frame_end=frame_start + transition_duration,
+        strip = _new_effect_kwargs(
+            sed,
+            f"{transition_type}_Transition",
+            transition_type,
+            channel,
+            frame_start,
+            frame_start + transition_duration,
             seq1=strip1,
             seq2=strip2,
         )
@@ -291,7 +293,7 @@ def _add_transition(sed: Any, payload: dict[str, Any], started: float) -> dict[s
 
 def _move_strip(sed: Any, payload: dict[str, Any], started: float) -> dict[str, Any]:
     strip_name = payload.get("strip_name", "")
-    strip = sed.sequences.get(strip_name)
+    strip = _strips(sed).get(strip_name)
     if not strip:
         return _error(code="not_found", message=f"Strip '{strip_name}' not found", started=started)
 
