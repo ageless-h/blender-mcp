@@ -128,10 +128,8 @@ class TestInfoQueryHandler(unittest.TestCase):
 
     def test_query_last_op_empty(self):
         """Test last_op query with no recorded operation."""
-        from blender_mcp_addon.handlers.info.query import info_query, _last_op_info
-
-        # Clear last op info
         import blender_mcp_addon.handlers.info.query as query_module
+        from blender_mcp_addon.handlers.info.query import info_query
 
         query_module._last_op_info = {}
 
@@ -223,10 +221,9 @@ class TestInfoQueryHandler(unittest.TestCase):
 
     def test_query_changes_initial(self):
         """Test changes query returns change tracking."""
-        from blender_mcp_addon.handlers.info.query import info_query
-
         # Reset change tracking
         import blender_mcp_addon.handlers.info.query as query_module
+        from blender_mcp_addon.handlers.info.query import info_query
 
         query_module._change_tracking = {
             "modified_objects": set(),
@@ -276,9 +273,8 @@ class TestRecordLastOp(unittest.TestCase):
 
     def test_record_and_retrieve(self):
         """Test that recorded operation can be retrieved."""
-        from blender_mcp_addon.handlers.info.query import record_last_op, _last_op_info
-
         import blender_mcp_addon.handlers.info.query as query_module
+        from blender_mcp_addon.handlers.info.query import record_last_op
 
         record_last_op(
             operator="mesh.primitive_cube_add",
