@@ -68,11 +68,11 @@ mcp/                           # MCP protocol tests
 uv run python -m unittest discover -s tests -p "test_*.py"        # All tests
 uv run python -m unittest tests/addon/test_response.py             # Single file
 uv run python -m unittest discover -s tests/tools -p "test_*.py"  # Schema only
-python scripts/ci_install_blender.py 4.2 linux-x64                # Download Blender for CI
-python scripts/ci_run_blender_tests.py /path/to/blender           # E2E with real Blender
+python scripts/ci_install_blender.py 4.2 linux-x64                # Download Blender for local testing
+python scripts/ci_run_blender_tests.py /path/to/blender           # E2E with real Blender (run locally)
 ```
 
-CI (`.github/workflows/ci.yml`): lint + unit (3.11/3.12/3.13) + blender-integration (4.2/4.5/5.0 on Linux).
+CI (`.github/workflows/ci.yml`): lint + unit (3.11/3.12/3.13) + coverage (≥75%). Blender integration tests run locally, not in CI.
 
 ## ADDING TESTS
 
@@ -83,13 +83,14 @@ CI (`.github/workflows/ci.yml`): lint + unit (3.11/3.12/3.13) + blender-integrat
 - MCP protocol → `tests/mcp/`
 - **All unit tests must pass without Blender installed** (mock mode)
 
-## CI BLENDER INTEGRATION
+## LOCAL BLENDER INTEGRATION TESTS
 
-The `blender-integration` job downloads Blender from `download.blender.org`, caches the archive, and runs E2E tests via `scripts/ci_run_blender_tests.py`.
+Blender integration tests run locally via `scripts/ci_run_blender_tests.py`, not in CI. This allows testing against multiple Blender versions without CI overhead.
 
-Matrix: `blender-version: ["4.2", "4.5", "5.0"]` on `ubuntu-latest`.
+To run locally:
+1. Download Blender: `python scripts/ci_install_blender.py 4.2 linux-x64`
+2. Run tests: `python scripts/ci_run_blender_tests.py /path/to/blender`
 
 To add a new Blender version:
-1. Add it to the CI matrix in `.github/workflows/ci.yml`
-2. Add the full version (e.g., "4.2.12") to `KNOWN_PATCHES` in `scripts/ci_install_blender.py`
-3. Update `docs/versioning/support-matrix.json`
+1. Add the full version (e.g., "4.2.12") to `KNOWN_PATCHES` in `scripts/ci_install_blender.py`
+2. Update `docs/versioning/support-matrix.json`

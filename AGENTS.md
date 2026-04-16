@@ -92,7 +92,7 @@ uv run pytest tests/                                             # Tests (also w
 uv run ruff check src/ tests/                                    # Lint
 uv run python -m examples.stdio_loop                             # Run stdio example
 python scripts/ci_install_blender.py 4.2 linux-x64              # Download Blender for local testing
-python scripts/ci_run_blender_tests.py /path/to/blender         # E2E tests with real Blender
+python scripts/ci_run_blender_tests.py /path/to/blender         # E2E tests with real Blender (run locally)
 ```
 
-CI (`.github/workflows/ci.yml`): lint + unit (3.11/3.12/3.13) + blender-integration (4.2/4.5/5.0 on Linux).
+CI (`.github/workflows/ci.yml`): lint + unit (3.11/3.12/3.13) + coverage (≥75%). Blender integration tests run locally via `scripts/ci_run_blender_tests.py`, not in CI.
