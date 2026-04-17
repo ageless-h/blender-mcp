@@ -93,8 +93,16 @@ def _insert_keyframe(bpy: Any, payload: dict[str, Any], started: float) -> dict[
     interp = payload.get("interpolation")
     if interp and obj.animation_data and obj.animation_data.action:
         action = obj.animation_data.action
-        # Use fcurves.find() for O(1) lookup instead of O(n) iteration
-        fc = action.fcurves.find(data_path, index=index if index >= 0 else -1)
+        from . import iter_fcurves
+
+        fc = None
+        if hasattr(action, "fcurves") and hasattr(action.fcurves, "find"):
+            fc = action.fcurves.find(data_path, index=index if index >= 0 else -1)
+        else:
+            for fcurve in iter_fcurves(action):
+                if fcurve.data_path == data_path and (index < 0 or fcurve.array_index == index):
+                    fc = fcurve
+                    break
         if fc:
             for kp in fc.keyframe_points:
                 if int(kp.co[0]) == frame:

@@ -109,6 +109,20 @@ def _handle_manage_material(payload: dict[str, Any], started: float) -> dict[str
             result = handler.delete(name, {})
             result["success"] = True
             return _ok(result=result, started=started)
+        elif action == "duplicate":
+            import bpy
+
+            src_mat = bpy.data.materials.get(name)
+            if src_mat is None:
+                return not_found_error("material", name, started)
+            new_name = payload.get("new_name", f"{name}.copy")
+            new_mat = src_mat.copy()
+            new_mat.name = new_name
+            bpy.data.materials.link(new_mat)
+            return _ok(
+                result={"action": "duplicate", "source": name, "name": new_mat.name},
+                started=started,
+            )
         elif action in ("assign", "unassign"):
             result = handler.link(
                 name,

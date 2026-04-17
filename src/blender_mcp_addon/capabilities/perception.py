@@ -172,15 +172,11 @@ def _handle_get_images(payload: dict[str, Any], started: float) -> dict[str, Any
 
 
 def _handle_capture_viewport(payload: dict[str, Any], started: float) -> dict[str, Any]:
-    from ..handlers.info import viewport_capture
-
-    return viewport_capture(payload, started=started)
+    return info_query({"type": "viewport_capture", "params": payload}, started=started)
 
 
 def _handle_get_selection(payload: dict[str, Any], started: float) -> dict[str, Any]:
-    from ..handlers.info import selection_query
-
-    return selection_query(payload, started=started)
+    return info_query({"type": "selection", "params": payload}, started=started)
 
 
 PERCEPTION_HANDLERS = {
