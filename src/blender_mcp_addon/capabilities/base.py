@@ -24,7 +24,9 @@ from .perception import PERCEPTION_HANDLERS
 # Capability dispatch registry
 # ---------------------------------------------------------------
 
-_CAPABILITY_HANDLERS: dict[str, Callable[[dict[str, Any], float], dict[str, Any]]] = {
+_CAPABILITY_HANDLERS: dict[
+    str, Callable[[dict[str, Any], float, Callable[[float, float | None, str | None], None] | None], dict[str, Any]]
+] = {
     **PERCEPTION_HANDLERS,
     **DECLARATIVE_HANDLERS,
     **IMPERATIVE_HANDLERS,
@@ -32,7 +34,12 @@ _CAPABILITY_HANDLERS: dict[str, Callable[[dict[str, Any], float], dict[str, Any]
 }
 
 
-def _dispatch_new_capability(capability: str, payload: dict[str, Any], started: float) -> dict[str, Any]:
+def _dispatch_new_capability(
+    capability: str,
+    payload: dict[str, Any],
+    started: float,
+    progress_callback: Callable[[float, float | None, str | None], None] | None = None,
+) -> dict[str, Any]:
     """Dispatch blender.* capabilities via four-tier handler registry.
 
     Handlers are organized by layer: Perception, Declarative, Imperative, Fallback.
@@ -40,6 +47,8 @@ def _dispatch_new_capability(capability: str, payload: dict[str, Any], started: 
     """
     handler = _CAPABILITY_HANDLERS.get(capability)
     if handler is not None:
+        if progress_callback is not None:
+            payload = {**payload, "_progress_callback": progress_callback}
         return handler(payload, started)
     return _error(
         code="unsupported_capability",
@@ -80,7 +89,10 @@ def _push_undo_step(capability: str) -> None:
         pass
 
 
-def execute_capability(request: dict[str, Any]) -> dict[str, Any]:
+def execute_capability(
+    request: dict[str, Any],
+    progress_callback: Callable[[float, float | None, str | None], None] | None = None,
+) -> dict[str, Any]:
     """Execute a capability request and return the result.
 
     Supports internal capabilities (data.*, operator.execute, info.query,
@@ -122,7 +134,7 @@ def execute_capability(request: dict[str, Any]) -> dict[str, Any]:
         if capability.startswith("blender."):
             if capability in _WRITE_CAPABILITIES:
                 _push_undo_step(capability)
-            return _dispatch_new_capability(capability, payload, started)
+            return _dispatch_new_capability(capability, payload, started, progress_callback)
 
         return _error(
             code="unsupported_capability",

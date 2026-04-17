@@ -24,8 +24,8 @@ _shutdown_flag = threading.Event()
 MAX_REQUEST_SIZE = 10 * 1024 * 1024  # 10MB max request size
 MAX_CONNECTIONS = 10  # Maximum concurrent connections
 
-# Main-thread dispatch queue: items are (request, response_holder, done_event, timeout)
-_dispatch_queue: queue.Queue[tuple[dict, list, threading.Event, float]] = queue.Queue()
+# Main-thread dispatch queue: items are (request, response_holder, done_event, timeout, progress_callback)
+_dispatch_queue: queue.Queue[tuple[dict, list, threading.Event, float, Any]] = queue.Queue()
 _timer_registered = False
 _timer_lock = threading.Lock()
 
@@ -223,7 +223,7 @@ def _handle_client(client_socket: socket.socket) -> None:
                     client_socket.sendall((json.dumps(response) + "\n").encode("utf-8"))
                     continue
 
-                response = _dispatch_to_main_thread(request)
+                response = _dispatch_to_main_thread(request, client_socket)
                 client_socket.sendall((json.dumps(response, ensure_ascii=False) + "\n").encode("utf-8"))
 
     except (OSError, RuntimeError, ConnectionError) as exc:
@@ -242,14 +242,33 @@ def _handle_client(client_socket: socket.socket) -> None:
             logger.debug("Error closing client socket: %s", exc)
 
 
-def _dispatch_to_main_thread(request: dict) -> dict:
+def _dispatch_to_main_thread(request: dict, client_socket: socket.socket | None = None) -> dict:
     """Queue a request for main-thread execution and block until done."""
     _kick_timer_if_dead()
     capability = request.get("capability", "")
     timeout = get_timeout(capability)
     response_holder: list[dict] = []
     done_event = threading.Event()
-    _dispatch_queue.put((request, response_holder, done_event, timeout))
+
+    progress_token = request.get("progress_token")
+    progress_callback = None
+
+    if progress_token and client_socket:
+
+        def progress_callback(progress: float, total: float | None, message: str | None) -> None:
+            msg = {
+                "type": "progress",
+                "token": progress_token,
+                "progress": progress,
+                "total": total,
+                "message": message,
+            }
+            try:
+                client_socket.sendall((json.dumps(msg, ensure_ascii=False) + "\n").encode("utf-8"))
+            except (OSError, RuntimeError):
+                pass
+
+    _dispatch_queue.put((request, response_holder, done_event, timeout, progress_callback))
     done_event.wait(timeout=timeout)
     if response_holder:
         return response_holder[0]
@@ -272,7 +291,7 @@ def _main_thread_poll() -> float | None:
 
     while not _dispatch_queue.empty():
         try:
-            request, response_holder, done_event, _timeout = _dispatch_queue.get_nowait()
+            request, response_holder, done_event, _timeout, progress_callback = _dispatch_queue.get_nowait()
         except queue.Empty:
             break
         capability = request.get("capability", "unknown")
@@ -280,7 +299,7 @@ def _main_thread_poll() -> float | None:
         result = None
         elapsed_ms = 0.0
         try:
-            result = execute_capability(request)
+            result = execute_capability(request, progress_callback=progress_callback)
             elapsed_ms = (_time.perf_counter() - started) * 1000.0
             response_holder.append(result)
         except Exception as exc:

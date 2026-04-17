@@ -5,89 +5,10 @@ from __future__ import annotations
 
 from typing import Any
 
+from ...metadata import get_blender_version, resolve_property_path
 from ..base import BaseHandler
 from ..registry import HandlerRegistry
 from ..types import DataType
-
-# Mapping of modifier types to their property containers.
-# Some modifiers have properties nested in sub-objects (e.g., physics modifiers).
-# Format: {modifier_type: {property_name: (container_path, target_property_name)}}
-# container_path uses dot notation for nested access, e.g., "settings" or "settings.point_cache"
-# For direct properties with name mapping, container_path is empty string ""
-MODIFIER_PROPERTY_PATHS: dict[str, dict[str, tuple[str, str]]] = {
-    "CLOTH": {
-        # Cloth properties are in modifier.settings
-        "mass": ("settings", "mass"),
-        "tension_stiffness": ("settings", "tension_stiffness"),
-        "compression_stiffness": ("settings", "compression_stiffness"),
-        "shear_stiffness": ("settings", "shear_stiffness"),
-        "bending_stiffness": ("settings", "bending_stiffness"),
-        "damping": ("settings", "damping"),
-        "air_damping": ("settings", "air_damping"),
-        "vel_damping": ("settings", "vel_damping"),
-        "density_target": ("settings", "density_target"),
-        "density_strength": ("settings", "density_strength"),
-        "voxel_cell_size": ("settings", "voxel_cell_size"),
-        "pin_stiffness": ("settings", "pin_stiffness"),
-        "shrink_min": ("settings", "shrink_min"),
-        "shrink_max": ("settings", "shrink_max"),
-        "use_internal_springs": ("settings", "use_internal_springs"),
-        "use_pressure": ("settings", "use_pressure"),
-        "use_sewing_springs": ("settings", "use_sewing_springs"),
-    },
-    "SOFT_BODY": {
-        # Soft body properties are in modifier.settings
-        "mass": ("settings", "mass"),
-        "speed": ("settings", "speed"),
-        "friction": ("settings", "friction"),
-        "use_goal": ("settings", "use_goal"),
-        "use_edges": ("settings", "use_edges"),
-        "use_stiff_quads": ("settings", "use_stiff_quads"),
-        "pull": ("settings", "pull"),
-        "push": ("settings", "push"),
-        "damping": ("settings", "damping"),
-        "spring_stiffness": ("settings", "spring_stiffness"),
-        "aero": ("settings", "aero"),
-        "bend": ("settings", "bend"),
-        "collision_type": ("settings", "collision_type"),
-        "ball_size": ("settings", "ball_size"),
-        "ball_stiff": ("settings", "ball_stiff"),
-        "ball_damp": ("settings", "ball_damp"),
-        "effector_weights": ("settings", "effector_weights"),
-    },
-    "FLUID": {
-        # Fluid properties are in modifier.settings
-        "domain_type": ("settings", "domain_type"),
-        "fluid_type": ("settings", "fluid_type"),
-    },
-    "WAVE": {
-        # Wave properties: amplitude -> height, wavelength -> width (name mapping)
-        "amplitude": ("", "height"),
-        "wavelength": ("", "width"),
-    },
-}
-
-# MIRROR modifier axis properties changed in Blender 5.0+
-# Old API (4.x): modifier.use_x, modifier.use_y, modifier.use_z
-# New API (5.0+): modifier.use_axis[0], modifier.use_axis[1], modifier.use_axis[2]
-MIRROR_AXIS_PROPERTIES = ("use_x", "use_y", "use_z")
-
-# Cached Blender version - avoids repeated bpy.app.version calls
-_CACHED_BLENDER_VERSION: tuple[int, int, int] | None = None
-
-
-def _get_blender_version() -> tuple[int, int, int]:
-    """Get Blender version as tuple (major, minor, patch). Cached at module level."""
-    global _CACHED_BLENDER_VERSION
-    if _CACHED_BLENDER_VERSION is not None:
-        return _CACHED_BLENDER_VERSION
-    try:
-        import bpy  # type: ignore
-
-        _CACHED_BLENDER_VERSION = bpy.app.version
-    except ImportError:
-        _CACHED_BLENDER_VERSION = (0, 0, 0)
-    return _CACHED_BLENDER_VERSION
 
 
 @HandlerRegistry.register
@@ -99,40 +20,30 @@ class ModifierHandler(BaseHandler):
     def _resolve_property_container(self, modifier: Any, prop_name: str) -> tuple[Any, str]:
         """Resolve the correct container and property name for a modifier property.
 
-        Some modifiers have properties nested in sub-objects (e.g., physics modifiers).
-        This method handles the resolution transparently.
-
-        Args:
-            modifier: The modifier object
-            prop_name: The property name to set
-
-        Returns:
-            Tuple of (container_object, actual_property_name)
+        Uses the metadata system for version-aware property resolution.
+        Falls back to direct property access if not in registry.
         """
         mod_type = modifier.type
+        version = get_blender_version()
 
-        # Handle MIRROR axis properties for Blender 5.0+
-        if mod_type == "MIRROR" and prop_name in MIRROR_AXIS_PROPERTIES:
-            version = _get_blender_version()
+        resolved = resolve_property_path(mod_type, "modifier", prop_name, version)
+        if resolved is None:
+            resolved = resolve_property_path(mod_type, "physics", prop_name, version)
+
+        if resolved is not None:
+            container_path, actual_prop = resolved
+            if container_path:
+                container = self._get_nested_attr(modifier, container_path)
+            else:
+                container = modifier
+            return container, actual_prop
+
+        if mod_type == "MIRROR" and prop_name in ("use_x", "use_y", "use_z"):
             if version >= (5, 0, 0):
-                # Blender 5.0+ uses use_axis array
-                axis_index = MIRROR_AXIS_PROPERTIES.index(prop_name)
+                axis_index = {"use_x": 0, "use_y": 1, "use_z": 2}[prop_name]
                 return modifier.use_axis, axis_index
-            # Blender 4.x uses use_x, use_y, use_z directly
             return modifier, prop_name
 
-        # Check for known nested property paths
-        if mod_type in MODIFIER_PROPERTY_PATHS:
-            path_map = MODIFIER_PROPERTY_PATHS[mod_type]
-            if prop_name in path_map:
-                container_path, target_prop = path_map[prop_name]
-                if container_path:
-                    container = self._get_nested_attr(modifier, container_path)
-                else:
-                    container = modifier
-                return container, target_prop
-
-        # Default: property is directly on modifier
         return modifier, prop_name
 
     def _set_modifier_property(self, modifier: Any, prop_name: str, value: Any) -> bool:
