@@ -15,6 +15,7 @@ class BlenderAdapter(Protocol):
         capability: str,
         payload: Dict[str, Any],
         progress_callback: Callable[[float, float | None, str | None], None] | None = None,
+        progress_token: str | int | None = None,
     ) -> AdapterResult:
         """Execute a capability and return the result.
 
@@ -23,5 +24,6 @@ class BlenderAdapter(Protocol):
             payload: The payload for the capability
             progress_callback: Optional callback for progress updates.
                 Signature: (progress, total, message) -> None
+            progress_token: Optional token for progress notification correlation
         """
         ...

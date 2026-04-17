@@ -76,12 +76,21 @@ class SocketAdapter:
         return sock
 
     def _recv_response(self, sock: socket.socket, started: float) -> AdapterResult:
+        MAX_RESPONSE_SIZE = 100 * 1024 * 1024  # 100MB max
         buffer = b""
         while True:
             chunk = sock.recv(65536)
             if not chunk:
                 break
             buffer += chunk
+            if len(buffer) > MAX_RESPONSE_SIZE:
+                elapsed_ms = (time.perf_counter() - started) * 1000.0
+                logger.error("Response exceeds max size (%d bytes)", len(buffer))
+                return AdapterResult(
+                    ok=False,
+                    error="adapter_response_too_large",
+                    timing_ms=elapsed_ms,
+                )
             while b"\n" in buffer:
                 line, buffer = buffer.split(b"\n", 1)
                 response_data = line

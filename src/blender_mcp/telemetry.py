@@ -16,6 +16,7 @@ import functools
 import logging
 import os
 import sqlite3
+import threading
 import time
 import uuid
 from collections import Counter
@@ -73,6 +74,7 @@ class TelemetryCollector:
     tools: Dict[str, ToolMetrics] = field(default_factory=dict)
     _session_id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
     _seq_index: int = 0
+    _lock: threading.Lock = field(default_factory=threading.Lock)
 
     def __post_init__(self) -> None:
         if self.enabled:
@@ -103,18 +105,21 @@ class TelemetryCollector:
         """Record a tool call metric."""
         if not self.enabled:
             return
-        if tool_name not in self.tools:
-            self.tools[tool_name] = ToolMetrics()
-        self.tools[tool_name].record(success, elapsed_ms)
+        with self._lock:
+            if tool_name not in self.tools:
+                self.tools[tool_name] = ToolMetrics()
+            self.tools[tool_name].record(success, elapsed_ms)
+            seq = self._seq_index
+            self._seq_index += 1
         logger.debug(
             "Telemetry: %s %s in %.1fms",
             tool_name,
             "ok" if success else "fail",
             elapsed_ms,
         )
-        self._persist(tool_name, success, elapsed_ms)
+        self._persist(tool_name, success, elapsed_ms, seq)
 
-    def _persist(self, tool_name: str, success: bool, elapsed_ms: float) -> None:
+    def _persist(self, tool_name: str, success: bool, elapsed_ms: float, seq_index: int) -> None:
         try:
             with sqlite3.connect(_DB_PATH) as conn:
                 conn.execute(
@@ -122,9 +127,8 @@ class TelemetryCollector:
                     INSERT INTO tool_calls (tool_name, success, elapsed_ms, session_id, seq_index, timestamp)
                     VALUES (?, ?, ?, ?, ?, ?)
                     """,
-                    (tool_name, success, elapsed_ms, self._session_id, self._seq_index, time.time()),
+                    (tool_name, success, elapsed_ms, self._session_id, seq_index, time.time()),
                 )
-            self._seq_index += 1
         except sqlite3.Error as exc:
             logger.warning("Failed to persist telemetry: %s", exc)
 

@@ -154,7 +154,8 @@ class MCPServer:
 
         now = time.time()
         last_time = self._last_progress_time.get(progress_token, 0.0)
-        if (now - last_time) * 1000 < self._progress_rate_limit_ms:
+        is_complete = total is not None and progress >= total
+        if not is_complete and (now - last_time) * 1000 < self._progress_rate_limit_ms:
             return False
 
         if message is not None and len(message) > self._progress_message_max_chars:
