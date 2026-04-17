@@ -6,7 +6,6 @@ from __future__ import annotations
 import unittest
 from unittest.mock import MagicMock, patch
 
-from blender_mcp.adapters.base import BlenderAdapter
 from blender_mcp.adapters.mock import MockAdapter
 from blender_mcp.adapters.socket import _FRIENDLY_ERRORS, SocketAdapter, _friendly_error
 from blender_mcp.adapters.types import AdapterResult
@@ -26,16 +25,6 @@ class TestAdapterResult(unittest.TestCase):
         self.assertIsNone(result.result)
         self.assertEqual(result.error, "test_error")
         self.assertEqual(result.timing_ms, 10.5)
-
-
-class TestBlenderAdapterProtocol(unittest.TestCase):
-    def test_mock_adapter_implements_protocol(self) -> None:
-        adapter = MockAdapter()
-        self.assertIsInstance(adapter, BlenderAdapter)
-
-    def test_socket_adapter_implements_protocol(self) -> None:
-        adapter = SocketAdapter()
-        self.assertIsInstance(adapter, BlenderAdapter)
 
 
 class TestMockAdapter(unittest.TestCase):

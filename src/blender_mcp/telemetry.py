@@ -19,10 +19,9 @@ import sqlite3
 import threading
 import time
 import uuid
-from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any, Callable, Dict
 
 logger = logging.getLogger(__name__)
 
@@ -151,101 +150,6 @@ class TelemetryCollector:
                 for name, m in sorted(self.tools.items())
             },
         }
-
-    def summary_from_db(self) -> Dict[str, Any]:
-        """Return a summary from persisted SQLite data."""
-        if not _DB_PATH.exists():
-            return {"total_calls": 0, "tools": {}}
-        try:
-            with sqlite3.connect(_DB_PATH) as conn:
-                conn.row_factory = sqlite3.Row
-                rows = conn.execute(
-                    """
-                    SELECT tool_name,
-                           COUNT(*) as calls,
-                           SUM(CASE WHEN success THEN 1 ELSE 0 END) as success,
-                           SUM(CASE WHEN NOT success THEN 1 ELSE 0 END) as failures,
-                           AVG(elapsed_ms) as avg_ms,
-                           MIN(elapsed_ms) as min_ms,
-                           MAX(elapsed_ms) as max_ms
-                    FROM tool_calls
-                    GROUP BY tool_name
-                    ORDER BY calls DESC
-                    """
-                ).fetchall()
-                total = sum(r["calls"] for r in rows)
-                return {
-                    "total_calls": total,
-                    "tools": {
-                        r["tool_name"]: {
-                            "calls": r["calls"],
-                            "success": r["success"],
-                            "failures": r["failures"],
-                            "avg_ms": round(r["avg_ms"], 1) if r["avg_ms"] else 0,
-                            "min_ms": round(r["min_ms"], 1) if r["min_ms"] else 0,
-                            "max_ms": round(r["max_ms"], 1) if r["max_ms"] else 0,
-                        }
-                        for r in rows
-                    },
-                }
-        except sqlite3.Error as exc:
-            logger.warning("Failed to read telemetry DB: %s", exc)
-            return {"total_calls": 0, "tools": {}}
-
-    def frequent_sequences(
-        self, min_length: int = 2, max_length: int = 5, min_count: int = 3
-    ) -> List[Tuple[Tuple[str, ...], int]]:
-        """Find frequent tool call sequences from persisted data."""
-        if not _DB_PATH.exists():
-            return []
-        try:
-            with sqlite3.connect(_DB_PATH) as conn:
-                conn.row_factory = sqlite3.Row
-                rows = conn.execute(
-                    """
-                    SELECT session_id, seq_index, tool_name
-                    FROM tool_calls
-                    ORDER BY session_id, seq_index
-                    """
-                ).fetchall()
-
-            sessions: Dict[str, List[str]] = {}
-            for row in rows:
-                sid = row["session_id"]
-                if sid not in sessions:
-                    sessions[sid] = []
-                sessions[sid].append(row["tool_name"])
-
-            ngram_counts: Counter = Counter()
-            for session_tools in sessions.values():
-                for n in range(min_length, max_length + 1):
-                    for i in range(len(session_tools) - n + 1):
-                        ngram = tuple(session_tools[i : i + n])
-                        ngram_counts[ngram] += 1
-
-            return [(seq, count) for seq, count in ngram_counts.most_common(20) if count >= min_count]
-        except sqlite3.Error as exc:
-            logger.warning("Failed to analyze sequences: %s", exc)
-            return []
-
-    def recommend_next_tool(self, recent_tools: List[str], top_n: int = 3) -> List[Tuple[str, int]]:
-        """Recommend next tool based on historical sequences."""
-        if len(recent_tools) < 1 or not _DB_PATH.exists():
-            return []
-        try:
-            sequences = self.frequent_sequences(min_length=2, max_length=5, min_count=2)
-            candidates: Counter = Counter()
-            for seq, count in sequences:
-                for i in range(len(seq) - 1):
-                    if seq[i] == recent_tools[-1]:
-                        candidates[seq[i + 1]] += count
-                    if len(recent_tools) >= 2 and i < len(seq) - 2:
-                        if seq[i] == recent_tools[-2] and seq[i + 1] == recent_tools[-1]:
-                            candidates[seq[i + 2]] += count * 2
-            return candidates.most_common(top_n)
-        except Exception as exc:
-            logger.warning("Failed to recommend: %s", exc)
-            return []
 
     def reset(self) -> None:
         """Reset all collected metrics."""
