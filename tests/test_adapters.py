@@ -121,7 +121,7 @@ class TestSocketAdapterRetry(unittest.TestCase):
         success = AdapterResult(ok=True, result={"ok": True}, timing_ms=2.0)
         mock_exec.side_effect = [fail, success]
 
-        adapter = SocketAdapter(max_retries=3, retry_base_delay=0.01)
+        adapter = SocketAdapter(max_retries=3, retry_base_delay=0.01, use_persistent_connection=False)
         result = adapter.execute("blender.get_scene", {})
         self.assertTrue(result.ok)
         self.assertEqual(mock_exec.call_count, 2)
@@ -132,7 +132,7 @@ class TestSocketAdapterRetry(unittest.TestCase):
         success = AdapterResult(ok=True, result={"ok": True}, timing_ms=2.0)
         mock_exec.side_effect = [fail, fail, success]
 
-        adapter = SocketAdapter(max_retries=3, retry_base_delay=0.01)
+        adapter = SocketAdapter(max_retries=3, retry_base_delay=0.01, use_persistent_connection=False)
         result = adapter.execute("blender.get_scene", {})
         self.assertTrue(result.ok)
         self.assertEqual(mock_exec.call_count, 3)
@@ -142,7 +142,7 @@ class TestSocketAdapterRetry(unittest.TestCase):
         fail = AdapterResult(ok=False, error="adapter_invalid_response", timing_ms=1.0)
         mock_exec.return_value = fail
 
-        adapter = SocketAdapter(max_retries=3, retry_base_delay=0.01)
+        adapter = SocketAdapter(max_retries=3, retry_base_delay=0.01, use_persistent_connection=False)
         result = adapter.execute("blender.get_scene", {})
         self.assertFalse(result.ok)
         self.assertEqual(mock_exec.call_count, 1)
@@ -152,7 +152,7 @@ class TestSocketAdapterRetry(unittest.TestCase):
         fail = AdapterResult(ok=False, error="adapter_unavailable", timing_ms=1.0)
         mock_exec.return_value = fail
 
-        adapter = SocketAdapter(max_retries=3, retry_base_delay=0.01)
+        adapter = SocketAdapter(max_retries=3, retry_base_delay=0.01, use_persistent_connection=False)
         result = adapter.execute("blender.get_scene", {})
         self.assertFalse(result.ok)
         self.assertEqual(result.error, _FRIENDLY_ERRORS["adapter_unavailable"])
@@ -163,7 +163,7 @@ class TestSocketAdapterRetry(unittest.TestCase):
         success = AdapterResult(ok=True, result={"data": 1}, timing_ms=5.0)
         mock_exec.return_value = success
 
-        adapter = SocketAdapter(max_retries=3, retry_base_delay=0.01)
+        adapter = SocketAdapter(max_retries=3, retry_base_delay=0.01, use_persistent_connection=False)
         result = adapter.execute("blender.get_scene", {})
         self.assertTrue(result.ok)
         self.assertEqual(mock_exec.call_count, 1)

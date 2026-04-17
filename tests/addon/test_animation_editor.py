@@ -30,16 +30,32 @@ def _mock_fcurve(data_path: str, array_index: int, keyframe_points: list | None 
     return fc
 
 
+def _mock_fcurves_collection(fcurves: list):
+    """Create a mock fcurves collection with .find() method."""
+    fcurves_mock = MagicMock()
+    fcurves_mock.__iter__ = lambda self: iter(fcurves)
+    fcurves_mock.__len__ = lambda self: len(fcurves)
+
+    def find(data_path: str, index: int = -1):
+        for fc in fcurves:
+            if fc.data_path == data_path and (index == -1 or fc.array_index == index):
+                return fc
+        return None
+
+    fcurves_mock.find = find
+    return fcurves_mock
+
+
 def _mock_action_legacy(fcurves: list):
     action = MagicMock()
-    action.fcurves = fcurves
+    action.fcurves = _mock_fcurves_collection(fcurves)
     del action.layers
     return action
 
 
 def _mock_action_layered(fcurves: list):
     cbag = MagicMock()
-    cbag.fcurves = fcurves
+    cbag.fcurves = _mock_fcurves_collection(fcurves)
     strip = MagicMock()
     strip.channelbags = [cbag]
     layer = MagicMock()
@@ -139,9 +155,7 @@ class TestInsertKeyframe(unittest.TestCase):
         self.assertTrue(result["ok"])
         self.assertEqual(result["result"]["action"], "insert_keyframe")
         self.assertEqual(result["result"]["frame"], 10)
-        obj.keyframe_insert.assert_called_once_with(
-            data_path="location", index=-1, frame=10
-        )
+        obj.keyframe_insert.assert_called_once_with(data_path="location", index=-1, frame=10)
 
     @patch("blender_mcp_addon.handlers.animation.editor.check_bpy_available")
     def test_missing_object(self, mock_check):
@@ -193,9 +207,7 @@ class TestDeleteKeyframe(unittest.TestCase):
         )
         self.assertTrue(result["ok"])
         self.assertEqual(result["result"]["action"], "delete_keyframe")
-        obj.keyframe_delete.assert_called_once_with(
-            data_path="location", index=-1, frame=10
-        )
+        obj.keyframe_delete.assert_called_once_with(data_path="location", index=-1, frame=10)
 
 
 class TestModifyKeyframe(unittest.TestCase):

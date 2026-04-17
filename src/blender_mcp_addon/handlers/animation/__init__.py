@@ -5,14 +5,6 @@ from __future__ import annotations
 
 from typing import Any
 
-# Cache Blender version check at module level to avoid repeated hasattr calls
-try:
-    import bpy  # type: ignore
-
-    _USE_LAYERED_FCURVES = bpy.app.version >= (5, 0)
-except ImportError:
-    _USE_LAYERED_FCURVES = False
-
 
 def iter_fcurves(action: Any):
     """Yield F-Curves from an action, supporting both legacy and Blender 5.0+ layered API.
@@ -24,8 +16,8 @@ def iter_fcurves(action: Any):
     Args:
         action: A bpy.types.Action (or similar) object.
     """
-    # Blender 5.0+ layered API
-    if _USE_LAYERED_FCURVES:
+    # Runtime check: Blender 5.0+ layered API
+    if hasattr(action, "layers"):
         for layer in action.layers:
             for strip in layer.strips:
                 for cbag in strip.channelbags:

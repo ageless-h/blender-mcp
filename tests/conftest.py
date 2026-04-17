@@ -5,6 +5,7 @@ This module provides centralized path setup so that individual test files
 do not need to manipulate sys.path. Simply importing from conftest or
 running via pytest automatically ensures the src/ directory is on the path.
 """
+
 from __future__ import annotations
 
 import os
@@ -21,6 +22,10 @@ TESTS = ROOT / "tests"
 # Ensure src/ is on sys.path for all tests
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
+
+# Ensure tests/ is on sys.path for fake_bpy imports
+if str(TESTS) not in sys.path:
+    sys.path.insert(0, str(TESTS))
 
 
 @pytest.fixture(scope="session")

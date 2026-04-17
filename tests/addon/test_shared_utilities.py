@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Unit tests for shared utility functions."""
+
 from __future__ import annotations
 
 import unittest
@@ -24,6 +25,7 @@ class TestCreateMeshPrimitive(unittest.TestCase):
 
         with patch.dict("sys.modules", {"bmesh": mock_bmesh}):
             from blender_mcp_addon.handlers.shared import create_mesh_primitive
+
             create_mesh_primitive(mock_mesh, "cube", {"size": 3.0})
 
         mock_bmesh.ops.create_cube.assert_called_once_with(mock_bm, size=3.0)
@@ -39,6 +41,7 @@ class TestCreateMeshPrimitive(unittest.TestCase):
 
         with patch.dict("sys.modules", {"bmesh": mock_bmesh}):
             from blender_mcp_addon.handlers.shared import create_mesh_primitive
+
             create_mesh_primitive(mock_mesh, "sphere", {"size": 4.0})
 
         call_kwargs = mock_bmesh.ops.create_uvsphere.call_args
@@ -51,6 +54,7 @@ class TestCreateMeshPrimitive(unittest.TestCase):
 
         with patch.dict("sys.modules", {"bmesh": mock_bmesh}):
             from blender_mcp_addon.handlers.shared import create_mesh_primitive
+
             create_mesh_primitive(mock_mesh, "sphere", {"size": 4.0, "radius": 1.5})
 
         call_kwargs = mock_bmesh.ops.create_uvsphere.call_args
@@ -63,6 +67,7 @@ class TestCreateMeshPrimitive(unittest.TestCase):
 
         with patch.dict("sys.modules", {"bmesh": mock_bmesh}):
             from blender_mcp_addon.handlers.shared import create_mesh_primitive
+
             create_mesh_primitive(mock_mesh, "cylinder", {"segments": 16, "depth": 3.0, "radius": 0.5})
 
         call_kwargs = mock_bmesh.ops.create_cone.call_args[1]
@@ -77,6 +82,7 @@ class TestCreateMeshPrimitive(unittest.TestCase):
 
         with patch.dict("sys.modules", {"bmesh": mock_bmesh}):
             from blender_mcp_addon.handlers.shared import create_mesh_primitive
+
             create_mesh_primitive(mock_mesh, "cone", {"radius": 1.0})
 
         call_kwargs = mock_bmesh.ops.create_cone.call_args[1]
@@ -90,6 +96,7 @@ class TestCreateMeshPrimitive(unittest.TestCase):
 
         with patch.dict("sys.modules", {"bmesh": mock_bmesh}):
             from blender_mcp_addon.handlers.shared import create_mesh_primitive
+
             create_mesh_primitive(mock_mesh, "plane", {"size": 2.0})
 
         mock_bmesh.ops.create_grid.assert_called_once()
@@ -101,6 +108,7 @@ class TestCreateMeshPrimitive(unittest.TestCase):
 
         with patch.dict("sys.modules", {"bmesh": mock_bmesh}):
             from blender_mcp_addon.handlers.shared import create_mesh_primitive
+
             create_mesh_primitive(mock_mesh, "icosphere", {"subdivisions": 3, "radius": 2.0})
 
         call_kwargs = mock_bmesh.ops.create_icosphere.call_args[1]
@@ -111,13 +119,21 @@ class TestCreateMeshPrimitive(unittest.TestCase):
         """Torus creates torus geometry."""
         mock_bmesh, mock_bm = self._make_mock_bmesh_module()
         mock_mesh = MagicMock()
+        mock_bpy = MagicMock()
 
-        with patch.dict("sys.modules", {"bmesh": mock_bmesh}):
+        with patch.dict("sys.modules", {"bmesh": mock_bmesh, "bpy": mock_bpy}):
             from blender_mcp_addon.handlers.shared import create_mesh_primitive
-            create_mesh_primitive(mock_mesh, "torus", {
-                "major_radius": 2.0, "minor_radius": 0.5,
-                "major_segments": 24, "minor_segments": 8,
-            })
+
+            create_mesh_primitive(
+                mock_mesh,
+                "torus",
+                {
+                    "major_radius": 2.0,
+                    "minor_radius": 0.5,
+                    "major_segments": 24,
+                    "minor_segments": 8,
+                },
+            )
 
         call_kwargs = mock_bmesh.ops.create_torus.call_args[1]
         self.assertEqual(call_kwargs["major_radius"], 2.0)
@@ -130,6 +146,7 @@ class TestCreateMeshPrimitive(unittest.TestCase):
 
         with patch.dict("sys.modules", {"bmesh": mock_bmesh}):
             from blender_mcp_addon.handlers.shared import create_mesh_primitive
+
             with self.assertRaises(ValueError) as ctx:
                 create_mesh_primitive(mock_mesh, "dodecahedron", {})
             self.assertIn("dodecahedron", str(ctx.exception))
@@ -145,6 +162,7 @@ class TestCreateMeshPrimitive(unittest.TestCase):
 
         with patch.dict("sys.modules", {"bmesh": mock_bmesh}):
             from blender_mcp_addon.handlers.shared import create_mesh_primitive
+
             with self.assertRaises(RuntimeError):
                 create_mesh_primitive(mock_mesh, "cube", {})
 
@@ -157,6 +175,7 @@ class TestCreateMeshPrimitive(unittest.TestCase):
 
         with patch.dict("sys.modules", {"bmesh": mock_bmesh}):
             from blender_mcp_addon.handlers.shared import create_mesh_primitive
+
             create_mesh_primitive(mock_mesh, "CUBE", {"size": 1.0})
 
         mock_bmesh.ops.create_cube.assert_called_once()
@@ -179,6 +198,7 @@ class TestLinkDataToScene(unittest.TestCase):
 
         with patch.dict("sys.modules", {"bpy": mock_bpy}):
             from blender_mcp_addon.handlers.shared import link_data_to_scene
+
             data_block = MagicMock()
             data_block.name = "MyLight"
             result = link_data_to_scene(data_block, {})
@@ -193,6 +213,7 @@ class TestLinkDataToScene(unittest.TestCase):
 
         with patch.dict("sys.modules", {"bpy": mock_bpy}):
             from blender_mcp_addon.handlers.shared import link_data_to_scene
+
             data_block = MagicMock()
             data_block.name = "Data"
             link_data_to_scene(data_block, {"object_name": "CustomName"})
@@ -207,6 +228,7 @@ class TestLinkDataToScene(unittest.TestCase):
 
         with patch.dict("sys.modules", {"bpy": mock_bpy}):
             from blender_mcp_addon.handlers.shared import link_data_to_scene
+
             data_block = MagicMock()
             data_block.name = "L"
             link_data_to_scene(data_block, {"collection": "Lights"})
@@ -221,6 +243,7 @@ class TestLinkDataToScene(unittest.TestCase):
 
         with patch.dict("sys.modules", {"bpy": mock_bpy}):
             from blender_mcp_addon.handlers.shared import link_data_to_scene
+
             data_block = MagicMock()
             data_block.name = "D"
             link_data_to_scene(data_block, {"collection": "NonExistent"})
@@ -233,6 +256,7 @@ class TestLinkDataToScene(unittest.TestCase):
 
         with patch.dict("sys.modules", {"bpy": mock_bpy}):
             from blender_mcp_addon.handlers.shared import link_data_to_scene
+
             data_block = MagicMock()
             data_block.name = "D"
             link_data_to_scene(data_block, {"location": [1, 2, 3]})
@@ -245,6 +269,7 @@ class TestLinkDataToScene(unittest.TestCase):
 
         with patch.dict("sys.modules", {"bpy": mock_bpy}):
             from blender_mcp_addon.handlers.shared import link_data_to_scene
+
             data_block = MagicMock()
             data_block.name = "D"
             link_data_to_scene(data_block, {"rotation": [0.1, 0.2, 0.3]})
@@ -257,6 +282,7 @@ class TestLinkDataToScene(unittest.TestCase):
 
         with patch.dict("sys.modules", {"bpy": mock_bpy}):
             from blender_mcp_addon.handlers.shared import link_data_to_scene
+
             data_block = MagicMock()
             data_block.name = "D"
             result = link_data_to_scene(data_block, {})
@@ -295,6 +321,7 @@ class TestFindReferencingObjects(unittest.TestCase):
 
         with patch.dict("sys.modules", {"bpy": mock_bpy}):
             from blender_mcp_addon.handlers.shared import find_referencing_objects
+
             result = find_referencing_objects(data_block, "LIGHT")
 
         self.assertEqual(result["objects"], ["Light.001", "Light.002"])
@@ -310,6 +337,7 @@ class TestFindReferencingObjects(unittest.TestCase):
 
         with patch.dict("sys.modules", {"bpy": mock_bpy}):
             from blender_mcp_addon.handlers.shared import find_referencing_objects
+
             result = find_referencing_objects(data_block, "LIGHT")
 
         self.assertEqual(result, {"objects": [], "collections": []})
@@ -328,6 +356,7 @@ class TestFindReferencingObjects(unittest.TestCase):
 
         with patch.dict("sys.modules", {"bpy": mock_bpy}):
             from blender_mcp_addon.handlers.shared import find_referencing_objects
+
             result = find_referencing_objects(data_block, "LIGHT")
 
         self.assertEqual(result["collections"].count("Shared"), 1)
@@ -344,6 +373,7 @@ class TestFindReferencingObjects(unittest.TestCase):
 
         with patch.dict("sys.modules", {"bpy": mock_bpy}):
             from blender_mcp_addon.handlers.shared import find_referencing_objects
+
             result = find_referencing_objects(data_block, "CAMERA")
 
         self.assertEqual(result["objects"], ["Cam"])
