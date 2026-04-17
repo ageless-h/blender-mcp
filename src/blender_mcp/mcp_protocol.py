@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 """MCP protocol adapter for Blender MCP server.
 
-Implements the MCP JSON-RPC protocol with:
-- 26 tools with flat parameters, hand-written schemas, and annotations
-- 10 prompts (7 workflow + 3 strategy) for LLM guidance
+Implements the MCP JSON-RPC protocol with 29 tools.
 """
 
 from __future__ import annotations
@@ -38,10 +36,7 @@ from blender_mcp.adapters.mock import MockAdapter
 from blender_mcp.adapters.socket import SocketAdapter
 from blender_mcp import __version__ as pkg_version
 from blender_mcp.schemas.tools import TOOL_DEFINITIONS, get_tool
-from blender_mcp.prompts.registry import (
-    BLENDER_PROMPTS,
-    get_prompt_messages,
-)
+from blender_mcp.prompts.registry import BLENDER_PROMPTS
 from blender_mcp.security.allowlist import Allowlist
 from blender_mcp.security.audit import (
     AuditEvent,
@@ -55,7 +50,7 @@ from blender_mcp.telemetry import telemetry_tool
 
 @dataclass
 class MCPServer:
-    """MCP protocol server with 26 tools, 10 prompts, and security pipeline.
+    """MCP protocol server with 29 tools and security pipeline.
 
     Security checks run in order on every tools/call:
       1. Allowlist  — is this capability permitted?
@@ -413,33 +408,12 @@ class MCPServer:
             }
 
     def prompts_list(self) -> dict[str, Any]:
-        """List all available workflow prompts."""
-        prompts = []
-        for prompt_def in BLENDER_PROMPTS.values():
-            prompts.append(
-                {
-                    "name": prompt_def["name"],
-                    "description": prompt_def.get("description", ""),
-                    "arguments": prompt_def.get("arguments", []),
-                }
-            )
-        return {"prompts": prompts}
+        return {"prompts": []}
 
     def prompts_get(self, name: str, arguments: dict[str, str] | None = None) -> dict[str, Any]:
-        """Get a specific prompt with generated messages."""
-        if not name or not isinstance(name, str):
-            return {
-                "error": {
-                    "code": -32602,
-                    "message": "'name' is required and must be a string",
-                },
-            }
-        result = get_prompt_messages(name, arguments)
-        if result is None:
-            return {
-                "error": {"code": -32602, "message": f"Prompt '{name}' not found"},
-            }
-        return result
+        return {
+            "error": {"code": -32602, "message": f"Prompt '{name}' not found. No prompts are defined."},
+        }
 
     def handle_request(self, request: dict[str, Any]) -> dict[str, Any] | None:
         """Handle an MCP JSON-RPC request.
@@ -518,7 +492,6 @@ class MCPServer:
                     },
                     "capabilities": {
                         "tools": {},
-                        "prompts": {"listChanged": False},
                     },
                 },
             }

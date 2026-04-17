@@ -49,15 +49,11 @@ class TestWorkflowScenarios(unittest.TestCase):
         )
         self.assertNotIn("isError", r2["result"])
 
-    def test_prompts_workflow(self) -> None:
-        """Test prompts list then get."""
+    def test_prompts_empty(self):
+        """Test that prompts/list returns empty list (prompts removed)."""
         r1 = self._rpc("prompts/list")
         self.assertIn("prompts", r1["result"])
-        names = [p["name"] for p in r1["result"]["prompts"]]
-        self.assertIn("blender-diagnose", names)
-
-        r2 = self._rpc("prompts/get", {"name": "blender-diagnose"})
-        self.assertIn("messages", r2["result"])
+        self.assertEqual(len(r1["result"]["prompts"]), 0)
 
 
 if __name__ == "__main__":

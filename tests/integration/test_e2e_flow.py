@@ -49,13 +49,16 @@ class TestE2EFlow(unittest.TestCase):
         resp = self._rpc("tools/call", {"name": "nonexistent", "arguments": {}}, 6)
         self.assertTrue(resp["result"]["isError"])
 
-    def test_prompts_list_then_get(self):
+    def test_prompts_list_empty(self):
+        """Test that prompts/list returns empty list (prompts removed)."""
         r1 = self._rpc("prompts/list", {}, 7)
         self.assertIn("prompts", r1["result"])
-        names = [p["name"] for p in r1["result"]["prompts"]]
-        self.assertIn("blender-diagnose", names)
+        self.assertEqual(len(r1["result"]["prompts"]), 0)
+
+    def test_prompts_get_returns_error(self):
+        """Test that prompts/get returns error (prompts removed)."""
         r2 = self._rpc("prompts/get", {"name": "blender-diagnose"}, 8)
-        self.assertIn("messages", r2["result"])
+        self.assertIn("error", r2)
 
     def test_unknown_tool_returns_error(self):
         resp = self._rpc("tools/call", {"name": "data.read", "arguments": {}}, 9)

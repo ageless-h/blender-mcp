@@ -267,15 +267,15 @@ class MCPRegistrationTest(unittest.TestCase):
                 tool["annotations"]["idempotentHint"], f"Perception tool '{name}' should have idempotentHint=true"
             )
 
-    def test_initialize_includes_prompts_capability(self):
-        """Test that initialize advertises prompts capability."""
+    def test_initialize_no_prompts_capability(self):
+        """Test that initialize does not advertise prompts capability (prompts removed)."""
         response = self._initialize()
         result = response["result"]
         capabilities = result["capabilities"]
-        self.assertIn("prompts", capabilities, "Should advertise prompts capability")
+        self.assertNotIn("prompts", capabilities, "Should not advertise prompts capability")
 
-    def test_prompts_list(self):
-        """Test that prompts/list returns 13 prompts."""
+    def test_prompts_list_empty(self):
+        """Test that prompts/list returns empty list (prompts removed)."""
         request = {
             "jsonrpc": "2.0",
             "id": 10,
@@ -285,28 +285,10 @@ class MCPRegistrationTest(unittest.TestCase):
         response = self._send_request(request)
         self.assertIn("result", response)
         prompts = response["result"]["prompts"]
-        self.assertEqual(len(prompts), 13, "Should have 13 prompts (7 workflow + 3 strategy + 3 domain)")
+        self.assertEqual(len(prompts), 0, "Should have 0 prompts (all removed)")
 
-        prompt_names = {p["name"] for p in prompts}
-        expected = {
-            "blender-scene-setup",
-            "blender-material-create",
-            "blender-model-asset",
-            "blender-animate",
-            "blender-composite",
-            "blender-render-output",
-            "blender-diagnose",
-            "blender-usage-strategy",
-            "blender-resource-strategy",
-            "blender-debugging-strategy",
-            "blender-uv-texturing",
-            "blender-rigging",
-            "blender-physics",
-        }
-        self.assertEqual(prompt_names, expected)
-
-    def test_prompts_get(self):
-        """Test that prompts/get returns structured messages."""
+    def test_prompts_get_returns_error(self):
+        """Test that prompts/get returns error (prompts removed)."""
         request = {
             "jsonrpc": "2.0",
             "id": 11,
@@ -316,11 +298,8 @@ class MCPRegistrationTest(unittest.TestCase):
             },
         }
         response = self._send_request(request)
-        self.assertIn("result", response)
-        result = response["result"]
-        self.assertIn("messages", result)
-        self.assertGreater(len(result["messages"]), 0)
-        self.assertEqual(result["messages"][0]["role"], "user")
+        self.assertIn("error", response)
+        self.assertIn("not found", response["error"]["message"].lower())
 
     def test_tool_descriptions_have_cross_references(self):
         """Test that tool descriptions include cross-reference guidance."""

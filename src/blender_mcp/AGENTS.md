@@ -5,7 +5,7 @@ Published to PyPI as `ageless-blender-mcp`. Standalone MCP server (stdio/SSE) th
 ## STRUCTURE
 
 ```
-mcp_protocol.py       # MCPServer — entry point, run_mcp_server(), 29 tools, 13 prompts
+mcp_protocol.py       # MCPServer — entry point, run_mcp_server(), 29 tools
 schemas/tools.py      # TOOL_DEFINITIONS list, _tool() helper, _vec3() fragments
 adapters/
   base.py             # Adapter ABC
@@ -18,7 +18,7 @@ security/
   guardrails.py       # Input validation
   rate_limit.py       # Per-client rate limiting
   audit.py            # JsonFileAuditLogger + MemoryAuditLogger
-prompts/registry.py   # 13 prompts (7 workflow + 3 strategy + 3 extended) with argument schemas
+prompts/registry.py   # Empty prompt registry (prompts removed)
 telemetry.py          # Opt-in telemetry tool
 ```
 
@@ -29,7 +29,6 @@ telemetry.py          # Opt-in telemetry tool
 | Add a new tool | `schemas/tools.py` | `_tool()` helper → `TOOL_DEFINITIONS` list |
 | Change adapter behavior | `adapters/socket.py` or `mock.py` | Both implement `Adapter` ABC from `base.py` |
 | Add security rule | `security/guardrails.py` | Pipeline: Allowlist → Guardrails → RateLimiter → Audit |
-| Add MCP prompt | `prompts/registry.py` | Dict entry with `name`, `title`, `description`, `arguments` |
 | Debug tool dispatch | `mcp_protocol.py` | `_handle_tool_call()` method |
 
 ## CONVENTIONS
