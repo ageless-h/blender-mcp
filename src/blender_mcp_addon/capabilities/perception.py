@@ -72,18 +72,19 @@ def _handle_get_materials(payload: dict[str, Any], started: float) -> dict[str, 
 
 def _handle_get_scene(payload: dict[str, Any], started: float) -> dict[str, Any]:
     include = payload.get("include", ["stats", "render", "timeline"])
+    include_set = set(include) if not isinstance(include, set) else include
     result: dict[str, Any] = {}
 
     batch_types = []
-    if any(s in include for s in ("stats", "render", "timeline")):
+    if include_set & {"stats", "render", "timeline"}:
         batch_types.append("scene_stats")
-    if "world" in include:
+    if "world" in include_set:
         batch_types.append("world")
-    if "version" in include:
+    if "version" in include_set:
         batch_types.append("version")
-    if "memory" in include:
+    if "memory" in include_set:
         batch_types.append("memory")
-    if "depsgraph" in include:
+    if "depsgraph" in include_set:
         batch_types.append("depsgraph")
 
     if batch_types:
@@ -94,7 +95,7 @@ def _handle_get_scene(payload: dict[str, Any], started: float) -> dict[str, Any]
             if "scene_stats" in batch_result:
                 stats = batch_result["scene_stats"]
                 if isinstance(stats, dict) and "error" not in stats:
-                    if "stats" in include:
+                    if "stats" in include_set:
                         result["stats"] = {
                             "scene_name": stats.get("scene_name"),
                             "object_count": stats.get("object_count"),
@@ -103,7 +104,7 @@ def _handle_get_scene(payload: dict[str, Any], started: float) -> dict[str, Any]
                             "edge_count": stats.get("edge_count"),
                             "face_count": stats.get("face_count"),
                         }
-                    if "render" in include:
+                    if "render" in include_set:
                         result["render"] = {
                             "engine": stats.get("render_engine"),
                             "fps": stats.get("fps"),
@@ -112,29 +113,29 @@ def _handle_get_scene(payload: dict[str, Any], started: float) -> dict[str, Any]
                             "resolution_y": stats.get("resolution_y"),
                             "resolution_percentage": stats.get("resolution_percentage"),
                         }
-                    if "timeline" in include:
+                    if "timeline" in include_set:
                         result["timeline"] = {
                             "frame_start": stats.get("frame_start"),
                             "frame_end": stats.get("frame_end"),
                             "frame_current": stats.get("frame_current"),
                         }
 
-            if "world" in include and "world" in batch_result:
+            if "world" in include_set and "world" in batch_result:
                 world_data = batch_result["world"]
                 if isinstance(world_data, dict) and "error" not in world_data:
                     result["world"] = world_data
 
-            if "version" in include and "version" in batch_result:
+            if "version" in include_set and "version" in batch_result:
                 version_data = batch_result["version"]
                 if isinstance(version_data, dict) and "error" not in version_data:
                     result["version"] = version_data
 
-            if "memory" in include and "memory" in batch_result:
+            if "memory" in include_set and "memory" in batch_result:
                 memory_data = batch_result["memory"]
                 if isinstance(memory_data, dict) and "error" not in memory_data:
                     result["memory"] = memory_data
 
-            if "depsgraph" in include and "depsgraph" in batch_result:
+            if "depsgraph" in include_set and "depsgraph" in batch_result:
                 depsgraph_data = batch_result["depsgraph"]
                 if isinstance(depsgraph_data, dict) and "error" not in depsgraph_data:
                     result["depsgraph"] = depsgraph_data

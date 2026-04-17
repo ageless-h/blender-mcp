@@ -10,6 +10,18 @@ from ..handlers.registry import HandlerRegistry
 from ..handlers.response import _error, _ok, not_found_error, operation_failed_error
 from ..handlers.types import DataType
 
+# Module-level constant for PBR material keys - avoids recreating tuple on every call
+_PBR_KEYS = (
+    "base_color",
+    "metallic",
+    "roughness",
+    "specular",
+    "alpha",
+    "emission_color",
+    "emission_strength",
+    "use_fake_user",
+)
+
 
 def _handle_create_object(payload: dict[str, Any], started: float) -> dict[str, Any]:
     obj_name = payload.get("name", "")
@@ -88,16 +100,6 @@ def _handle_modify_object(payload: dict[str, Any], started: float) -> dict[str, 
 def _handle_manage_material(payload: dict[str, Any], started: float) -> dict[str, Any]:
     action = payload.get("action", "")
     name = payload.get("name", "")
-    _PBR_KEYS = (
-        "base_color",
-        "metallic",
-        "roughness",
-        "specular",
-        "alpha",
-        "emission_color",
-        "emission_strength",
-        "use_fake_user",
-    )
     handler = HandlerRegistry.get(DataType.MATERIAL)
     if handler is None:
         return _error(code="unsupported_type", message="material handler not available", started=started)
