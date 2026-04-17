@@ -5,8 +5,8 @@ from __future__ import annotations
 
 import unittest
 
-from blender_mcp.catalog.catalog import minimal_capability_set, new_tool_scope_map
 from blender_mcp.schemas.tools import TOOL_DEFINITIONS
+from catalog_utils.catalog import minimal_capability_set, new_tool_scope_map
 
 
 class TestCatalogSchemaSync(unittest.TestCase):

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import unittest
 
-from blender_mcp.catalog.catalog import (
+from catalog_utils.catalog import (
     CapabilityCatalog,
     CapabilityMeta,
     capability_availability,
