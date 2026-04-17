@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..handlers.error_codes import ErrorCode
 from ..handlers.operator import operator_execute
 from ..handlers.registry import HandlerRegistry
 from ..handlers.response import _error, _ok, not_found_error, operation_failed_error
@@ -26,11 +27,11 @@ _PBR_KEYS = (
 def _handle_create_object(payload: dict[str, Any], started: float) -> dict[str, Any]:
     obj_name = payload.get("name", "")
     if not obj_name:
-        return _error(code="invalid_params", message="'name' parameter is required", started=started)
+        return _error(code=ErrorCode.INVALID_PARAMS, message="'name' parameter is required", started=started)
     params = {k: v for k, v in payload.items() if k != "name"}
     handler = HandlerRegistry.get(DataType.OBJECT)
     if handler is None:
-        return _error(code="unsupported_type", message="object handler not available", started=started)
+        return _error(code=ErrorCode.UNSUPPORTED_TYPE, message="object handler not available", started=started)
     try:
         return _ok(result=handler.create(obj_name, params), started=started)
     except (AttributeError, KeyError, TypeError, RuntimeError, ValueError) as exc:
@@ -41,7 +42,7 @@ def _handle_modify_object(payload: dict[str, Any], started: float) -> dict[str, 
     obj_name = payload.get("name", "")
     handler = HandlerRegistry.get(DataType.OBJECT)
     if handler is None:
-        return _error(code="unsupported_type", message="object handler not available", started=started)
+        return _error(code=ErrorCode.UNSUPPORTED_TYPE, message="object handler not available", started=started)
     if payload.get("delete"):
         try:
             result = handler.delete(obj_name, {"delete_data": payload.get("delete_data", True)})
@@ -102,7 +103,7 @@ def _handle_manage_material(payload: dict[str, Any], started: float) -> dict[str
     name = payload.get("name", "")
     handler = HandlerRegistry.get(DataType.MATERIAL)
     if handler is None:
-        return _error(code="unsupported_type", message="material handler not available", started=started)
+        return _error(code=ErrorCode.UNSUPPORTED_TYPE, message="material handler not available", started=started)
     try:
         if action == "create":
             mat_params = {k: payload[k] for k in _PBR_KEYS if k in payload}
@@ -134,7 +135,7 @@ def _handle_manage_material(payload: dict[str, Any], started: float) -> dict[str
                 {"slot": payload.get("slot")},
             )
             if "error" in result:
-                return _error(code="link_failed", message=result["error"], started=started)
+                return _error(code=ErrorCode.LINK_FAILED, message=result["error"], started=started)
             result["success"] = True
             return _ok(result=result, started=started)
         else:
@@ -154,7 +155,7 @@ def _handle_manage_modifier(payload: dict[str, Any], started: float) -> dict[str
     mod_name = payload.get("modifier_name", "")
     handler = HandlerRegistry.get(DataType.MODIFIER)
     if handler is None:
-        return _error(code="unsupported_type", message="modifier handler not available", started=started)
+        return _error(code=ErrorCode.UNSUPPORTED_TYPE, message="modifier handler not available", started=started)
     try:
         if action == "add":
             result = handler.create(
@@ -193,7 +194,7 @@ def _handle_manage_modifier(payload: dict[str, Any], started: float) -> dict[str
     except (AttributeError, TypeError, RuntimeError, ValueError) as exc:
         return operation_failed_error("manage_modifier", exc, started)
     return _error(
-        code="invalid_params",
+        code=ErrorCode.INVALID_PARAMS,
         message=f"Unknown modifier action: {action}",
         started=started,
     )
@@ -204,7 +205,7 @@ def _handle_manage_collection(payload: dict[str, Any], started: float) -> dict[s
     col_name = payload.get("collection_name", "")
     handler = HandlerRegistry.get(DataType.COLLECTION)
     if handler is None:
-        return _error(code="unsupported_type", message="collection handler not available", started=started)
+        return _error(code=ErrorCode.UNSUPPORTED_TYPE, message="collection handler not available", started=started)
     try:
         if action == "create":
             col_params: dict[str, Any] = {}
@@ -220,7 +221,7 @@ def _handle_manage_collection(payload: dict[str, Any], started: float) -> dict[s
         elif action in ("link_object", "unlink_object"):
             obj_handler = HandlerRegistry.get(DataType.OBJECT)
             if obj_handler is None:
-                return _error(code="unsupported_type", message="object handler not available", started=started)
+                return _error(code=ErrorCode.UNSUPPORTED_TYPE, message="object handler not available", started=started)
             result = obj_handler.link(
                 payload.get("object_name", ""),
                 DataType.COLLECTION,
@@ -229,7 +230,7 @@ def _handle_manage_collection(payload: dict[str, Any], started: float) -> dict[s
                 {},
             )
             if "error" in result:
-                return _error(code="link_failed", message=result["error"], started=started)
+                return _error(code=ErrorCode.LINK_FAILED, message=result["error"], started=started)
             result["success"] = True
             return _ok(result=result, started=started)
         elif action == "set_visibility":
@@ -250,7 +251,7 @@ def _handle_manage_collection(payload: dict[str, Any], started: float) -> dict[s
                 {},
             )
             if "error" in result:
-                return _error(code="link_failed", message=result["error"], started=started)
+                return _error(code=ErrorCode.LINK_FAILED, message=result["error"], started=started)
             result["success"] = True
             return _ok(result=result, started=started)
     except KeyError:
@@ -258,7 +259,7 @@ def _handle_manage_collection(payload: dict[str, Any], started: float) -> dict[s
     except (AttributeError, TypeError, RuntimeError, ValueError) as exc:
         return operation_failed_error("manage_collection", exc, started)
     return _error(
-        code="invalid_params",
+        code=ErrorCode.INVALID_PARAMS,
         message=f"Unknown collection action: {action}",
         started=started,
     )

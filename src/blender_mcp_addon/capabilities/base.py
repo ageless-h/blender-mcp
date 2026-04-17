@@ -14,6 +14,7 @@ import time
 from typing import Any, Callable
 
 from ..handlers import data as _data_handlers  # noqa: F401 - Import to register handlers
+from ..handlers.error_codes import ErrorCode
 from ..handlers.response import _error
 from .declarative import DECLARATIVE_HANDLERS
 from .fallback import FALLBACK_HANDLERS
@@ -51,7 +52,7 @@ def _dispatch_new_capability(
             payload = {**payload, "_progress_callback": progress_callback}
         return handler(payload, started)
     return _error(
-        code="unsupported_capability",
+        code=ErrorCode.UNSUPPORTED_CAPABILITY,
         message=f"capability '{capability}' not found in handler registry",
         data={"capability": capability},
         started=started,
@@ -105,7 +106,7 @@ def execute_capability(
     try:
         if not isinstance(request, dict):
             return _error(
-                code="invalid_request",
+                code=ErrorCode.INVALID_REQUEST,
                 message="request must be a dict",
                 data={"type": type(request).__name__},
                 started=started,
@@ -114,7 +115,7 @@ def execute_capability(
         capability = request.get("capability")
         if not isinstance(capability, str) or not capability.strip():
             return _error(
-                code="invalid_request",
+                code=ErrorCode.INVALID_REQUEST,
                 message="missing or invalid 'capability'",
                 data={"capability": capability},
                 started=started,
@@ -125,7 +126,7 @@ def execute_capability(
             payload = {}
         if not isinstance(payload, dict):
             return _error(
-                code="invalid_request",
+                code=ErrorCode.INVALID_REQUEST,
                 message="'payload' must be a dict",
                 data={"type": type(payload).__name__},
                 started=started,
@@ -137,7 +138,7 @@ def execute_capability(
             return _dispatch_new_capability(capability, payload, started, progress_callback)
 
         return _error(
-            code="unsupported_capability",
+            code=ErrorCode.UNSUPPORTED_CAPABILITY,
             message="capability is not supported by this addon",
             data={"capability": capability},
             started=started,
@@ -147,7 +148,7 @@ def execute_capability(
 
         tb = traceback.format_exc()
         return _error(
-            code="addon_exception",
+            code=ErrorCode.ADDON_EXCEPTION,
             message=f"unhandled: {type(exc).__name__}: {exc}",
             data={"traceback": tb},
             started=started,

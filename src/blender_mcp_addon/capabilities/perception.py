@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..handlers.error_codes import ErrorCode
 from ..handlers.info import info_query
 from ..handlers.registry import HandlerRegistry
 from ..handlers.response import _error, _ok, not_found_error, operation_failed_error
@@ -25,7 +26,7 @@ def _handle_get_objects(payload: dict[str, Any], started: float) -> dict[str, An
         filter_dict["collection"] = payload["collection"]
     handler = HandlerRegistry.get(DataType.OBJECT)
     if handler is None:
-        return _error(code="unsupported_type", message="object handler not available", started=started)
+        return _error(code=ErrorCode.UNSUPPORTED_TYPE, message="object handler not available", started=started)
     try:
         return _ok(result=handler.list_items(filter_dict), started=started)
     except (AttributeError, TypeError, RuntimeError, ValueError) as exc:
@@ -39,7 +40,7 @@ def _handle_get_object_data(payload: dict[str, Any], started: float) -> dict[str
         read_params["include"] = payload["include"]
     handler = HandlerRegistry.get(DataType.OBJECT)
     if handler is None:
-        return _error(code="unsupported_type", message="object handler not available", started=started)
+        return _error(code=ErrorCode.UNSUPPORTED_TYPE, message="object handler not available", started=started)
     try:
         return _ok(result=handler.read(name, None, read_params), started=started)
     except KeyError:
@@ -63,7 +64,7 @@ def _handle_get_animation_data(payload: dict[str, Any], started: float) -> dict[
 def _handle_get_materials(payload: dict[str, Any], started: float) -> dict[str, Any]:
     handler = HandlerRegistry.get(DataType.MATERIAL)
     if handler is None:
-        return _error(code="unsupported_type", message="material handler not available", started=started)
+        return _error(code=ErrorCode.UNSUPPORTED_TYPE, message="material handler not available", started=started)
     try:
         return _ok(result=handler.list_items(payload), started=started)
     except (AttributeError, TypeError, RuntimeError, ValueError) as exc:
@@ -146,7 +147,7 @@ def _handle_get_scene(payload: dict[str, Any], started: float) -> dict[str, Any]
 def _handle_get_collections(payload: dict[str, Any], started: float) -> dict[str, Any]:
     handler = HandlerRegistry.get(DataType.COLLECTION)
     if handler is None:
-        return _error(code="unsupported_type", message="collection handler not available", started=started)
+        return _error(code=ErrorCode.UNSUPPORTED_TYPE, message="collection handler not available", started=started)
     read_params = {}
     if "depth" in payload:
         read_params["depth"] = payload["depth"]
@@ -165,7 +166,7 @@ def _handle_get_armature_data(payload: dict[str, Any], started: float) -> dict[s
 def _handle_get_images(payload: dict[str, Any], started: float) -> dict[str, Any]:
     handler = HandlerRegistry.get(DataType.IMAGE)
     if handler is None:
-        return _error(code="unsupported_type", message="image handler not available", started=started)
+        return _error(code=ErrorCode.UNSUPPORTED_TYPE, message="image handler not available", started=started)
     try:
         return _ok(result=handler.list_items(payload), started=started)
     except (AttributeError, TypeError, RuntimeError, ValueError) as exc:
