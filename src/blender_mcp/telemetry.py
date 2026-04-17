@@ -276,7 +276,9 @@ def telemetry_tool(func: Callable[..., Any]) -> Callable[..., Any]:
         result = func(*args, **kwargs)
         elapsed_ms = (time.perf_counter() - started) * 1000.0
         is_error = result.get("isError", False) if isinstance(result, dict) else False
-        _collector.record(str(tool_name), success=not is_error, elapsed_ms=elapsed_ms)
+        _collector.record(
+            tool_name if isinstance(tool_name, str) else str(tool_name), success=not is_error, elapsed_ms=elapsed_ms
+        )
         return result
 
     return wrapper

@@ -264,34 +264,38 @@ def new_tool_scope_map() -> dict[str, set[str]]:
 
     Maps internal capability names to required scopes.
     """
-    return {
-        "blender.get_objects": {"data:read"},
-        "blender.get_object_data": {"data:read"},
-        "blender.get_node_tree": {"data:read"},
-        "blender.get_animation_data": {"data:read"},
-        "blender.get_materials": {"data:read"},
-        "blender.get_scene": {"info:read"},
-        "blender.get_collections": {"data:read"},
-        "blender.get_armature_data": {"data:read"},
-        "blender.get_images": {"data:read"},
-        "blender.capture_viewport": {"info:read"},
-        "blender.get_selection": {"info:read"},
-        "blender.edit_nodes": {"data:write"},
-        "blender.edit_animation": {"data:write"},
-        "blender.edit_sequencer": {"data:write"},
-        "blender.create_object": {"data:create"},
-        "blender.modify_object": {"data:write"},
-        "blender.manage_material": {"data:write"},
-        "blender.manage_modifier": {"data:write"},
-        "blender.manage_collection": {"data:write"},
-        "blender.manage_uv": {"data:write"},
-        "blender.manage_constraints": {"data:write"},
-        "blender.manage_physics": {"data:write"},
-        "blender.setup_scene": {"data:write"},
-        "blender.execute_operator": {"operator:execute"},
-        "blender.execute_script": {"script:execute"},
-        "blender.import_export": {"data:write", "operator:execute"},
-    }
+    return _TOOL_SCOPE_MAP.copy()
+
+
+# Pre-built scope map for O(1) lookup (module-level constant)
+_TOOL_SCOPE_MAP: dict[str, set[str]] = {
+    "blender.get_objects": {"data:read"},
+    "blender.get_object_data": {"data:read"},
+    "blender.get_node_tree": {"data:read"},
+    "blender.get_animation_data": {"data:read"},
+    "blender.get_materials": {"data:read"},
+    "blender.get_scene": {"info:read"},
+    "blender.get_collections": {"data:read"},
+    "blender.get_armature_data": {"data:read"},
+    "blender.get_images": {"data:read"},
+    "blender.capture_viewport": {"info:read"},
+    "blender.get_selection": {"info:read"},
+    "blender.edit_nodes": {"data:write"},
+    "blender.edit_animation": {"data:write"},
+    "blender.edit_sequencer": {"data:write"},
+    "blender.create_object": {"data:create"},
+    "blender.modify_object": {"data:write"},
+    "blender.manage_material": {"data:write"},
+    "blender.manage_modifier": {"data:write"},
+    "blender.manage_collection": {"data:write"},
+    "blender.manage_uv": {"data:write"},
+    "blender.manage_constraints": {"data:write"},
+    "blender.manage_physics": {"data:write"},
+    "blender.setup_scene": {"data:write"},
+    "blender.execute_operator": {"operator:execute"},
+    "blender.execute_script": {"script:execute"},
+    "blender.import_export": {"data:write", "operator:execute"},
+}
 
 
 def get_dynamic_scopes(capability: str, payload: dict) -> set[str]:

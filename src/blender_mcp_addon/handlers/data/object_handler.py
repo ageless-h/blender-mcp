@@ -43,6 +43,9 @@ _VALID_INCLUDE_SECTIONS = frozenset(
     }
 )
 
+# Default include tuple - avoids creating new list on every read() call
+_DEFAULT_INCLUDE = ("summary",)
+
 
 @HandlerRegistry.register
 class ObjectHandler(BaseHandler):
@@ -211,7 +214,7 @@ class ObjectHandler(BaseHandler):
                     pass
             return {"name": name, "path": path, "value": value}
 
-        include = params.get("include", ["summary"])
+        include = params.get("include", _DEFAULT_INCLUDE)
         include_set = set(include) if not isinstance(include, set) else include
         result: dict[str, Any] = {"name": obj.name, "type": obj.type}
 

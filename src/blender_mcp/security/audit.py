@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
+import json
 import os
 import threading
 from collections import deque
@@ -43,8 +44,6 @@ class MemoryAuditLogger(AuditLogger):
             self._events.append(event)
 
     def export_json(self, file_path: str) -> None:
-        import json
-
         with self._lock:
             snapshot = list(self._events)
         with open(file_path, "w", encoding="utf-8") as handle:
@@ -72,8 +71,6 @@ class JsonFileAuditLogger(AuditLogger):
     def _flush_buffer(self) -> None:
         if not self._buffer:
             return
-        import json
-
         self._rotate_if_needed()
         with open(self._file_path, "a", encoding="utf-8") as handle:
             for event in self._buffer:
