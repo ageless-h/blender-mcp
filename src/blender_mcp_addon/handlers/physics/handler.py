@@ -6,6 +6,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Callable
 
+from ...metadata import get_blender_version, resolve_property_value
 from ..context_utils import get_view3d_override
 from ..error_codes import ErrorCode
 from ..response import _error, _ok, bpy_unavailable_error, check_bpy_available
@@ -134,7 +135,7 @@ def _configure_physics(obj: Any, payload: dict[str, Any], started: float, progre
 
 
 def _apply_settings(obj: Any, physics_type: str, settings: dict[str, Any], progress: ProgressCallback = None) -> None:
-    """Apply physics settings to the appropriate physics data."""
+    """Apply physics settings to the appropriate physics data using metadata resolver."""
     target = None
     if physics_type in ("RIGID_BODY", "RIGID_BODY_PASSIVE") and obj.rigid_body:
         target = obj.rigid_body
@@ -154,9 +155,34 @@ def _apply_settings(obj: Any, physics_type: str, settings: dict[str, Any], progr
         target = obj.field
 
     if target:
+        version = get_blender_version()
         total = len(settings)
         for i, (key, value) in enumerate(settings.items()):
-            if hasattr(target, key):
+            resolved = resolve_property_value(physics_type, "physics", key, value, version)
+            if resolved is not None:
+                container_path, prop_name, resolved_value = resolved
+                if container_path:
+                    parts = container_path.split(".")
+                    actual_target = obj
+                    for part in parts:
+                        if hasattr(actual_target, part):
+                            actual_target = getattr(actual_target, part)
+                        else:
+                            actual_target = None
+                            break
+                    if actual_target is None:
+                        continue
+                else:
+                    actual_target = target
+
+                if isinstance(prop_name, int):
+                    try:
+                        actual_target[prop_name] = resolved_value
+                    except (TypeError, KeyError, IndexError):
+                        pass
+                elif hasattr(actual_target, str(prop_name)):
+                    setattr(actual_target, str(prop_name), resolved_value)
+            elif hasattr(target, key):
                 setattr(target, key, value)
             if progress and total > 0:
                 progress((i + 1) / total, None, f"Setting {key}")

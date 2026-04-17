@@ -223,18 +223,42 @@ class MCPServer:
                 if "enum" in prop_schema and value not in prop_schema["enum"]:
                     allowed = ", ".join(repr(e) for e in prop_schema["enum"])
                     return f"Parameter '{key}' must be one of: {allowed}"
+                if "maxLength" in prop_schema and len(value) > prop_schema["maxLength"]:
+                    return f"Parameter '{key}' exceeds maximum length of {prop_schema['maxLength']}"
+                if "minLength" in prop_schema and len(value) < prop_schema["minLength"]:
+                    return f"Parameter '{key}' must be at least {prop_schema['minLength']} characters"
             elif prop_type == "number":
                 if not isinstance(value, (int, float)):
                     return f"Parameter '{key}' must be a number"
+                if "minimum" in prop_schema and value < prop_schema["minimum"]:
+                    return f"Parameter '{key}' must be >= {prop_schema['minimum']}"
+                if "maximum" in prop_schema and value > prop_schema["maximum"]:
+                    return f"Parameter '{key}' must be <= {prop_schema['maximum']}"
+                if "exclusiveMinimum" in prop_schema and value <= prop_schema["exclusiveMinimum"]:
+                    return f"Parameter '{key}' must be > {prop_schema['exclusiveMinimum']}"
+                if "exclusiveMaximum" in prop_schema and value >= prop_schema["exclusiveMaximum"]:
+                    return f"Parameter '{key}' must be < {prop_schema['exclusiveMaximum']}"
             elif prop_type == "integer":
                 if not isinstance(value, int) or isinstance(value, bool):
                     return f"Parameter '{key}' must be an integer"
+                if "minimum" in prop_schema and value < prop_schema["minimum"]:
+                    return f"Parameter '{key}' must be >= {prop_schema['minimum']}"
+                if "maximum" in prop_schema and value > prop_schema["maximum"]:
+                    return f"Parameter '{key}' must be <= {prop_schema['maximum']}"
+                if "exclusiveMinimum" in prop_schema and value <= prop_schema["exclusiveMinimum"]:
+                    return f"Parameter '{key}' must be > {prop_schema['exclusiveMinimum']}"
+                if "exclusiveMaximum" in prop_schema and value >= prop_schema["exclusiveMaximum"]:
+                    return f"Parameter '{key}' must be < {prop_schema['exclusiveMaximum']}"
             elif prop_type == "boolean":
                 if not isinstance(value, bool):
                     return f"Parameter '{key}' must be a boolean"
             elif prop_type == "array":
                 if not isinstance(value, list):
                     return f"Parameter '{key}' must be an array"
+                if "minItems" in prop_schema and len(value) < prop_schema["minItems"]:
+                    return f"Parameter '{key}' must have at least {prop_schema['minItems']} items"
+                if "maxItems" in prop_schema and len(value) > prop_schema["maxItems"]:
+                    return f"Parameter '{key}' must have at most {prop_schema['maxItems']} items"
 
         return None
 

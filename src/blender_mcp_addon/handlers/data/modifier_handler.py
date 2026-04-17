@@ -5,7 +5,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from ...metadata import get_blender_version, resolve_property_path
+from ...metadata import (
+    get_all_supported_properties,
+    get_blender_version,
+    get_readable_properties,
+    resolve_property_path,
+)
 from ..base import BaseHandler
 from ..registry import HandlerRegistry
 from ..types import DataType
@@ -143,32 +148,65 @@ class ModifierHandler(BaseHandler):
                     pass
             return {"name": name, "object": object_name, "path": path, "value": value}
 
+        mod_type = modifier.type
+        version = get_blender_version()
+
         result = {
             "name": modifier.name,
-            "type": modifier.type,
+            "type": mod_type,
             "object": object_name,
             "show_viewport": modifier.show_viewport,
             "show_render": modifier.show_render,
             "show_in_editmode": modifier.show_in_editmode,
         }
 
-        if modifier.type == "SUBSURF":
-            result["levels"] = modifier.levels
-            result["render_levels"] = modifier.render_levels
-        elif modifier.type == "ARRAY":
-            result["count"] = modifier.count
-            result["use_relative_offset"] = modifier.use_relative_offset
-        elif modifier.type == "MIRROR":
-            result["use_axis"] = [modifier.use_axis[0], modifier.use_axis[1], modifier.use_axis[2]]
-        elif modifier.type == "BOOLEAN":
-            result["operation"] = modifier.operation
-            result["object"] = modifier.object.name if modifier.object else None
-        elif modifier.type == "SOLIDIFY":
-            result["thickness"] = modifier.thickness
-            result["offset"] = modifier.offset
-        elif modifier.type == "BEVEL":
-            result["width"] = modifier.width
-            result["segments"] = modifier.segments
+        # Try to use metadata system for dynamic property reading
+        readable_props = get_readable_properties(mod_type, "modifier")
+        if readable_props:
+            # Use metadata-driven property reading
+            supported = get_all_supported_properties(mod_type, "modifier", version)
+            for prop_name in readable_props:
+                if prop_name not in supported:
+                    continue
+                try:
+                    container, actual_prop = self._resolve_property_container(modifier, prop_name)
+                    if isinstance(actual_prop, int):
+                        # Array index access (e.g., use_axis[0])
+                        value = container[actual_prop]
+                    elif hasattr(container, str(actual_prop)):
+                        value = getattr(container, str(actual_prop))
+                    else:
+                        continue
+                    # Convert object references to names
+                    if hasattr(value, "name") and hasattr(value, "type"):
+                        value = value.name
+                    elif hasattr(value, "__iter__") and not isinstance(value, str):
+                        try:
+                            value = list(value)
+                        except TypeError:
+                            pass
+                    result[prop_name] = value
+                except (AttributeError, KeyError, IndexError, TypeError):
+                    pass
+        else:
+            # Fallback to hardcoded property reading for unregistered modifier types
+            if mod_type == "SUBSURF":
+                result["levels"] = modifier.levels
+                result["render_levels"] = modifier.render_levels
+            elif mod_type == "ARRAY":
+                result["count"] = modifier.count
+                result["use_relative_offset"] = modifier.use_relative_offset
+            elif mod_type == "MIRROR":
+                result["use_axis"] = [modifier.use_axis[0], modifier.use_axis[1], modifier.use_axis[2]]
+            elif mod_type == "BOOLEAN":
+                result["operation"] = modifier.operation
+                result["object"] = modifier.object.name if modifier.object else None
+            elif mod_type == "SOLIDIFY":
+                result["thickness"] = modifier.thickness
+                result["offset"] = modifier.offset
+            elif mod_type == "BEVEL":
+                result["width"] = modifier.width
+                result["segments"] = modifier.segments
 
         return result
 

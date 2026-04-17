@@ -6,10 +6,78 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from ...metadata import get_blender_version, resolve_property_value
 from ..error_codes import ErrorCode
 from ..response import _error, _ok, bpy_unavailable_error, check_bpy_available
 
 logger = logging.getLogger(__name__)
+
+
+def _apply_constraint_settings(constraint: Any, constraint_type: str, settings: dict[str, Any], bpy: Any) -> list[str]:
+    """Apply settings to a constraint using metadata resolver.
+
+    Args:
+        constraint: The constraint object
+        constraint_type: Type of the constraint (e.g., "COPY_LOCATION")
+        settings: Settings dictionary to apply
+        bpy: Blender module reference
+
+    Returns:
+        List of applied property names
+    """
+    applied = []
+    version = get_blender_version()
+
+    for key, value in settings.items():
+        resolved = resolve_property_value(constraint_type, "constraint", key, value, version)
+        if resolved is not None:
+            container_path, prop_name, resolved_value = resolved
+            if container_path:
+                parts = container_path.split(".")
+                target = constraint
+                for part in parts:
+                    if hasattr(target, part):
+                        target = getattr(target, part)
+                    else:
+                        target = None
+                        break
+                if target is None:
+                    continue
+            else:
+                target = constraint
+
+            if key == "target" or prop_name == "target":
+                if isinstance(resolved_value, str):
+                    target_obj = bpy.data.objects.get(resolved_value)
+                    if target_obj:
+                        resolved_value = target_obj
+                if hasattr(constraint, "target"):
+                    constraint.target = resolved_value
+                    applied.append(key)
+            elif isinstance(prop_name, int):
+                try:
+                    target[prop_name] = resolved_value
+                    applied.append(key)
+                except (TypeError, KeyError, IndexError):
+                    pass
+            elif hasattr(target, str(prop_name)):
+                setattr(target, str(prop_name), resolved_value)
+                applied.append(key)
+        else:
+            if key == "target":
+                target_obj = bpy.data.objects.get(value)
+                if target_obj and hasattr(constraint, "target"):
+                    constraint.target = target_obj
+                    applied.append(key)
+            elif key == "subtarget":
+                if hasattr(constraint, "subtarget"):
+                    constraint.subtarget = value
+                    applied.append(key)
+            elif hasattr(constraint, key):
+                setattr(constraint, key, value)
+                applied.append(key)
+
+    return applied
 
 
 def _resolve_target(bpy: Any, payload: dict[str, Any], started: float):
@@ -76,15 +144,7 @@ def constraints_manage(payload: dict[str, Any], *, started: float) -> dict[str, 
             c = constraints.new(type=constraint_type)
             c.name = constraint_name
             settings = payload.get("settings", {})
-            for key, value in settings.items():
-                if key == "target":
-                    target_obj = bpy.data.objects.get(value)
-                    if target_obj:
-                        c.target = target_obj
-                elif key == "subtarget":
-                    c.subtarget = value
-                elif hasattr(c, key):
-                    setattr(c, key, value)
+            _apply_constraint_settings(c, constraint_type, settings, bpy)
             return _ok(result={"action": "add", "name": c.name, "type": constraint_type}, started=started)
 
         elif action == "configure":
@@ -95,13 +155,7 @@ def constraints_manage(payload: dict[str, Any], *, started: float) -> dict[str, 
                     code=ErrorCode.NOT_FOUND, message=f"Constraint '{constraint_name}' not found", started=started
                 )
             settings = payload.get("settings", {})
-            for key, value in settings.items():
-                if key == "target":
-                    target_obj = bpy.data.objects.get(value)
-                    if target_obj:
-                        c.target = target_obj
-                elif hasattr(c, key):
-                    setattr(c, key, value)
+            _apply_constraint_settings(c, c.type, settings, bpy)
             return _ok(result={"action": "configure", "name": c.name}, started=started)
 
         elif action == "remove":
