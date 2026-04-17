@@ -343,7 +343,7 @@ class MCPServer:
             def progress_callback(progress: float, total: float | None, message: str | None) -> None:
                 self.send_progress(progress_token, progress, total, message)
 
-        result = self._adapter.execute(internal_capability, payload, progress_callback)
+        result = self._adapter.execute(internal_capability, payload, progress_callback, progress_token)
         elapsed_ms = (time.perf_counter() - call_start) * 1000.0
 
         if result.ok:

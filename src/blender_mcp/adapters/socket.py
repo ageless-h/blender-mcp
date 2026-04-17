@@ -74,46 +74,56 @@ class SocketAdapter:
         return sock
 
     def _recv_response(self, sock: socket.socket, started: float) -> AdapterResult:
-        response_chunks = []
-        leftover_data = b""
+        buffer = b""
         while True:
             chunk = sock.recv(65536)
             if not chunk:
                 break
-            if b"\n" in chunk:
-                idx = chunk.index(b"\n")
-                response_chunks.append(chunk[:idx])
-                leftover_data = chunk[idx + 1 :]
-                break
-            response_chunks.append(chunk)
+            buffer += chunk
+            while b"\n" in buffer:
+                line, buffer = buffer.split(b"\n", 1)
+                response_data = line
+                elapsed_ms = (time.perf_counter() - started) * 1000.0
+                logger.debug("Response received in %.1fms", elapsed_ms)
 
-        response_data = b"".join(response_chunks)
+                if not response_data:
+                    continue
+
+                try:
+                    response = json.loads(response_data.decode("utf-8").strip())
+                except json.JSONDecodeError:
+                    return AdapterResult(
+                        ok=False,
+                        error="adapter_invalid_response",
+                        timing_ms=elapsed_ms,
+                    )
+
+                if response.get("type") == "progress":
+                    if self._progress_callback:
+                        try:
+                            self._progress_callback(
+                                response.get("progress", 0),
+                                response.get("total"),
+                                response.get("message"),
+                            )
+                        except Exception:
+                            logger.exception("Progress callback raised an exception")
+                    continue
+
+                err_obj = response.get("error")
+                return AdapterResult(
+                    ok=response.get("ok", False),
+                    result=response.get("result"),
+                    error=err_obj.get("code") if err_obj else None,
+                    error_message=err_obj.get("message") if err_obj else None,
+                    error_suggestion=err_obj.get("suggestion") if err_obj else None,
+                    timing_ms=elapsed_ms,
+                )
+
         elapsed_ms = (time.perf_counter() - started) * 1000.0
-        logger.debug("Response received in %.1fms", elapsed_ms)
-
-        if not response_data and not leftover_data:
-            return AdapterResult(
-                ok=False,
-                error="adapter_empty_response",
-                timing_ms=elapsed_ms,
-            )
-
-        try:
-            response = json.loads(response_data.decode("utf-8").strip())
-        except json.JSONDecodeError:
-            return AdapterResult(
-                ok=False,
-                error="adapter_invalid_response",
-                timing_ms=elapsed_ms,
-            )
-
-        err_obj = response.get("error")
         return AdapterResult(
-            ok=response.get("ok", False),
-            result=response.get("result"),
-            error=err_obj.get("code") if err_obj else None,
-            error_message=err_obj.get("message") if err_obj else None,
-            error_suggestion=err_obj.get("suggestion") if err_obj else None,
+            ok=False,
+            error="adapter_empty_response",
             timing_ms=elapsed_ms,
         )
 
@@ -170,6 +180,7 @@ class SocketAdapter:
         capability: str,
         payload: Dict[str, Any],
         progress_callback: Callable[[float, float | None, str | None], None] | None = None,
+        progress_token: str | None = None,
     ) -> AdapterResult:
         """Execute a capability with automatic retry on transient errors.
 
@@ -177,11 +188,11 @@ class SocketAdapter:
             capability: The capability to execute
             payload: The payload for the capability
             progress_callback: Optional callback for progress updates.
-                Note: For socket adapter, progress updates require the Blender
-                addon to send progress messages back. This callback is stored
-                for potential future use with bidirectional communication.
+                Called when intermediate progress messages are received.
+            progress_token: Optional token to include in the request for progress tracking.
         """
         self._progress_callback = progress_callback
+        self._progress_token = progress_token
         last_result: AdapterResult | None = None
 
         for attempt in range(self.max_retries):
@@ -230,7 +241,10 @@ class SocketAdapter:
             try:
                 sock = self._ensure_connected()
 
-                request = json.dumps({"capability": capability, "payload": payload}, ensure_ascii=False)
+                request_obj: Dict[str, Any] = {"capability": capability, "payload": payload}
+                if self._progress_token is not None:
+                    request_obj["progress_token"] = self._progress_token
+                request = json.dumps(request_obj, ensure_ascii=False)
                 sock.sendall((request + "\n").encode("utf-8"))
 
                 return self._recv_response(sock, started)
@@ -264,7 +278,10 @@ class SocketAdapter:
                 sock.connect((self.host, self.port))
                 logger.debug("Connected to %s:%d", self.host, self.port)
 
-                request = json.dumps({"capability": capability, "payload": payload}, ensure_ascii=False)
+                request_obj: Dict[str, Any] = {"capability": capability, "payload": payload}
+                if self._progress_token is not None:
+                    request_obj["progress_token"] = self._progress_token
+                request = json.dumps(request_obj, ensure_ascii=False)
                 sock.sendall((request + "\n").encode("utf-8"))
 
                 return self._recv_response(sock, started)
