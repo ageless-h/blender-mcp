@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Imperative write layer handlers — 9 tools for object/material/modifier/etc management."""
+"""Imperative write layer handlers — 10 tools for object/material/modifier/mesh/etc management."""
 
 from __future__ import annotations
 
@@ -289,6 +289,12 @@ def _handle_setup_scene(payload: dict[str, Any], started: float) -> dict[str, An
     return scene_setup(payload, started=started)
 
 
+def _handle_edit_mesh(payload: dict[str, Any], started: float) -> dict[str, Any]:
+    from ..handlers.mesh.handler import edit_mesh
+
+    return edit_mesh(payload, started=started)
+
+
 IMPERATIVE_HANDLERS = {
     "blender.create_object": _handle_create_object,
     "blender.modify_object": _handle_modify_object,
@@ -299,4 +305,5 @@ IMPERATIVE_HANDLERS = {
     "blender.manage_constraints": _handle_manage_constraints,
     "blender.manage_physics": _handle_manage_physics,
     "blender.setup_scene": _handle_setup_scene,
+    "blender.edit_mesh": _handle_edit_mesh,
 }

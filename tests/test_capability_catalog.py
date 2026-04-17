@@ -36,7 +36,7 @@ class TestCapabilityCatalog(unittest.TestCase):
             "blender.edit_nodes",
             "blender.edit_animation",
             "blender.edit_sequencer",
-            # Imperative write layer (9)
+            # Imperative write layer (10)
             "blender.create_object",
             "blender.modify_object",
             "blender.manage_material",
@@ -46,6 +46,7 @@ class TestCapabilityCatalog(unittest.TestCase):
             "blender.manage_constraints",
             "blender.manage_physics",
             "blender.setup_scene",
+            "blender.edit_mesh",
             # Fallback layer (4)
             "blender.execute_operator",
             "blender.execute_script",

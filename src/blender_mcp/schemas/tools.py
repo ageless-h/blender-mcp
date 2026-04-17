@@ -796,7 +796,7 @@ _DECLARATIVE_TOOLS = [
 ]
 
 # ---------------------------------------------------------------------------
-# Imperative Write Layer (9 Tools)
+# Imperative Write Layer (10 Tools)
 # ---------------------------------------------------------------------------
 
 _IMPERATIVE_TOOLS = [
@@ -1339,6 +1339,74 @@ _IMPERATIVE_TOOLS = [
             "openWorldHint": False,
         },
         internal_capability="blender.setup_scene",
+    ),
+    _tool(
+        name="blender_edit_mesh",
+        description=(
+            "Edit mesh geometry with operations like extrude, inset, bevel, loop cut, dissolve, merge, "
+            "subdivide, and delete.\n\n"
+            "Use this when: you need to modify mesh topology.\n\n"
+            "Do NOT use for: UV operations (use blender_manage_uv), object transforms (use blender_modify_object)."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "object_name": {"type": "string", "description": "Name of the mesh object."},
+                "action": {
+                    "type": "string",
+                    "enum": [
+                        "extrude",
+                        "extrude_individual",
+                        "inset",
+                        "bevel",
+                        "loop_cut",
+                        "dissolve_vertices",
+                        "dissolve_edges",
+                        "dissolve_faces",
+                        "merge_vertices",
+                        "subdivide",
+                        "delete",
+                        "select_all",
+                        "select_mode",
+                    ],
+                    "description": "Mesh operation to perform.",
+                },
+                "selection": {
+                    "type": "string",
+                    "enum": ["VERT", "EDGE", "FACE", "ONLY_FACE", "ALL"],
+                    "description": "Selection type for delete action.",
+                },
+                "select_action": {
+                    "type": "string",
+                    "enum": ["SELECT", "DESELECT", "TOGGLE", "INVERT"],
+                    "description": "Action for select_all.",
+                },
+                "mode": {
+                    "type": "string",
+                    "enum": ["VERT", "EDGE", "FACE"],
+                    "description": "Selection mode for select_mode action.",
+                },
+                "threshold": {"type": "number", "description": "Merge threshold for merge_vertices.", "minimum": 0},
+                "segments": {"type": "integer", "description": "Segments for bevel.", "minimum": 1},
+                "number_cuts": {"type": "integer", "description": "Cuts for subdivide/loop_cut.", "minimum": 1},
+                "amount": {"type": "number", "description": "Amount for inset/bevel."},
+                "use_boundary": {"type": "boolean", "description": "For inset, inset boundary edges."},
+                "use_even_offset": {"type": "boolean", "description": "For inset, use even offset."},
+                "use_relative_offset": {"type": "boolean", "description": "For inset, use relative offset."},
+                "use_verts": {"type": "boolean", "description": "For dissolve, also dissolve vertices."},
+                "use_face_split": {"type": "boolean", "description": "For dissolve_edges, use face split."},
+            },
+            "required": ["object_name", "action"],
+            "additionalProperties": False,
+        },
+        annotations={
+            "title": "Edit Mesh",
+            "readOnlyHint": False,
+            "destructiveHint": True,
+            "idempotentHint": False,
+            "openWorldHint": False,
+        },
+        internal_capability="blender.edit_mesh",
     ),
 ]
 

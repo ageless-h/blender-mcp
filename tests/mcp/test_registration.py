@@ -141,6 +141,7 @@ class MCPRegistrationTest(unittest.TestCase):
             "blender_manage_constraints",
             "blender_manage_physics",
             "blender_setup_scene",
+            "blender_edit_mesh",
             # Fallback (4)
             "blender_execute_operator",
             "blender_execute_script",
@@ -151,7 +152,7 @@ class MCPRegistrationTest(unittest.TestCase):
         for tool in expected_tools:
             self.assertIn(tool, tool_names, f"Tool '{tool}' should be present")
 
-        self.assertEqual(len(tools), 27, "Should have exactly 27 tools")
+        self.assertEqual(len(tools), 28, "Should have exactly 28 tools")
 
     def test_jsonrpc_compliance(self):
         """Test that responses conform to JSON-RPC 2.0 specification."""

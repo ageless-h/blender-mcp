@@ -55,7 +55,8 @@ class TestCatalogSchemaSync(unittest.TestCase):
 
     def test_declarative_layer_count(self):
         catalog_caps = minimal_capability_set()
-        declarative = [c for c in catalog_caps if c.name.startswith("blender.edit_")]
+        declarative_names = ["blender.edit_nodes", "blender.edit_animation", "blender.edit_sequencer"]
+        declarative = [c for c in catalog_caps if c.name in declarative_names]
         self.assertEqual(len(declarative), 3)
 
     def test_imperative_layer_count(self):
@@ -70,9 +71,10 @@ class TestCatalogSchemaSync(unittest.TestCase):
             "blender.manage_constraints",
             "blender.manage_physics",
             "blender.setup_scene",
+            "blender.edit_mesh",
         ]
         imperative = [c for c in catalog_caps if c.name in imperative_names]
-        self.assertEqual(len(imperative), 9)
+        self.assertEqual(len(imperative), 10)
 
     def test_fallback_layer_count(self):
         catalog_caps = minimal_capability_set()
@@ -87,7 +89,7 @@ class TestCatalogSchemaSync(unittest.TestCase):
 
     def test_total_capability_count(self):
         catalog_caps = minimal_capability_set()
-        self.assertEqual(len(catalog_caps), 27)
+        self.assertEqual(len(catalog_caps), 28)
 
 
 if __name__ == "__main__":

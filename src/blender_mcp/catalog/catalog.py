@@ -87,12 +87,12 @@ def capability_to_dict(capability: CapabilityMeta, version: str | None = None) -
 
 
 def minimal_capability_set() -> list[CapabilityMeta]:
-    """Return the 27-tool capability set.
+    """Return the 28-tool capability set.
 
     Four layers:
     - Perception (11): read-only queries
     - Declarative Write (3): node/animation/VSE batch edits
-    - Imperative Write (9): object/material/modifier etc.
+    - Imperative Write (10): object/material/modifier/mesh etc.
     - Fallback (4): operator/script/import-export/render
     """
     return [
@@ -237,7 +237,13 @@ def minimal_capability_set() -> list[CapabilityMeta]:
             scopes=["data:write"],
             min_version="4.2",
         ),
-        # Fallback layer (3)
+        CapabilityMeta(
+            name="blender.edit_mesh",
+            description="Mesh topology editing (extrude/inset/bevel/etc)",
+            scopes=["data:write"],
+            min_version="4.2",
+        ),
+        # Fallback layer (4)
         CapabilityMeta(
             name="blender.execute_operator",
             description="Execute any bpy.ops.*",
@@ -267,7 +273,7 @@ def minimal_capability_set() -> list[CapabilityMeta]:
 
 
 def new_tool_scope_map() -> dict[str, set[str]]:
-    """Return scope mappings for the 27-tool architecture.
+    """Return scope mappings for the 28-tool architecture.
 
     Maps internal capability names to required scopes.
     """
@@ -299,6 +305,7 @@ _TOOL_SCOPE_MAP: dict[str, set[str]] = {
     "blender.manage_constraints": {"data:write"},
     "blender.manage_physics": {"data:write"},
     "blender.setup_scene": {"data:write"},
+    "blender.edit_mesh": {"data:write"},
     "blender.execute_operator": {"operator:execute"},
     "blender.execute_script": {"script:execute"},
     "blender.import_export": {"data:write", "operator:execute"},
