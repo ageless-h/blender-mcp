@@ -13,7 +13,6 @@ from ..response import (
     check_bpy_available,
     operation_failed_error,
 )
-from . import iter_fcurves
 
 logger = logging.getLogger(__name__)
 
@@ -92,11 +91,15 @@ def _insert_keyframe(bpy: Any, payload: dict[str, Any], started: float) -> dict[
 
     interp = payload.get("interpolation")
     if interp and obj.animation_data and obj.animation_data.action:
-        for fc in iter_fcurves(obj.animation_data.action):
-            if fc.data_path == data_path and (index == -1 or fc.array_index == index):
-                for kp in fc.keyframe_points:
-                    if int(kp.co[0]) == frame:
-                        kp.interpolation = interp
+        action = obj.animation_data.action
+        # Use fcurves.find() for O(1) lookup instead of O(n) iteration
+        fc = action.fcurves.find(data_path, index=index if index >= 0 else -1)
+        if fc:
+            for kp in fc.keyframe_points:
+                if int(kp.co[0]) == frame:
+                    kp.interpolation = interp
+        else:
+            logger.warning("FCurve not found for data_path='%s' index=%d", data_path, index)
 
     return _ok(
         result={
@@ -142,21 +145,25 @@ def _modify_keyframe(bpy: Any, payload: dict[str, Any], started: float) -> dict[
         return _error(code="not_found", message="No animation data on object", started=started)
 
     modified = 0
-    for fc in iter_fcurves(obj.animation_data.action):
-        if fc.data_path == data_path and (index == -1 or fc.array_index == index):
-            if value is not None and frame is not None:
-                target_frame = int(frame)
-                for kp in list(fc.keyframe_points):
-                    if int(kp.co[0]) == target_frame:
-                        new_kp = fc.keyframe_points.insert(float(target_frame), float(value))
-                        new_kp.interpolation = interp or kp.interpolation
-                        modified += 1
-                        break
-            elif interp:
-                for kp in fc.keyframe_points:
-                    if frame is None or int(kp.co[0]) == frame:
-                        kp.interpolation = interp
-                        modified += 1
+    action = obj.animation_data.action
+    # Use fcurves.find() for O(1) lookup instead of O(n) iteration
+    fc = action.fcurves.find(data_path, index=index if index >= 0 else -1)
+    if fc:
+        if value is not None and frame is not None:
+            target_frame = int(frame)
+            for kp in list(fc.keyframe_points):
+                if int(kp.co[0]) == target_frame:
+                    new_kp = fc.keyframe_points.insert(float(target_frame), float(value))
+                    new_kp.interpolation = interp or kp.interpolation
+                    modified += 1
+                    break
+        elif interp:
+            for kp in fc.keyframe_points:
+                if frame is None or int(kp.co[0]) == frame:
+                    kp.interpolation = interp
+                    modified += 1
+    else:
+        logger.warning("FCurve not found for data_path='%s' index=%d", data_path, index)
 
     return _ok(
         result={"action": "modify_keyframe", "modified_count": modified},

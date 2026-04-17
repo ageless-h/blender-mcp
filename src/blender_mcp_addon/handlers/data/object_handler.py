@@ -10,6 +10,39 @@ from ..registry import HandlerRegistry
 from ..shared import create_mesh_primitive as _create_mesh_primitive_shared
 from ..types import DataType
 
+# Module-level constant for delete operation - avoids rebuilding dict every call
+_BL_ID_TO_DATATYPE = {
+    "Mesh": DataType.MESH,
+    "Camera": DataType.CAMERA,
+    "Light": DataType.LIGHT,
+    "Armature": DataType.ARMATURE,
+    "Curve": DataType.CURVE,
+    "Surface": DataType.SURFACE,
+    "MetaBall": DataType.METABALL,
+    "Text": DataType.TEXT,
+    "GreasePencil": DataType.GREASE_PENCIL,
+    "Lattice": DataType.LATTICE,
+    "Volume": DataType.VOLUME,
+}
+
+# Set for O(1) include membership checks instead of O(n) list traversal
+_VALID_INCLUDE_SECTIONS = frozenset(
+    {
+        "summary",
+        "mesh_stats",
+        "modifiers",
+        "materials",
+        "constraints",
+        "physics",
+        "animation",
+        "custom_properties",
+        "vertex_groups",
+        "shape_keys",
+        "uv_maps",
+        "particle_systems",
+    }
+)
+
 
 @HandlerRegistry.register
 class ObjectHandler(BaseHandler):
@@ -179,9 +212,10 @@ class ObjectHandler(BaseHandler):
             return {"name": name, "path": path, "value": value}
 
         include = params.get("include", ["summary"])
+        include_set = set(include) if not isinstance(include, set) else include
         result: dict[str, Any] = {"name": obj.name, "type": obj.type}
 
-        if "summary" in include:
+        if "summary" in include_set:
             data_info = None
             if obj.data:
                 data_info = {"name": obj.data.name, "type": type(obj.data).__name__}
@@ -196,7 +230,7 @@ class ObjectHandler(BaseHandler):
                 "children": [c.name for c in obj.children],
             }
 
-        if "mesh_stats" in include and obj.type == "MESH" and obj.data:
+        if "mesh_stats" in include_set and obj.type == "MESH" and obj.data:
             mesh = obj.data
             result["mesh_stats"] = {
                 "vertices": len(mesh.vertices),
@@ -207,7 +241,7 @@ class ObjectHandler(BaseHandler):
                 "materials_count": len(mesh.materials),
             }
 
-        if "modifiers" in include:
+        if "modifiers" in include_set:
             mods = []
             for m in obj.modifiers:
                 mod_info: dict[str, Any] = {
@@ -219,16 +253,16 @@ class ObjectHandler(BaseHandler):
                 mods.append(mod_info)
             result["modifiers"] = mods
 
-        if "materials" in include:
+        if "materials" in include_set:
             result["materials"] = [
                 {"slot_index": i, "name": slot.material.name if slot.material else None, "link": slot.link}
                 for i, slot in enumerate(obj.material_slots)
             ]
 
-        if "constraints" in include:
+        if "constraints" in include_set:
             result["constraints"] = [{"name": c.name, "type": c.type, "enabled": not c.mute} for c in obj.constraints]
 
-        if "physics" in include:
+        if "physics" in include_set:
             physics = {}
             for mod in obj.modifiers:
                 if mod.type in {"PARTICLE_SYSTEM", "CLOTH", "SOFT_BODY", "FLUID", "COLLISION", "DYNAMIC_PAINT"}:
@@ -241,7 +275,7 @@ class ObjectHandler(BaseHandler):
                 }
             result["physics"] = physics
 
-        if "animation" in include:
+        if "animation" in include_set:
             anim: dict[str, Any] = {"has_action": False}
             if obj.animation_data:
                 ad = obj.animation_data
@@ -255,25 +289,25 @@ class ObjectHandler(BaseHandler):
                 anim["drivers_count"] = len(ad.drivers)
             result["animation"] = anim
 
-        if "custom_properties" in include:
+        if "custom_properties" in include_set:
             result["custom_properties"] = {k: v for k, v in obj.items() if k != "_RNA_UI" and not k.startswith("_")}
 
-        if "vertex_groups" in include:
+        if "vertex_groups" in include_set:
             result["vertex_groups"] = [
                 {"index": vg.index, "name": vg.name, "lock_weight": vg.lock_weight} for vg in obj.vertex_groups
             ]
 
-        if "shape_keys" in include and obj.data and hasattr(obj.data, "shape_keys") and obj.data.shape_keys:
+        if "shape_keys" in include_set and obj.data and hasattr(obj.data, "shape_keys") and obj.data.shape_keys:
             sk = obj.data.shape_keys
             result["shape_keys"] = {
                 "reference_key": sk.reference_key.name if sk.reference_key else None,
                 "keys": [{"name": k.name, "value": k.value, "mute": k.mute} for k in sk.key_blocks],
             }
 
-        if "uv_maps" in include and obj.type == "MESH" and obj.data:
+        if "uv_maps" in include_set and obj.type == "MESH" and obj.data:
             result["uv_maps"] = [{"name": uv.name, "active": uv.active} for uv in obj.data.uv_layers]
 
-        if "particle_systems" in include:
+        if "particle_systems" in include_set:
             result["particle_systems"] = [
                 {
                     "name": ps.name,
@@ -353,21 +387,8 @@ class ObjectHandler(BaseHandler):
         bpy.data.objects.remove(obj, do_unlink=True)
 
         if delete_data and obj_data:
-            from ..types import DATA_TYPE_TO_COLLECTION, DataType
+            from ..types import DATA_TYPE_TO_COLLECTION
 
-            _BL_ID_TO_DATATYPE = {
-                "Mesh": DataType.MESH,
-                "Camera": DataType.CAMERA,
-                "Light": DataType.LIGHT,
-                "Armature": DataType.ARMATURE,
-                "Curve": DataType.CURVE,
-                "Surface": DataType.SURFACE,
-                "MetaBall": DataType.METABALL,
-                "Text": DataType.TEXT,
-                "GreasePencil": DataType.GREASE_PENCIL,
-                "Lattice": DataType.LATTICE,
-                "Volume": DataType.VOLUME,
-            }
             bl_id = obj_data.bl_rna.identifier
             dt = _BL_ID_TO_DATATYPE.get(bl_id)
             coll_name = DATA_TYPE_TO_COLLECTION.get(dt) if dt else None

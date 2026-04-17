@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import logging
 import time
+from collections import Counter
 from typing import Any
 
 from ..response import (
@@ -319,6 +320,8 @@ def _extract_new_reports(
 ) -> list[dict[str, str]]:
     """Extract new reports added after an operation.
 
+    Uses Counter to handle duplicate reports correctly.
+
     Args:
         before: Reports snapshot before operation
         after: Reports snapshot after operation
@@ -326,11 +329,16 @@ def _extract_new_reports(
     Returns:
         List of new report dicts with 'type' and 'message'
     """
-    before_set = set(before)
+    before_counter = Counter(before)
+    after_counter = Counter(after)
     new_reports = []
-    for report_type, message in after:
-        if (report_type, message) not in before_set:
-            new_reports.append({"type": report_type, "message": message})
+    # Subtract before counts from after to find new reports
+    for report, count in after_counter.items():
+        new_count = count - before_counter.get(report, 0)
+        if new_count > 0:
+            report_type, message = report
+            for _ in range(new_count):
+                new_reports.append({"type": report_type, "message": message})
     return new_reports
 
 

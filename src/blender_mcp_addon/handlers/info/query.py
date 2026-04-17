@@ -48,6 +48,28 @@ _change_tracking: dict[str, set[str]] = {
     "deleted_objects": set(),
 }
 
+# Module-level constant for mode string mapping - avoids rebuilding dict every call
+_MODE_MAP = {
+    "OBJECT": "Object Mode",
+    "EDIT_MESH": "Edit Mode",
+    "EDIT_CURVE": "Edit Mode (Curve)",
+    "EDIT_SURFACE": "Edit Mode (Surface)",
+    "EDIT_TEXT": "Edit Mode (Text)",
+    "EDIT_ARMATURE": "Edit Mode (Armature)",
+    "EDIT_METABALL": "Edit Mode (Metaball)",
+    "EDIT_LATTICE": "Edit Mode (Lattice)",
+    "POSE": "Pose Mode",
+    "SCULPT": "Sculpt Mode",
+    "PAINT_WEIGHT": "Weight Paint",
+    "PAINT_VERTEX": "Vertex Paint",
+    "PAINT_TEXTURE": "Texture Paint",
+    "PARTICLE": "Particle Edit",
+    "PAINT_GPENCIL": "Draw (Grease Pencil)",
+    "EDIT_GPENCIL": "Edit (Grease Pencil)",
+    "SCULPT_GPENCIL": "Sculpt (Grease Pencil)",
+    "WEIGHT_GPENCIL": "Weight (Grease Pencil)",
+}
+
 
 def record_last_op(
     operator: str,
@@ -253,9 +275,22 @@ def _query_undo_history(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
 
 
 def _query_scene_stats(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
-    """Query scene statistics."""
+    """Query scene statistics.
+
+    Args:
+        bpy: Blender Python API module
+        params: Query parameters:
+            - use_evaluated: bool (default: False)
+              If True, evaluates mesh modifiers and returns accurate vertex/edge/face counts.
+              WARNING: This is extremely expensive for complex scenes - calls to_mesh() for every MESH object.
+              If False (default), uses original mesh data without evaluating modifiers (much faster).
+
+    Returns:
+        Dict with scene statistics including object counts, vertex/edge/face counts, render settings.
+    """
+    use_evaluated = params.get("use_evaluated", False)
     scene = bpy.context.scene
-    depsgraph = bpy.context.evaluated_depsgraph_get()
+    depsgraph = bpy.context.evaluated_depsgraph_get() if use_evaluated else None
 
     total_verts = 0
     total_edges = 0
@@ -265,17 +300,24 @@ def _query_scene_stats(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
     for obj in scene.objects:
         if obj.type == "MESH":
             mesh_objects += 1
-            obj_eval = obj.evaluated_get(depsgraph)
-            try:
-                mesh = obj_eval.to_mesh()
-                if mesh:
+            if use_evaluated and depsgraph:
+                obj_eval = obj.evaluated_get(depsgraph)
+                try:
+                    mesh = obj_eval.to_mesh()
+                    if mesh:
+                        total_verts += len(mesh.vertices)
+                        total_edges += len(mesh.edges)
+                        total_faces += len(mesh.polygons)
+                except (AttributeError, RuntimeError, ValueError) as exc:
+                    logger.debug("Failed to evaluate mesh for '%s': %s", obj.name, exc)
+                finally:
+                    obj_eval.to_mesh_clear()
+            else:
+                if obj.data is not None:
+                    mesh = obj.data
                     total_verts += len(mesh.vertices)
                     total_edges += len(mesh.edges)
                     total_faces += len(mesh.polygons)
-            except (AttributeError, RuntimeError, ValueError) as exc:
-                logger.debug("Failed to evaluate mesh for '%s': %s", obj.name, exc)
-            finally:
-                obj_eval.to_mesh_clear()
 
     memory_stats = {}
     try:
@@ -341,10 +383,13 @@ def _query_selection(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
                 import bmesh
 
                 bm = bmesh.from_edit_mesh(obj.data)
+                sel_verts = sum(1 for v in bm.verts if v.select)
+                sel_edges = sum(1 for e in bm.edges if e.select)
+                sel_faces = sum(1 for f in bm.faces if f.select)
                 result["edit_mesh"] = {
-                    "selected_verts": sum(1 for v in bm.verts if v.select),
-                    "selected_edges": sum(1 for e in bm.edges if e.select),
-                    "selected_faces": sum(1 for f in bm.faces if f.select),
+                    "selected_verts": sel_verts,
+                    "selected_edges": sel_edges,
+                    "selected_faces": sel_faces,
                     "total_verts": len(bm.verts),
                     "total_edges": len(bm.edges),
                     "total_faces": len(bm.faces),
@@ -360,26 +405,6 @@ def _query_mode(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
     ctx = bpy.context
 
     mode_string = ctx.mode
-    mode_map = {
-        "OBJECT": "Object Mode",
-        "EDIT_MESH": "Edit Mode",
-        "EDIT_CURVE": "Edit Mode (Curve)",
-        "EDIT_SURFACE": "Edit Mode (Surface)",
-        "EDIT_TEXT": "Edit Mode (Text)",
-        "EDIT_ARMATURE": "Edit Mode (Armature)",
-        "EDIT_METABALL": "Edit Mode (Metaball)",
-        "EDIT_LATTICE": "Edit Mode (Lattice)",
-        "POSE": "Pose Mode",
-        "SCULPT": "Sculpt Mode",
-        "PAINT_WEIGHT": "Weight Paint",
-        "PAINT_VERTEX": "Vertex Paint",
-        "PAINT_TEXTURE": "Texture Paint",
-        "PARTICLE": "Particle Edit",
-        "PAINT_GPENCIL": "Draw (Grease Pencil)",
-        "EDIT_GPENCIL": "Edit (Grease Pencil)",
-        "SCULPT_GPENCIL": "Sculpt (Grease Pencil)",
-        "WEIGHT_GPENCIL": "Weight (Grease Pencil)",
-    }
 
     active_tool = None
     try:
@@ -393,7 +418,7 @@ def _query_mode(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
 
     return {
         "mode": mode_string,
-        "mode_string": mode_map.get(mode_string, mode_string),
+        "mode_string": _MODE_MAP.get(mode_string, mode_string),
         "active_object": ctx.active_object.name if ctx.active_object else None,
         "object_type": ctx.active_object.type if ctx.active_object else None,
         "tool": active_tool,
@@ -524,6 +549,7 @@ def _encode_image(
         return base64.b64encode(raw_data).decode("utf-8"), width, height, "image/png"
 
     img = bpy.data.images.load(filepath, check_existing=False)
+    original_quality = None
     try:
         scale = max_size / max(width, height)
         new_w = max(1, int(width * scale))
@@ -533,6 +559,8 @@ def _encode_image(
         thumb_path = filepath + "_thumb.jpg"
         img.filepath_raw = thumb_path
         img.file_format = "JPEG"
+        # Save original quality and restore after
+        original_quality = bpy.context.scene.render.image_settings.quality
         bpy.context.scene.render.image_settings.quality = 50
         img.save()
 
@@ -548,6 +576,9 @@ def _encode_image(
             "image/jpeg",
         )
     finally:
+        # Restore original quality setting
+        if original_quality is not None:
+            bpy.context.scene.render.image_settings.quality = original_quality
         bpy.data.images.remove(img)
 
 

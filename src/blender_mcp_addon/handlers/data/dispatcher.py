@@ -63,7 +63,7 @@ def data_create(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
         params = {}
 
     try:
-        result = handler.create(name, params)
+        result = handler.create(unicodedata.normalize("NFC", name), params)
         return _ok(result=result, started=started)
     except (AttributeError, KeyError, TypeError, RuntimeError, ValueError) as exc:
         return operation_failed_error("data.create", exc, started)
@@ -97,6 +97,8 @@ def data_write(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
         return err
 
     name = payload.get("name", "")
+    if name:
+        name = unicodedata.normalize("NFC", name)
     properties = payload.get("properties", {})
     params = payload.get("params", {})
 
@@ -123,6 +125,7 @@ def data_delete(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
     if not name:
         return invalid_params_error("'name' parameter is required", started)
 
+    name = unicodedata.normalize("NFC", name)
     params = payload.get("params", {})
 
     try:
@@ -178,10 +181,14 @@ def data_link(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
     if not source_type_str or not source_name:
         return invalid_params_error("source must have 'type' and 'name'", started)
 
+    source_name = unicodedata.normalize("NFC", source_name)
+
     target_type_str = target.get("type")
     target_name = target.get("name")
     if not target_type_str or not target_name:
         return invalid_params_error("target must have 'type' and 'name'", started)
+
+    target_name = unicodedata.normalize("NFC", target_name)
 
     source_type = HandlerRegistry.parse_type(source_type_str)
     if source_type is None:

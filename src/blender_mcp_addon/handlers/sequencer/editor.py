@@ -12,10 +12,15 @@ logger = logging.getLogger(__name__)
 
 # Cached Blender version check for VSE API
 _USE_LENGTH_PARAM: bool | None = None
+# Cached VSE strips attribute check - avoids repeated hasattr calls
+_USE_STRIPS_ATTR: bool | None = None
 
 
 def _strips(sed: Any) -> Any:
-    return sed.strips if hasattr(sed, "strips") else sed.sequences
+    global _USE_STRIPS_ATTR
+    if _USE_STRIPS_ATTR is None:
+        _USE_STRIPS_ATTR = hasattr(sed, "strips")
+    return sed.strips if _USE_STRIPS_ATTR else sed.sequences
 
 
 def _use_length_param() -> bool:

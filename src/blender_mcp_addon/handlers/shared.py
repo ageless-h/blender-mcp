@@ -30,9 +30,7 @@ def create_mesh_primitive(mesh: Any, primitive: str, params: dict[str, Any]) -> 
             segments = params.get("segments", 32)
             ring_count = params.get("ring_count", 16)
             radius = params.get("radius", size / 2)
-            bmesh.ops.create_uvsphere(
-                bm, u_segments=segments, v_segments=ring_count, radius=radius
-            )
+            bmesh.ops.create_uvsphere(bm, u_segments=segments, v_segments=ring_count, radius=radius)
         elif kind == "cylinder":
             segments = params.get("segments", 32)
             depth = params.get("depth", 2.0)
@@ -159,15 +157,10 @@ def find_referencing_objects(data_block: Any, object_type: str) -> dict[str, lis
     """
     import bpy  # type: ignore
 
-    objects = [
-        obj.name
-        for obj in bpy.data.objects
-        if obj.type == object_type and obj.data == data_block
-    ]
-    collections: list[str] = []
+    objects = [obj.name for obj in bpy.data.objects if obj.type == object_type and obj.data == data_block]
+    collections: set[str] = set()
     if objects:
         for coll in bpy.data.collections:
             if any(obj_name in coll.objects for obj_name in objects):
-                if coll.name not in collections:
-                    collections.append(coll.name)
-    return {"objects": objects, "collections": collections}
+                collections.add(coll.name)
+    return {"objects": objects, "collections": list(collections)}

@@ -72,15 +72,22 @@ MODIFIER_PROPERTY_PATHS: dict[str, dict[str, tuple[str, str]]] = {
 # New API (5.0+): modifier.use_axis[0], modifier.use_axis[1], modifier.use_axis[2]
 MIRROR_AXIS_PROPERTIES = ("use_x", "use_y", "use_z")
 
+# Cached Blender version - avoids repeated bpy.app.version calls
+_CACHED_BLENDER_VERSION: tuple[int, int, int] | None = None
+
 
 def _get_blender_version() -> tuple[int, int, int]:
-    """Get Blender version as tuple (major, minor, patch)."""
+    """Get Blender version as tuple (major, minor, patch). Cached at module level."""
+    global _CACHED_BLENDER_VERSION
+    if _CACHED_BLENDER_VERSION is not None:
+        return _CACHED_BLENDER_VERSION
     try:
         import bpy  # type: ignore
 
-        return bpy.app.version
+        _CACHED_BLENDER_VERSION = bpy.app.version
     except ImportError:
-        return (0, 0, 0)
+        _CACHED_BLENDER_VERSION = (0, 0, 0)
+    return _CACHED_BLENDER_VERSION
 
 
 @HandlerRegistry.register

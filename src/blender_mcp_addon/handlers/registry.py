@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Handler registry for unified data CRUD operations."""
+
 from __future__ import annotations
 
 from typing import Type, TypeVar
@@ -8,6 +9,12 @@ from .base import BaseHandler
 from .types import DataType
 
 T = TypeVar("T", bound=BaseHandler)
+
+# Type aliases for parse_type (module-level constant for performance)
+_TYPE_ALIASES = {
+    "gpencil": "grease_pencil",
+    "meta": "metaball",
+}
 
 
 class HandlerRegistry:
@@ -46,9 +53,7 @@ class HandlerRegistry:
             ValueError: If a handler is already registered for the data type
         """
         if not hasattr(handler_class, "data_type"):
-            raise ValueError(
-                f"Handler class {handler_class.__name__} must have a 'data_type' attribute"
-            )
+            raise ValueError(f"Handler class {handler_class.__name__} must have a 'data_type' attribute")
 
         data_type = handler_class.data_type
         if not isinstance(data_type, DataType):
@@ -149,11 +154,7 @@ class HandlerRegistry:
             The DataType enum value, or None if invalid
         """
         normalized = type_str.lower()
-        alias_map = {
-            "gpencil": "grease_pencil",
-            "meta": "metaball",
-        }
-        normalized = alias_map.get(normalized, normalized)
+        normalized = _TYPE_ALIASES.get(normalized, normalized)
         try:
             return DataType(normalized)
         except ValueError:

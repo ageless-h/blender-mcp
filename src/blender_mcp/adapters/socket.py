@@ -73,7 +73,49 @@ class SocketAdapter:
         logger.debug("Connected to %s:%d", self.host, self.port)
         return sock
 
-    def _ensure_connected(self) -> socket.socket:
+    def _recv_response(self, sock: socket.socket, started: float) -> AdapterResult:
+        response_chunks = []
+        leftover_data = b""
+        while True:
+            chunk = sock.recv(65536)
+            if not chunk:
+                break
+            if b"\n" in chunk:
+                idx = chunk.index(b"\n")
+                response_chunks.append(chunk[:idx])
+                leftover_data = chunk[idx + 1 :]
+                break
+            response_chunks.append(chunk)
+
+        response_data = b"".join(response_chunks)
+        elapsed_ms = (time.perf_counter() - started) * 1000.0
+        logger.debug("Response received in %.1fms", elapsed_ms)
+
+        if not response_data and not leftover_data:
+            return AdapterResult(
+                ok=False,
+                error="adapter_empty_response",
+                timing_ms=elapsed_ms,
+            )
+
+        try:
+            response = json.loads(response_data.decode("utf-8").strip())
+        except json.JSONDecodeError:
+            return AdapterResult(
+                ok=False,
+                error="adapter_invalid_response",
+                timing_ms=elapsed_ms,
+            )
+
+        err_obj = response.get("error")
+        return AdapterResult(
+            ok=response.get("ok", False),
+            result=response.get("result"),
+            error=err_obj.get("code") if err_obj else None,
+            error_message=err_obj.get("message") if err_obj else None,
+            error_suggestion=err_obj.get("suggestion") if err_obj else None,
+            timing_ms=elapsed_ms,
+        )
         """Ensure we have a valid connection, reconnecting if necessary."""
         if self._socket is not None:
             # Test if socket is still alive
@@ -189,38 +231,7 @@ class SocketAdapter:
                 request = json.dumps({"capability": capability, "payload": payload}, ensure_ascii=False)
                 sock.sendall((request + "\n").encode("utf-8"))
 
-                response_chunks = []
-                while True:
-                    chunk = sock.recv(65536)
-                    if not chunk:
-                        break
-                    response_chunks.append(chunk)
-                    if b"\n" in chunk:
-                        break
-
-                response_data = b"".join(response_chunks)
-                elapsed_ms = (time.perf_counter() - started) * 1000.0
-                logger.debug("Response received in %.1fms", elapsed_ms)
-
-                if not response_data:
-                    # Empty response - connection may be in bad state
-                    self._close_socket()
-                    return AdapterResult(
-                        ok=False,
-                        error="adapter_empty_response",
-                        timing_ms=elapsed_ms,
-                    )
-
-                response = json.loads(response_data.decode("utf-8").strip())
-                err_obj = response.get("error")
-                return AdapterResult(
-                    ok=response.get("ok", False),
-                    result=response.get("result"),
-                    error=err_obj.get("code") if err_obj else None,
-                    error_message=err_obj.get("message") if err_obj else None,
-                    error_suggestion=err_obj.get("suggestion") if err_obj else None,
-                    timing_ms=elapsed_ms,
-                )
+                return self._recv_response(sock, started)
 
             except socket.timeout:
                 elapsed_ms = (time.perf_counter() - started) * 1000.0
@@ -240,14 +251,6 @@ class SocketAdapter:
                     error="adapter_unavailable",
                     timing_ms=elapsed_ms,
                 )
-            except json.JSONDecodeError:
-                elapsed_ms = (time.perf_counter() - started) * 1000.0
-                logger.debug("Invalid JSON response after %.1fms", elapsed_ms)
-                return AdapterResult(
-                    ok=False,
-                    error="adapter_invalid_response",
-                    timing_ms=elapsed_ms,
-                )
 
     def _execute_once(self, capability: str, payload: Dict[str, Any]) -> AdapterResult:
         """Execute a single attempt via socket connection to Blender addon (non-persistent)."""
@@ -262,36 +265,7 @@ class SocketAdapter:
                 request = json.dumps({"capability": capability, "payload": payload}, ensure_ascii=False)
                 sock.sendall((request + "\n").encode("utf-8"))
 
-                response_chunks = []
-                while True:
-                    chunk = sock.recv(65536)
-                    if not chunk:
-                        break
-                    response_chunks.append(chunk)
-                    if b"\n" in chunk:
-                        break
-
-                response_data = b"".join(response_chunks)
-                elapsed_ms = (time.perf_counter() - started) * 1000.0
-                logger.debug("Response received in %.1fms", elapsed_ms)
-
-                if not response_data:
-                    return AdapterResult(
-                        ok=False,
-                        error="adapter_empty_response",
-                        timing_ms=elapsed_ms,
-                    )
-
-                response = json.loads(response_data.decode("utf-8").strip())
-                err_obj = response.get("error")
-                return AdapterResult(
-                    ok=response.get("ok", False),
-                    result=response.get("result"),
-                    error=err_obj.get("code") if err_obj else None,
-                    error_message=err_obj.get("message") if err_obj else None,
-                    error_suggestion=err_obj.get("suggestion") if err_obj else None,
-                    timing_ms=elapsed_ms,
-                )
+                return self._recv_response(sock, started)
 
         except socket.timeout:
             elapsed_ms = (time.perf_counter() - started) * 1000.0
@@ -307,14 +281,6 @@ class SocketAdapter:
             return AdapterResult(
                 ok=False,
                 error="adapter_unavailable",
-                timing_ms=elapsed_ms,
-            )
-        except json.JSONDecodeError:
-            elapsed_ms = (time.perf_counter() - started) * 1000.0
-            logger.debug("Invalid JSON response after %.1fms", elapsed_ms)
-            return AdapterResult(
-                ok=False,
-                error="adapter_invalid_response",
                 timing_ms=elapsed_ms,
             )
 

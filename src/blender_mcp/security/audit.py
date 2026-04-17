@@ -11,6 +11,7 @@ from typing import Any, Dict
 MAX_LOG_SIZE = 10 * 1024 * 1024  # 10MB
 MAX_LOG_FILES = 5
 MAX_MEMORY_EVENTS = 1000
+BUFFER_FLUSH_COUNT = 10
 
 
 @dataclass(frozen=True)
@@ -56,18 +57,33 @@ class MemoryAuditLogger(AuditLogger):
 
 
 class JsonFileAuditLogger(AuditLogger):
-    def __init__(self, file_path: str) -> None:
+    def __init__(self, file_path: str, buffer_size: int = BUFFER_FLUSH_COUNT) -> None:
         self._file_path = file_path
         self._lock = threading.Lock()
+        self._buffer: list[AuditEvent] = []
+        self._buffer_size = buffer_size
 
     def record(self, event: AuditEvent) -> None:
+        with self._lock:
+            self._buffer.append(event)
+            if len(self._buffer) >= self._buffer_size:
+                self._flush_buffer()
+
+    def _flush_buffer(self) -> None:
+        if not self._buffer:
+            return
         import json
 
-        with self._lock:
-            self._rotate_if_needed()
-            with open(self._file_path, "a", encoding="utf-8") as handle:
+        self._rotate_if_needed()
+        with open(self._file_path, "a", encoding="utf-8") as handle:
+            for event in self._buffer:
                 handle.write(json.dumps(event.__dict__, ensure_ascii=False))
                 handle.write("\n")
+        self._buffer.clear()
+
+    def flush(self) -> None:
+        with self._lock:
+            self._flush_buffer()
 
     def _rotate_if_needed(self) -> None:
         try:

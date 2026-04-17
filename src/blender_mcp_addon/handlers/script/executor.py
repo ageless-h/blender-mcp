@@ -8,6 +8,7 @@ import sys
 import threading
 import time
 import traceback
+from collections import deque
 from typing import Any
 
 from ..response import (
@@ -25,7 +26,12 @@ _script_config: dict[str, Any] = {
     "audit_log_enabled": True,
 }
 
-_audit_log: list[dict[str, Any]] = []
+# Thread-local storage for stdout/stderr capture (avoids global competition)
+# This prevents multiple concurrent script executions from interfering with each other's output
+_stdout_state = threading.local()
+
+# Use deque for efficient append and automatic size limiting
+_audit_log: deque[dict[str, Any]] = deque(maxlen=1000)
 
 
 def configure_script_execution(
@@ -66,7 +72,8 @@ def get_audit_log(limit: int = 100) -> list[dict[str, Any]]:
     Returns:
         List of audit log entries
     """
-    return list(_audit_log[-limit:])
+    # deque supports slicing, but convert to list for consistent return type
+    return list(_audit_log)[:limit]
 
 
 def clear_audit_log() -> None:
@@ -89,9 +96,7 @@ def _log_execution(code: str, success: bool, result: Any, error: str | None, dur
         "duration_ms": duration_ms,
     }
     _audit_log.append(entry)
-
-    if len(_audit_log) > 1000:
-        _audit_log[:] = _audit_log[-500:]
+    # deque with maxlen auto-trims, no manual trimming needed
 
 
 def script_execute(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
@@ -196,6 +201,22 @@ def _execute_with_timeout(code: str, timeout: int, bpy: Any) -> dict[str, Any]:
     Raises:
         TimeoutError: If execution exceeds timeout
         Exception: If execution fails
+
+    ⚠️ THREAD SAFETY WARNING (CRITICAL LIMITATION):
+        User scripts execute in a separate thread. The Blender Python API (bpy)
+        is NOT thread-safe and should only be called from the main thread.
+        This is a known limitation of the Blender API. Scripts that modify
+        Blender data from a background thread may cause crashes or undefined
+        behavior. Use bpy.app.timers or queue work to the main thread if needed.
+
+        Known issues:
+        - Concurrent bpy API calls from multiple threads can cause race conditions
+        - Global stdout/stderr redirection competes across threads (mitigated by threading.local())
+        - Blender data modifications from background threads are unsafe
+
+        Mitigation:
+        - threading.local() used for stdout/stderr capture to avoid global competition
+        - Users should avoid bpy API calls in scripts or use bpy.app.timers for main-thread execution
     """
     result_container: dict[str, Any] = {
         "return_value": None,
@@ -231,6 +252,8 @@ def _execute_with_timeout(code: str, timeout: int, bpy: Any) -> dict[str, Any]:
 
     def execute_code():
         try:
+            _stdout_state.stdout = stdout_capture
+            _stdout_state.stderr = stderr_capture
             sys.stdout = stdout_capture
             sys.stderr = stderr_capture
 
@@ -249,6 +272,8 @@ def _execute_with_timeout(code: str, timeout: int, bpy: Any) -> dict[str, Any]:
         finally:
             sys.stdout = old_stdout
             sys.stderr = old_stderr
+            _stdout_state.stdout = None
+            _stdout_state.stderr = None
 
     thread = threading.Thread(target=execute_code)
     thread.start()

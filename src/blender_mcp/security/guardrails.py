@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
-import json
 import os
 from dataclasses import dataclass, field
 from typing import Any, Dict, Iterable, Set
@@ -17,10 +16,7 @@ class Guardrails:
     def allow(self, capability: str, payload: Dict[str, Any]) -> bool:
         if capability in self.blocked_capabilities:
             return False
-        try:
-            payload_size = len(json.dumps(payload).encode("utf-8"))
-        except (TypeError, ValueError, OverflowError):
-            return False
+        payload_size = self._estimate_size(payload)
         if payload_size > self.max_payload_bytes:
             return False
         if len(payload) > self.max_payload_keys:
@@ -28,6 +24,32 @@ class Guardrails:
         if not self._check_depth(payload, self.max_nesting_depth):
             return False
         return True
+
+    @staticmethod
+    def _estimate_size(obj: Any) -> int:
+        """Estimate JSON size without full serialization."""
+        if obj is None:
+            return 4
+        if isinstance(obj, bool):
+            return 5
+        if isinstance(obj, int):
+            return len(str(obj))
+        if isinstance(obj, float):
+            return len(str(obj))
+        if isinstance(obj, str):
+            return len(obj.encode("utf-8")) + 2
+        if isinstance(obj, dict):
+            size = 2
+            for key, value in obj.items():
+                size += len(key.encode("utf-8")) + 4
+                size += Guardrails._estimate_size(value)
+            return size
+        if isinstance(obj, (list, tuple)):
+            size = 2
+            for item in obj:
+                size += Guardrails._estimate_size(item) + 2
+            return size
+        return len(str(obj))
 
     @staticmethod
     def _check_depth(obj: Any, max_depth: int, current: int = 0) -> bool:

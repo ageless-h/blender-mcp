@@ -6,7 +6,23 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any
 
-from .types import DataType
+from .types import DataType, get_collection_name, is_pseudo_type
+
+# Module-level import cache for bpy to avoid repeated imports in hot path
+_bpy = None
+
+
+def _get_bpy():
+    """Get bpy module, caching the import for performance."""
+    global _bpy
+    if _bpy is None:
+        try:
+            import bpy  # type: ignore
+
+            _bpy = bpy
+        except ImportError:
+            return None
+    return _bpy
 
 
 class BaseHandler(ABC):
@@ -114,17 +130,10 @@ class BaseHandler(ABC):
         return {"error": f"Link operation not supported for type {self.data_type.value}"}
 
     def get_collection(self) -> Any:
-        """Get the bpy.data collection for this handler's data type.
-
-        Returns:
-            The bpy.data.<collection> for this type, or None for pseudo-types
-        """
-        try:
-            import bpy  # type: ignore
-        except ImportError:
+        """Get the bpy.data collection for this handler's data type."""
+        bpy = _get_bpy()
+        if bpy is None:
             return None
-
-        from .types import get_collection_name, is_pseudo_type
 
         if is_pseudo_type(self.data_type):
             return None
@@ -310,11 +319,14 @@ class GenericCollectionHandler(BaseHandler):
 
     def delete(self, name: str, params: dict[str, Any]) -> dict[str, Any]:
         """Delete a data block from the bpy.data collection."""
-        item = self.get_item(name)
+        collection = self.get_collection()
+        if collection is None:
+            raise KeyError(f"{self._type_label()} '{name}' not found")
+
+        item = collection.get(name)
         if item is None:
             raise KeyError(f"{self._type_label()} '{name}' not found")
 
-        collection = self.get_collection()
         collection.remove(item)
         return {"deleted": name}
 

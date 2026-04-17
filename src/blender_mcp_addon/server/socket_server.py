@@ -76,7 +76,7 @@ def start_socket_server(host: str | None = None, port: int | None = None) -> dic
             _server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             _server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             _server_socket.bind((host, port))
-            _server_socket.listen(5)
+            _server_socket.listen(MAX_CONNECTIONS)
             _server_socket.settimeout(1.0)
 
             _server_thread = threading.Thread(

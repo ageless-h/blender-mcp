@@ -30,13 +30,8 @@ class OperationLog:
     def record(self, capability: str, ok: bool, duration_ms: float, response: dict | None = None) -> None:
         preview = ""
         if response is not None:
-            import json
-
-            raw = json.dumps(response, ensure_ascii=False)
-            if len(raw) > _MAX_PREVIEW_CHARS:
-                preview = raw[:_MAX_PREVIEW_CHARS] + "…"
-            else:
-                preview = raw
+            raw = str(response)
+            preview = raw[:_MAX_PREVIEW_CHARS] + "…" if len(raw) > _MAX_PREVIEW_CHARS else raw
 
         entry = LogEntry(
             capability=capability,

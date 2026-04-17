@@ -147,9 +147,7 @@ class ArmatureHandler(GenericCollectionHandler):
         armature = bpy.data.armatures.new(name=name)
         return {"name": armature.name, "type": "armature"}
 
-    def read(
-        self, name: str, path: str | None, params: dict[str, Any]
-    ) -> dict[str, Any]:
+    def read(self, name: str, path: str | None, params: dict[str, Any]) -> dict[str, Any]:
         import fnmatch
 
         import bpy  # type: ignore
@@ -176,10 +174,17 @@ class ArmatureHandler(GenericCollectionHandler):
 
         if "hierarchy" in include:
             result["hierarchy"] = [
-                {"name": b.name, "head": list(b.head), "tail": list(b.tail),
-                 "length": b.length, "parent": b.parent.name if b.parent else None,
-                 "children": [c.name for c in b.children], "connected": b.use_connect}
-                for b in armature.bones if _match(b.name)
+                {
+                    "name": b.name,
+                    "head": list(b.head),
+                    "tail": list(b.tail),
+                    "length": b.length,
+                    "parent": b.parent.name if b.parent else None,
+                    "children": [c.name for c in b.children],
+                    "connected": b.use_connect,
+                }
+                for b in armature.bones
+                if _match(b.name)
             ]
 
         arm_obj = None
@@ -191,10 +196,15 @@ class ArmatureHandler(GenericCollectionHandler):
 
         if "poses" in include and arm_obj and arm_obj.pose:
             result["poses"] = [
-                {"name": pb.name, "location": list(pb.location),
-                 "rotation_quaternion": list(pb.rotation_quaternion),
-                 "scale": list(pb.scale), "rotation_mode": pb.rotation_mode}
-                for pb in arm_obj.pose.bones if _match(pb.name)
+                {
+                    "name": pb.name,
+                    "location": list(pb.location),
+                    "rotation_quaternion": list(pb.rotation_quaternion),
+                    "scale": list(pb.scale),
+                    "rotation_mode": pb.rotation_mode,
+                }
+                for pb in arm_obj.pose.bones
+                if _match(pb.name)
             ]
 
         if "constraints" in include and arm_obj and arm_obj.pose:
@@ -203,15 +213,21 @@ class ArmatureHandler(GenericCollectionHandler):
                 if not _match(pb.name):
                     continue
                 for c in pb.constraints:
-                    cons.append({"bone": pb.name, "name": c.name, "type": c.type,
-                                 "enabled": not c.mute, "influence": c.influence})
+                    cons.append(
+                        {
+                            "bone": pb.name,
+                            "name": c.name,
+                            "type": c.type,
+                            "enabled": not c.mute,
+                            "influence": c.influence,
+                        }
+                    )
             result["constraints"] = cons
 
         if "bone_groups" in include and arm_obj and arm_obj.pose:
             if hasattr(arm_obj.pose, "bone_groups"):
                 result["bone_groups"] = [
-                    {"name": bg.name, "color_set": bg.color_set}
-                    for bg in arm_obj.pose.bone_groups
+                    {"name": bg.name, "color_set": bg.color_set} for bg in arm_obj.pose.bone_groups
                 ]
             else:
                 result["bone_groups"] = []
@@ -223,10 +239,14 @@ class ArmatureHandler(GenericCollectionHandler):
                     continue
                 for c in pb.constraints:
                     if c.type == "IK":
-                        chains.append({"bone": pb.name,
-                                       "target": c.target.name if c.target else None,
-                                       "subtarget": c.subtarget,
-                                       "chain_count": c.chain_count})
+                        chains.append(
+                            {
+                                "bone": pb.name,
+                                "target": c.target.name if c.target else None,
+                                "subtarget": c.subtarget,
+                                "chain_count": c.chain_count,
+                            }
+                        )
             result["ik_chains"] = chains
 
         return result
@@ -249,9 +269,7 @@ class CurveHandler(GenericCollectionHandler):
         from mathutils import Vector  # type: ignore
 
         curve_type = params.get("curve_type") or "CURVE"
-        spline_type_default = (
-            params.get("spline_type") or params.get("type") or "BEZIER"
-        )
+        spline_type_default = params.get("spline_type") or params.get("type") or "BEZIER"
         curve = bpy.data.curves.new(name=name, type=curve_type)
 
         if "dimensions" in params:
@@ -279,12 +297,8 @@ class CurveHandler(GenericCollectionHandler):
                         point.handle_left = Vector(point_data["handle_left"])
                     if "handle_right" in point_data:
                         point.handle_right = Vector(point_data["handle_right"])
-                    point.handle_left_type = point_data.get(
-                        "handle_left_type", point.handle_left_type
-                    )
-                    point.handle_right_type = point_data.get(
-                        "handle_right_type", point.handle_right_type
-                    )
+                    point.handle_left_type = point_data.get("handle_left_type", point.handle_left_type)
+                    point.handle_right_type = point_data.get("handle_right_type", point.handle_right_type)
             else:
                 points = spline_data.get("points", [])
                 spline.points.add(max(len(points) - 1, 0))
@@ -354,9 +368,7 @@ class _FontCurveHandler(BaseHandler):
 
         return result
 
-    def read(
-        self, name: str, path: str | None, params: dict[str, Any]
-    ) -> dict[str, Any]:
+    def read(self, name: str, path: str | None, params: dict[str, Any]) -> dict[str, Any]:
         import bpy  # type: ignore
 
         font_curve = bpy.data.curves.get(name)
@@ -375,9 +387,7 @@ class _FontCurveHandler(BaseHandler):
             "size": font_curve.size,
         }
 
-    def write(
-        self, name: str, properties: dict[str, Any], params: dict[str, Any]
-    ) -> dict[str, Any]:
+    def write(self, name: str, properties: dict[str, Any], params: dict[str, Any]) -> dict[str, Any]:
         import bpy  # type: ignore
 
         font_curve = bpy.data.curves.get(name)
@@ -402,11 +412,7 @@ class _FontCurveHandler(BaseHandler):
     def list_items(self, filter_params: dict[str, Any] | None) -> dict[str, Any]:
         import bpy  # type: ignore
 
-        items = [
-            {"name": c.name, "body": c.body}
-            for c in bpy.data.curves
-            if c.type == "FONT"
-        ]
+        items = [{"name": c.name, "body": c.body} for c in bpy.data.curves if c.type == "FONT"]
         return {"items": items, "count": len(items)}
 
 
@@ -457,9 +463,7 @@ class WorldHandler(GenericCollectionHandler):
     def _list_fields(self, item: Any) -> dict[str, Any]:
         return {"name": item.name, "use_nodes": item.use_nodes}
 
-    def write(
-        self, name: str, properties: dict[str, Any], params: dict[str, Any]
-    ) -> dict[str, Any]:
+    def write(self, name: str, properties: dict[str, Any], params: dict[str, Any]) -> dict[str, Any]:
         import bpy  # type: ignore
 
         world = bpy.data.worlds.get(name)
@@ -467,21 +471,18 @@ class WorldHandler(GenericCollectionHandler):
             raise KeyError(f"World '{name}' not found")
 
         modified = []
+        # Look up Background node once instead of twice
+        bg_node = None
+        if world.use_nodes and world.node_tree:
+            bg_node = world.node_tree.nodes.get("Background")
+
         for prop_path, value in properties.items():
-            if prop_path == "background_color" and world.use_nodes and world.node_tree:
-                bg_node = world.node_tree.nodes.get("Background")
-                if bg_node:
-                    bg_node.inputs["Color"].default_value = tuple(value)
-                    modified.append("background_color")
-            elif (
-                prop_path == "background_strength"
-                and world.use_nodes
-                and world.node_tree
-            ):
-                bg_node = world.node_tree.nodes.get("Background")
-                if bg_node:
-                    bg_node.inputs["Strength"].default_value = value
-                    modified.append("background_strength")
+            if prop_path == "background_color" and bg_node:
+                bg_node.inputs["Color"].default_value = tuple(value)
+                modified.append("background_color")
+            elif prop_path == "background_strength" and bg_node:
+                bg_node.inputs["Strength"].default_value = value
+                modified.append("background_strength")
             else:
                 self._set_nested_attr(world, prop_path, value)
                 modified.append(prop_path)
@@ -547,9 +548,7 @@ class GreasePencilHandler(GenericCollectionHandler):
 
         layers_count = len(gp.layers)
         frames_total = sum(len(layer.frames) for layer in gp.layers)
-        strokes_total = sum(
-            len(frame.strokes) for layer in gp.layers for frame in layer.frames
-        )
+        strokes_total = sum(len(frame.strokes) for layer in gp.layers for frame in layer.frames)
 
         result = {
             "name": gp.name,
@@ -572,9 +571,7 @@ class GreasePencilHandler(GenericCollectionHandler):
             "layers": layers,
             "layers_count": len(item.layers),
             "frames_total": sum(len(layer.frames) for layer in item.layers),
-            "strokes_total": sum(
-                len(frame.strokes) for layer in item.layers for frame in layer.frames
-            ),
+            "strokes_total": sum(len(frame.strokes) for layer in item.layers for frame in layer.frames),
         }
 
     def _list_fields(self, item: Any) -> dict[str, Any]:
