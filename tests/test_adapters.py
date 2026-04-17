@@ -101,7 +101,7 @@ class TestSocketAdapter(unittest.TestCase):
         mock_socket_class.return_value.__enter__ = MagicMock(return_value=mock_sock)
         mock_socket_class.return_value.__exit__ = MagicMock(return_value=False)
 
-        adapter = SocketAdapter(max_retries=1)
+        adapter = SocketAdapter(max_retries=1, use_persistent_connection=False)
         result = adapter.execute("blender.get_scene", {})
         self.assertFalse(result.ok)
         self.assertEqual(result.error, _FRIENDLY_ERRORS["adapter_timeout"])

@@ -148,10 +148,15 @@ class TestBug4_VSETransitionImplementation(unittest.TestCase):
         sed = MagicMock()
         sed.sequences.get.side_effect = lambda n: {"Clip1": strip1, "Clip2": strip2}.get(n)
         sed.sequences.new_effect.return_value = new_strip
+        del sed.strips
 
         bpy = MagicMock()
         bpy.context.scene.sequence_editor = sed
         mock_check.return_value = (True, bpy)
+
+        from blender_mcp_addon.handlers.sequencer import editor as se_mod
+
+        se_mod._USE_STRIPS_ATTR = None
 
         from blender_mcp_addon.handlers.sequencer.editor import sequencer_edit
 

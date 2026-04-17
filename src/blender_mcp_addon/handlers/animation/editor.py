@@ -146,8 +146,21 @@ def _modify_keyframe(bpy: Any, payload: dict[str, Any], started: float) -> dict[
 
     modified = 0
     action = obj.animation_data.action
-    # Use fcurves.find() for O(1) lookup instead of O(n) iteration
-    fc = action.fcurves.find(data_path, index=index if index >= 0 else -1)
+
+    # Find the FCurve - use iter_fcurves() for layered actions, fcurves.find() for legacy
+    from . import iter_fcurves
+
+    fc = None
+    if hasattr(action, "layers"):
+        # Blender 5.0+ layered API - iterate to find matching fcurve
+        for fcurve in iter_fcurves(action):
+            if fcurve.data_path == data_path and (index == -1 or fcurve.array_index == index):
+                fc = fcurve
+                break
+    elif hasattr(action, "fcurves"):
+        # Legacy API - use O(1) find() lookup
+        fc = action.fcurves.find(data_path, index=index if index >= 0 else -1)
+
     if fc:
         if value is not None and frame is not None:
             target_frame = int(frame)
