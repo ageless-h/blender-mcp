@@ -1,8 +1,36 @@
 # 全量代码逐行性能与稳定性审计报告
 
 > 审计日期: 2026-04-17
+> 修复日期: 2026-04-17
 > 审计范围: `src/` 下全部 97 个 Python 文件, ~14,909 行
 > 分类: 🔴 严重 | 🟡 中等 | 🟢 低优先级 | 🐛 BUG
+
+---
+
+## 修复状态汇总
+
+> **状态**: ✅ 所有问题已修复或验证
+
+### Phase 1 (v1.3.1) — 紧急修复 ✅
+- ✅ 修复 5 个 BUG (movieclip, sound, workspace, key_handler, dispatcher)
+- ✅ `check_bpy_available()` 缓存
+- ✅ `_use_length_param()` 缓存
+- ✅ image_handler 像素循环优化
+- ✅ mesh/query to_mesh() try/finally
+- ✅ query.py 临时文件清理
+
+### Phase 2 (v1.4.0) — 性能优化 ✅
+- ✅ nodes/editor.py 节点索引 + 反向查找表
+- ✅ material_handler _find_principled 提前查找
+- ✅ op_log 改用 deque
+- ✅ base.py hasattr→try/getattr
+- ✅ scene_stats evaluated mesh 策略优化
+- ✅ iter_fcurves 版本检测缓存
+
+### Phase 3 (v1.5.0) — 架构改进 ✅
+- ✅ script/executor 线程安全重构 (threading.local + deque)
+- ✅ socket.py 响应大小限制 + 缓冲区处理
+- ✅ protocol 签名 + progress_token 支持
 
 ---
 
