@@ -78,6 +78,7 @@ _WRITE_CAPABILITIES = frozenset(
         "blender.execute_script",
         "blender.import_export",
         "blender.render_scene",
+        "blender.batch_execute",
     }
 )
 
@@ -99,7 +100,7 @@ def execute_capability(
     """Execute a capability request and return the result.
 
     Supports internal capabilities (data.*, operator.execute, info.query,
-    script.execute) and new blender.* capabilities from the 28-tool architecture.
+    script.execute) and new blender.* capabilities from the 29-tool architecture.
 
     Write capabilities are wrapped with an undo-push so that every MCP
     mutation can be reverted with Ctrl+Z in Blender.

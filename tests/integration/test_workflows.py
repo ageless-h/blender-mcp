@@ -25,9 +25,9 @@ class TestWorkflowScenarios(unittest.TestCase):
         self.assertIn("content", resp["result"])
         self.assertNotIn("isError", resp["result"])
 
-    def test_tools_list_returns_28_tools(self) -> None:
+    def test_tools_list_returns_29_tools(self) -> None:
         resp = self._rpc("tools/list")
-        self.assertEqual(len(resp["result"]["tools"]), 28)
+        self.assertEqual(len(resp["result"]["tools"]), 29)
 
     def test_unknown_tool_rejected(self) -> None:
         resp = self._rpc("tools/call", {"name": "nonexistent_tool", "arguments": {}})

@@ -1411,7 +1411,7 @@ _IMPERATIVE_TOOLS = [
 ]
 
 # ---------------------------------------------------------------------------
-# Fallback Layer (4 Tools)
+# Fallback Layer (5 Tools)
 # ---------------------------------------------------------------------------
 
 _FALLBACK_TOOLS = [
@@ -1587,6 +1587,56 @@ _FALLBACK_TOOLS = [
             "openWorldHint": True,
         },
         internal_capability="blender.render_scene",
+    ),
+    _tool(
+        name="blender_batch_execute",
+        description=(
+            "Execute multiple operations in a single batch request. "
+            "Reduces MCP round-trips for complex workflows.\n\n"
+            "Use this when: you need to perform multiple independent operations efficiently.\n\n"
+            "Do NOT use for: single operations (use the specific tool directly)."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "operations": {
+                    "type": "array",
+                    "description": "List of operations to execute.",
+                    "minItems": 1,
+                    "maxItems": 50,
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "tool": {
+                                "type": "string",
+                                "description": "Tool name (e.g., 'blender_create_object').",
+                            },
+                            "params": {"type": "object", "description": "Tool parameters."},
+                        },
+                        "required": ["tool", "params"],
+                        "additionalProperties": False,
+                    },
+                },
+                "stop_on_error": {
+                    "type": "boolean",
+                    "description": "Stop on first error (default: true).",
+                },
+                "continue_on_error": {
+                    "type": "boolean",
+                    "description": "Continue even on errors (default: false).",
+                },
+            },
+            "required": ["operations"],
+            "additionalProperties": False,
+        },
+        annotations={
+            "title": "Batch Execute",
+            "readOnlyHint": False,
+            "destructiveHint": True,
+            "idempotentHint": False,
+            "openWorldHint": False,
+        },
+        internal_capability="blender.batch_execute",
     ),
 ]
 

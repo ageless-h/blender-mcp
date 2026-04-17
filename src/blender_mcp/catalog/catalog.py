@@ -87,13 +87,13 @@ def capability_to_dict(capability: CapabilityMeta, version: str | None = None) -
 
 
 def minimal_capability_set() -> list[CapabilityMeta]:
-    """Return the 28-tool capability set.
+    """Return the 29-tool capability set.
 
     Four layers:
     - Perception (11): read-only queries
     - Declarative Write (3): node/animation/VSE batch edits
     - Imperative Write (10): object/material/modifier/mesh etc.
-    - Fallback (4): operator/script/import-export/render
+    - Fallback (5): operator/script/import-export/render/batch
     """
     return [
         # Perception layer (11)
@@ -243,7 +243,7 @@ def minimal_capability_set() -> list[CapabilityMeta]:
             scopes=["data:write"],
             min_version="4.2",
         ),
-        # Fallback layer (4)
+        # Fallback layer (5)
         CapabilityMeta(
             name="blender.execute_operator",
             description="Execute any bpy.ops.*",
@@ -262,18 +262,23 @@ def minimal_capability_set() -> list[CapabilityMeta]:
             scopes=["data:write", "operator:execute"],
             min_version="4.2",
         ),
-        # Fallback layer - render (1)
         CapabilityMeta(
             name="blender.render_scene",
             description="Render scene to image/animation",
             scopes=["render:execute"],
             min_version="4.2",
         ),
+        CapabilityMeta(
+            name="blender.batch_execute",
+            description="Execute multiple operations in batch",
+            scopes=["batch:execute"],
+            min_version="4.2",
+        ),
     ]
 
 
 def new_tool_scope_map() -> dict[str, set[str]]:
-    """Return scope mappings for the 28-tool architecture.
+    """Return scope mappings for the 29-tool architecture.
 
     Maps internal capability names to required scopes.
     """
@@ -310,6 +315,7 @@ _TOOL_SCOPE_MAP: dict[str, set[str]] = {
     "blender.execute_script": {"script:execute"},
     "blender.import_export": {"data:write", "operator:execute"},
     "blender.render_scene": {"render:execute"},
+    "blender.batch_execute": {"batch:execute"},
 }
 
 

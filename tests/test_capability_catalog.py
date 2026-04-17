@@ -47,11 +47,12 @@ class TestCapabilityCatalog(unittest.TestCase):
             "blender.manage_physics",
             "blender.setup_scene",
             "blender.edit_mesh",
-            # Fallback layer (4)
+            # Fallback layer (5)
             "blender.execute_operator",
             "blender.execute_script",
             "blender.import_export",
             "blender.render_scene",
+            "blender.batch_execute",
         }
         self.assertEqual(names, expected)
         for cap in capabilities:

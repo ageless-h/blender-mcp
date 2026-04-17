@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Schema validation tests for all 28 tools."""
+"""Schema validation tests for all 29 tools."""
 
 from __future__ import annotations
 
@@ -14,8 +14,8 @@ ANN_KEYS = ["readOnlyHint", "destructiveHint", "idempotentHint", "openWorldHint"
 
 
 class TestToolCount(unittest.TestCase):
-    def test_exactly_28(self):
-        self.assertEqual(len(TOOL_DEFINITIONS), 28)
+    def test_exactly_29(self):
+        self.assertEqual(len(TOOL_DEFINITIONS), 29)
 
     def test_unique_names(self):
         names = [t["name"] for t in TOOL_DEFINITIONS]
