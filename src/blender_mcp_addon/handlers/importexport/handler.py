@@ -3,11 +3,18 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Callable
 
 from ..context_utils import get_view3d_override
 from ..error_codes import ErrorCode
 from ..response import _error, _ok, bpy_unavailable_error, check_bpy_available
+
+ProgressCallback = Callable[[float, float | None, str | None], None] | None
+
+
+def _get_progress_callback(payload: dict[str, Any]) -> ProgressCallback:
+    return payload.pop("_progress_callback", None)
+
 
 _IMPORT_OPERATORS = {
     "FBX": "import_scene.fbx",
@@ -67,6 +74,7 @@ def import_export(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
     if not available:
         return bpy_unavailable_error(started)
 
+    progress = _get_progress_callback(payload)
     action = payload.get("action", "")
     fmt = payload.get("format", "")
     filepath = payload.get("filepath", "")
@@ -78,6 +86,9 @@ def import_export(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
     if not filepath:
         return _error(code=ErrorCode.INVALID_PARAMS, message="filepath is required", started=started)
 
+    if progress:
+        progress(0.1, 1.0, f"Validating {action} path...")
+
     validated_path = _validate_filepath(filepath)
     if validated_path is None:
         return _error(code=ErrorCode.INVALID_PARAMS, message="Invalid or unsafe file path", started=started)
@@ -88,30 +99,31 @@ def import_export(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
     if not operator_id:
         return _error(code=ErrorCode.INVALID_PARAMS, message=f"Unsupported format: {fmt}", started=started)
 
-    # Build operator params
     params: dict[str, Any] = {"filepath": filepath}
     settings = payload.get("settings", {})
     params.update(settings)
 
-    # Handle GLTF/GLB export format parameter
     if fmt == "GLB" and action == "export":
         params.setdefault("export_format", "GLB")
     elif fmt == "GLTF" and action == "export":
         params.setdefault("export_format", "GLTF_SEPARATE")
 
+    if progress:
+        progress(0.3, 1.0, f"Starting {action} {fmt}...")
+
     try:
-        # Resolve operator
         parts = operator_id.split(".")
         op_module = getattr(bpy.ops, parts[0])
         op_func = getattr(op_module, parts[1])
-        # Build a context override so operators have the 3D-View context
-        # they may require (especially exporters).
         override = get_view3d_override(bpy)
         with bpy.context.temp_override(**override):
             result = op_func(**params)
         status = "FINISHED" if result == {"FINISHED"} else str(result)
     except (AttributeError, RuntimeError, OSError, KeyError, TypeError) as exc:
         return _error(code=ErrorCode.OPERATION_FAILED, message=f"{action} {fmt} failed: {exc}", started=started)
+
+    if progress:
+        progress(1.0, 1.0, f"{action.capitalize()} {fmt} complete")
 
     return _ok(
         result={
