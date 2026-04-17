@@ -8,7 +8,641 @@
 
 ---
 
-## 核心测试系统
+## ⚠️ RALPH-LOOP 严格规则
+
+### 强制执行原则
+
+1. **永不跳过步骤** - 必须按顺序完成每个阶段
+2. **每次操作必须验证** - 不能假设操作成功，必须读取验证
+3. **错误必须记录** - 任何异常都要写入状态文件
+4. **内存必须监控** - 每次迭代检查内存使用
+5. **清理必须执行** - 无论成功失败，都要清理资源
+
+### 迭代必须完成闭环
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         完整迭代生命周期                                  │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐                │
+│  │  1. PREPARE │───▶│ 2. STARTUP  │───▶│ 3. EXECUTE  │                │
+│  └─────────────┘    └─────────────┘    └─────────────┘                │
+│        │                  │                  │                          │
+│        ▼                  ▼                  ▼                          │
+│   读取状态文件        启动 Blender        执行测试场景                   │
+│   确定场景编号        验证 MCP 连接       验证每个操作                   │
+│   检查磁盘空间        记录 PID           记录结果                       │
+│                                                                         │
+│                     ┌─────────────┐    ┌─────────────┐                │
+│                     │  4. CLEANUP │◀───│ 5. DOCUMENT │                │
+│                     └─────────────┘    └─────────────┘                │
+│                           │                  │                          │
+│                           ▼                  ▼                          │
+│                      清理临时文件         记录错误                       │
+│                      删除测试场景         创建 Issue                     │
+│                      检查内存使用         更新状态文件                   │
+│                                                                         │
+│                           │                                              │
+│                           ▼                                              │
+│                     ┌─────────────┐                                     │
+│                     │  6. SHUTDOWN│                                     │
+│                     └─────────────┘                                     │
+│                           │                                              │
+│                           ▼                                              │
+│                      保存场景 (可选)                                      │
+│                      关闭 Blender                                        │
+│                      验证进程终止                                         │
+│                      更新最终状态                                         │
+│                           │                                              │
+│                           ▼                                              │
+│                     ┌─────────────┐                                     │
+│                     │  下一迭代   │                                     │
+│                     └─────────────┘                                     │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 阶段 1: PREPARE (准备阶段)
+
+### 必须执行
+
+```python
+# 1.1 检查 Blender 未运行
+result = subprocess.run(["pgrep", "-f", "Blender"], capture_output=True)
+if result.returncode == 0:
+    # Blender 正在运行 - 强制关闭
+    subprocess.run(["pkill", "-f", "/Applications/Blender.app"])
+    time.sleep(2)
+    print("WARNING: Forced close existing Blender")
+
+# 1.2 读取或创建状态文件
+state_file = "/tmp/mcp_test_state.json"
+if os.path.exists(state_file):
+    with open(state_file) as f:
+        state = json.load(f)
+    state["iteration"] += 1
+else:
+    state = {
+        "iteration": 1,
+        "current_scenario": 1,
+        "scenarios_completed": [],
+        "operations_count": 0,
+        "errors": {"critical": 0, "major": 0, "minor": 0},
+        "issues_created": [],
+        "memory_peak_mb": 0,
+        "slowest_operation": None,
+        "start_time": datetime.now().isoformat(),
+        "blender_pid": None,
+        "phase": "PREPARE"
+    }
+
+# 1.3 确定场景编号 (循环 1-9)
+state["current_scenario"] = ((state["iteration"] - 1) % 9) + 1
+
+# 1.4 检查磁盘空间
+disk_usage = shutil.disk_usage("/tmp")
+if disk_usage.free < 1_000_000_000:  # < 1GB
+    print("CRITICAL: Low disk space, cleaning up")
+    subprocess.run(["rm", "-rf", "/tmp/mcp_test_*"])
+    subprocess.run(["rm", "-rf", "/tmp/blender_*"])
+
+# 1.5 保存状态
+state["phase"] = "PREPARE_DONE"
+with open(state_file, "w") as f:
+    json.dump(state, f, indent=2)
+```
+
+### 检查点
+
+- [ ] Blender 进程不存在
+- [ ] 状态文件已读取/创建
+- [ ] 场景编号已确定
+- [ ] 磁盘空间充足 (>1GB)
+
+---
+
+## 阶段 2: STARTUP (启动阶段)
+
+### 必须执行
+
+```python
+# 2.1 启动 Blender GUI
+subprocess.run(["open", "-a", "Blender"])
+print(f"STARTUP: Launching Blender...")
+
+# 2.2 等待启动 (固定 4 秒)
+time.sleep(4)
+
+# 2.3 验证进程运行
+result = subprocess.run(["pgrep", "-l", "-f", "Blender"], capture_output=True, text=True)
+if result.returncode != 0:
+    state["errors"]["critical"] += 1
+    state["last_error"] = "Blender failed to start"
+    # 直接跳到 SHUTDOWN 阶段
+    raise Exception("STARTUP_FAILED")
+
+pid = int(result.stdout.split()[0])
+state["blender_pid"] = pid
+print(f"STARTUP: Blender running with PID {pid}")
+
+# 2.4 测试 MCP 连接
+try:
+    scene = blender_blender_get_scene(include=["version", "stats"])
+    print(f"STARTUP: MCP connected, Blender {scene['version']['blender_version_string']}")
+except Exception as e:
+    state["errors"]["critical"] += 1
+    state["last_error"] = f"MCP connection failed: {e}"
+    raise Exception("MCP_CONNECTION_FAILED")
+
+# 2.5 记录初始内存
+memory = int(subprocess.run(
+    ["ps", "-o", "rss=", "-p", str(pid)],
+    capture_output=True, text=True
+).stdout.strip())
+state["memory_start_mb"] = memory // 1024
+
+# 2.6 更新状态
+state["phase"] = "STARTUP_DONE"
+with open(state_file, "w") as f:
+    json.dump(state, f, indent=2)
+```
+
+### 检查点
+
+- [ ] Blender 进程存在
+- [ ] PID 已记录
+- [ ] MCP 连接成功
+- [ ] 初始内存已记录
+
+### 失败处理
+
+```
+如果 STARTUP 失败:
+├── 记录错误到状态文件
+├── 尝试 pkill Blender
+├── 等待 5 秒
+├── 更新迭代计数
+└── 开始下一次迭代
+```
+
+---
+
+## 阶段 3: EXECUTE (执行阶段)
+
+### 必须执行
+
+```python
+# 3.1 获取场景配置
+scenario = SCENARIOS[state["current_scenario"]]
+print(f"EXECUTE: Starting scenario {state['current_scenario']}: {scenario['name']}")
+
+# 3.2 创建 Todo 列表
+todos = []
+for phase_name, phase_ops in scenario["phases"].items():
+    todos.append({"content": phase_name, "status": "pending", "operations": phase_ops})
+todowrite(todos)
+
+# 3.3 执行每个 Phase
+for i, todo in enumerate(todos):
+    todo["status"] = "in_progress"
+    todowrite(todos)
+    
+    phase_start = time.time()
+    phase_errors = []
+    
+    # 3.3.1 执行操作
+    for op in todo["operations"]:
+        op_start = time.time()
+        try:
+            result = execute_operation(op)
+            op_time = time.time() - op_start
+            
+            # 记录最慢操作
+            if state["slowest_operation"] is None or op_time > state["slowest_operation"]["time"]:
+                state["slowest_operation"] = {
+                    "name": op["tool"],
+                    "time": op_time,
+                    "iteration": state["iteration"]
+                }
+            
+            state["operations_count"] += 1
+            
+        except Exception as e:
+            error_info = {
+                "phase": todo["content"],
+                "operation": op,
+                "error": str(e),
+                "time": datetime.now().isoformat()
+            }
+            phase_errors.append(error_info)
+            classify_error(error_info, state)
+    
+    phase_time = time.time() - phase_start
+    
+    # 3.3.2 验证 Phase 结果
+    if len(phase_errors) == 0:
+        todo["status"] = "completed"
+    else:
+        todo["status"] = "completed_with_errors"
+        state["phase_errors"] = phase_errors
+    
+    todowrite(todos)
+
+# 3.4 更新状态
+state["phase"] = "EXECUTE_DONE"
+with open(state_file, "w") as f:
+    json.dump(state, f, indent=2)
+```
+
+### 操作执行规范
+
+```python
+def execute_operation(op):
+    """执行单个操作，带验证"""
+    tool_name = op["tool"]
+    params = op.get("params", {})
+    
+    # 执行
+    result = globals()[tool_name](**params)
+    
+    # 验证 (如果有验证函数)
+    if "verify" in op:
+        verify_result(result, op["verify"])
+    
+    # 返回结果
+    return result
+
+def verify_result(result, verify_rules):
+    """验证操作结果"""
+    for rule in verify_rules:
+        if rule["type"] == "exists":
+            assert rule["key"] in result, f"Missing key: {rule['key']}"
+        elif rule["type"] == "equals":
+            assert result[rule["key"]] == rule["value"], f"Expected {rule['value']}, got {result[rule['key']]}"
+        elif rule["type"] == "not_empty":
+            assert len(result[rule["key"]]) > 0, f"Empty: {rule['key']}"
+```
+
+### 错误分级
+
+```python
+def classify_error(error_info, state):
+    """错误分级并更新状态"""
+    error_str = error_info["error"].lower()
+    
+    # Critical: 崩溃、连接丢失
+    if any(x in error_str for x in ["crash", "connection", "timeout", "segfault"]):
+        state["errors"]["critical"] += 1
+        error_info["level"] = "CRITICAL"
+        # 立即停止当前迭代，跳到 CLEANUP
+    
+    # Major: 操作失败
+    elif any(x in error_str for x in ["error", "failed", "invalid", "not found"]):
+        state["errors"]["major"] += 1
+        error_info["level"] = "MAJOR"
+    
+    # Minor: 其他
+    else:
+        state["errors"]["minor"] += 1
+        error_info["level"] = "MINOR"
+```
+
+### 检查点
+
+- [ ] 所有 Phase 已执行
+- [ ] 每个操作都有结果
+- [ ] 错误已分级记录
+- [ ] 操作计数已更新
+
+---
+
+## 阶段 4: DOCUMENT (记录阶段)
+
+### 必须执行
+
+```python
+# 4.1 汇总本次迭代结果
+iteration_summary = {
+    "iteration": state["iteration"],
+    "scenario": state["current_scenario"],
+    "operations": state.get("phase_operations_count", 0),
+    "errors": state.get("phase_errors", []),
+    "duration_seconds": time.time() - state.get("phase_start_time", time.time())
+}
+
+# 4.2 创建 GitHub Issue (如果有严重错误)
+if state["errors"]["critical"] > 0 or state["errors"]["major"] > 0:
+    issue_body = format_issue_body(iteration_summary)
+    issue_number = create_github_issue(
+        title=f"[Auto-Test] Iteration {state['iteration']}: {len(iteration_summary['errors'])} errors",
+        body=issue_body,
+        labels=["automated-test", "bug"]
+    )
+    state["issues_created"].append(issue_number)
+    print(f"DOCUMENT: Created issue #{issue_number}")
+
+# 4.3 追加到日志文件
+log_file = "/tmp/mcp_test_log.jsonl"
+with open(log_file, "a") as f:
+    f.write(json.dumps(iteration_summary) + "\n")
+
+# 4.4 更新状态
+state["scenarios_completed"].append(state["current_scenario"])
+state["phase"] = "DOCUMENT_DONE"
+with open(state_file, "w") as f:
+    json.dump(state, f, indent=2)
+```
+
+### Issue 格式
+
+```markdown
+## Summary
+[Auto-detected during iteration #N, scenario: X]
+
+## Error Details
+
+### Critical Errors: X
+[List of critical errors with stack traces]
+
+### Major Errors: Y
+[List of major errors]
+
+## Reproduction
+[Steps to reproduce]
+
+## Environment
+- Blender: [version]
+- MCP: [commit hash]
+- Iteration: #N
+- Scenario: [name]
+
+## Auto-generated
+This issue was automatically created by the MCP Stability Test Loop.
+```
+
+### 检查点
+
+- [ ] 迭代结果已汇总
+- [ ] Issue 已创建 (如有错误)
+- [ ] 日志已追加
+- [ ] 状态已更新
+
+---
+
+## 阶段 5: CLEANUP (清理阶段)
+
+### 必须执行
+
+```python
+# 5.1 保存场景 (可选，用于调试)
+if state["errors"]["critical"] > 0:
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    save_path = f"/tmp/mcp_test_crash_{timestamp}.blend"
+    try:
+        blender_blender_execute_operator(
+            operator="wm.save_as_mainfile",
+            params={"filepath": save_path}
+        )
+        print(f"CLEANUP: Saved crash scene to {save_path}")
+    except:
+        print("CLEANUP: Failed to save crash scene")
+
+# 5.2 清理测试文件
+subprocess.run(["rm", "-f"] + glob.glob("/tmp/mcp_test_session_*.blend"))
+subprocess.run(["rm", "-rf"] + glob.glob("/tmp/blender_temp_*"))
+
+# 5.3 清理超过 1 小时的文件
+subprocess.run([
+    "find", "/tmp", "-name", "*.blend", "-mmin", "+60", "-delete"
+])
+
+# 5.4 检查内存
+if state["blender_pid"]:
+    memory = int(subprocess.run(
+        ["ps", "-o", "rss=", "-p", str(state["blender_pid"])],
+        capture_output=True, text=True
+    ).stdout.strip() or "0")
+    memory_mb = memory // 1024
+    
+    if memory_mb > state["memory_peak_mb"]:
+        state["memory_peak_mb"] = memory_mb
+    
+    memory_growth = memory_mb - state.get("memory_start_mb", 0)
+    if memory_growth > 500:  # >500MB 增长
+        print(f"WARNING: Memory growth: {memory_growth}MB")
+
+# 5.5 更新状态
+state["phase"] = "CLEANUP_DONE"
+with open(state_file, "w") as f:
+    json.dump(state, f, indent=2)
+```
+
+### 检查点
+
+- [ ] 崩溃场景已保存 (如有)
+- [ ] 测试文件已清理
+- [ ] 临时目录已删除
+- [ ] 内存已记录
+
+---
+
+## 阶段 6: SHUTDOWN (关闭阶段)
+
+### 必须执行
+
+```python
+shutdown_success = False
+
+# 6.1 尝试优雅关闭
+try:
+    result = blender_blender_execute_operator(operator="wm.quit_blender")
+    if result.get("success"):
+        print("SHUTDOWN: Graceful quit successful")
+        shutdown_success = True
+except Exception as e:
+    print(f"SHUTDOWN: Graceful quit failed: {e}")
+
+# 6.2 等待进程结束
+time.sleep(2)
+
+# 6.3 验证进程已终止
+result = subprocess.run(["pgrep", "-f", "Blender"], capture_output=True)
+if result.returncode == 0:
+    # 进程仍然存在，强制终止
+    print("SHUTDOWN: Process still running, forcing kill")
+    subprocess.run(["pkill", "-f", "/Applications/Blender.app"])
+    time.sleep(2)
+    
+    # 再次验证
+    result = subprocess.run(["pgrep", "-f", "Blender"], capture_output=True)
+    if result.returncode == 0:
+        state["errors"]["critical"] += 1
+        state["last_error"] = "Failed to terminate Blender process"
+        print("CRITICAL: Blender process cannot be terminated")
+    else:
+        shutdown_success = True
+else:
+    shutdown_success = True
+
+# 6.4 更新最终状态
+state["blender_pid"] = None
+state["phase"] = "SHUTDOWN_DONE"
+state["last_iteration_time"] = datetime.now().isoformat()
+
+# 计算统计
+if "start_time" in state:
+    total_time = (datetime.now() - datetime.fromisoformat(state["start_time"])).total_seconds()
+    state["total_runtime_seconds"] = total_time
+
+with open(state_file, "w") as f:
+    json.dump(state, f, indent=2)
+
+print(f"SHUTDOWN: Iteration {state['iteration']} complete")
+print(f"  - Operations: {state['operations_count']}")
+print(f"  - Errors: Critical={state['errors']['critical']}, Major={state['errors']['major']}, Minor={state['errors']['minor']}")
+print(f"  - Memory peak: {state['memory_peak_mb']}MB")
+```
+
+### 检查点
+
+- [ ] 优雅关闭尝试完成
+- [ ] 进程已终止
+- [ ] PID 已清除
+- [ ] 最终状态已保存
+
+### 闭环验证
+
+```python
+def verify_loop_closed(state):
+    """验证迭代完全闭环"""
+    checks = [
+        ("PREPARE_DONE", "Phase PREPARE not completed"),
+        ("STARTUP_DONE", "Phase STARTUP not completed"),
+        ("EXECUTE_DONE", "Phase EXECUTE not completed"),
+        ("DOCUMENT_DONE", "Phase DOCUMENT not completed"),
+        ("CLEANUP_DONE", "Phase CLEANUP not completed"),
+        ("SHUTDOWN_DONE", "Phase SHUTDOWN not completed"),
+    ]
+    
+    phase_history = state.get("phase_history", [])
+    
+    for phase, error_msg in checks:
+        if phase not in phase_history:
+            print(f"WARNING: {error_msg}")
+            return False
+    
+    # 验证 Blender 已关闭
+    result = subprocess.run(["pgrep", "-f", "Blender"], capture_output=True)
+    if result.returncode == 0:
+        print("WARNING: Blender still running after SHUTDOWN")
+        return False
+    
+    print("✓ Loop closure verified")
+    return True
+```
+
+---
+
+## 完整迭代伪代码
+
+```python
+def run_iteration():
+    """单次完整迭代"""
+    
+    try:
+        # Phase 1: PREPARE
+        state = prepare_phase()
+        
+        # Phase 2: STARTUP
+        startup_phase(state)
+        
+        # Phase 3: EXECUTE
+        execute_phase(state)
+        
+        # Phase 4: DOCUMENT
+        document_phase(state)
+        
+        # Phase 5: CLEANUP
+        cleanup_phase(state)
+        
+    except CriticalError as e:
+        # 严重错误，直接跳到清理和关闭
+        print(f"CRITICAL ERROR: {e}")
+        state["errors"]["critical"] += 1
+        
+    finally:
+        # Phase 6: SHUTDOWN (always executed)
+        shutdown_phase(state)
+        
+        # 验证闭环
+        verify_loop_closed(state)
+    
+    return state
+
+# Ralph Loop 主循环
+while True:
+    try:
+        state = run_iteration()
+        print(f"=== Iteration {state['iteration']} complete ===")
+        print(f"Next iteration in 5 seconds...")
+        time.sleep(5)
+    except Exception as e:
+        print(f"FATAL: {e}")
+        # 强制清理
+        subprocess.run(["pkill", "-f", "Blender"])
+        time.sleep(10)
+```
+
+---
+
+## 状态文件完整格式
+
+```json
+{
+  "iteration": 1,
+  "current_scenario": 1,
+  "scenarios_completed": [1],
+  
+  "phase": "SHUTDOWN_DONE",
+  "phase_history": [
+    "PREPARE_DONE",
+    "STARTUP_DONE",
+    "EXECUTE_DONE",
+    "DOCUMENT_DONE",
+    "CLEANUP_DONE",
+    "SHUTDOWN_DONE"
+  ],
+  
+  "operations_count": 42,
+  "errors": {
+    "critical": 0,
+    "major": 0,
+    "minor": 0
+  },
+  "error_details": [],
+  
+  "issues_created": [],
+  "memory_start_mb": 256,
+  "memory_peak_mb": 512,
+  "slowest_operation": {
+    "name": "blender_render_scene",
+    "time": 2.5,
+    "iteration": 1
+  },
+  
+  "start_time": "2026-04-17T23:00:00",
+  "last_iteration_time": "2026-04-17T23:05:00",
+  "total_runtime_seconds": 300,
+  
+  "blender_pid": null,
+  "blender_version": "5.1.0"
+}
+```
+
+---
 
 | 系统 | 工具 | 复杂度 |
 |------|------|--------|
