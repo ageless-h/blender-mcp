@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""MCP Prompt definitions for Blender MCP - 10 prompts (7 workflow + 3 strategy) for LLM guidance.
+"""MCP Prompt definitions for Blender MCP - 13 prompts (7 workflow + 3 strategy + 3 extended) for LLM guidance.
 
 Prompts are user-controlled workflow templates triggered via /slash-commands.
 They inject step-by-step tool usage guidance into the conversation.
@@ -274,7 +274,7 @@ def _render_output_messages(args: dict[str, str]) -> list[dict[str, Any]]:
                     "1. **Check settings** — Call `blender_get_scene` with include=['render','timeline'].\n"
                     "2. **Adjust** — Use `blender_setup_scene` to set render settings.\n"
                     "3. **Preview** — Call `blender_capture_viewport` with camera_view=true, shading=RENDERED.\n"
-                    "4. **Render** — Use `blender_execute_operator` with operator='render.render'."
+                    "4. **Render** — Use `blender_render_scene` with output_path for final render."
                 ),
             },
         }
@@ -326,15 +326,18 @@ def _usage_strategy_messages(args: dict[str, str]) -> list[dict[str, Any]]:
                     "   - `blender_edit_nodes` for any node tree (shader, compositor, geometry nodes)\n"
                     "   - `blender_edit_animation` for keyframes, NLA, drivers\n"
                     "   - `blender_edit_sequencer` for video editing\n\n"
-                    "3. **Imperative Write Layer** (9 tools) — For direct object/scene manipulation.\n"
+                    "3. **Imperative Write Layer** (10 tools) — For direct object/scene manipulation.\n"
                     "   - `blender_create_object`, `blender_modify_object`, etc.\n"
+                    "   - `blender_edit_mesh` for mesh topology operations (extrude, inset, bevel, etc.)\n"
                     "   - Each tool is scoped to one domain (material, modifier, UV, etc.)\n\n"
-                    "4. **Fallback Layer** (3 tools) — Only when no specialized tool exists.\n"
+                    "4. **Fallback Layer** (5 tools) — Only when no specialized tool exists.\n"
                     "   - `blender_execute_operator` for bpy.ops calls\n"
                     "   - `blender_execute_script` as last resort (full Python access)\n"
-                    "   - `blender_import_export` for file I/O\n\n"
+                    "   - `blender_import_export` for file I/O\n"
+                    "   - `blender_render_scene` for final rendering\n"
+                    "   - `blender_batch_execute` for multiple operations in one request\n\n"
                     "## Best Practices\n\n"
-                    "- **Batch operations**: Group related changes to minimize round-trips.\n"
+                    "- **Batch operations**: Use `blender_batch_execute` to group related changes.\n"
                     "- **Verify after changes**: Call `blender_capture_viewport` after significant modifications.\n"
                     "- **Use `include` parameters**: Only request data you need "
                     "(e.g., `blender_get_object_data` with specific includes).\n"
