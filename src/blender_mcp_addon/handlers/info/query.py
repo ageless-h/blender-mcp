@@ -265,16 +265,17 @@ def _query_scene_stats(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
     for obj in scene.objects:
         if obj.type == "MESH":
             mesh_objects += 1
+            obj_eval = obj.evaluated_get(depsgraph)
             try:
-                obj_eval = obj.evaluated_get(depsgraph)
                 mesh = obj_eval.to_mesh()
                 if mesh:
                     total_verts += len(mesh.vertices)
                     total_edges += len(mesh.edges)
                     total_faces += len(mesh.polygons)
-                    obj_eval.to_mesh_clear()
             except (AttributeError, RuntimeError, ValueError) as exc:
                 logger.debug("Failed to evaluate mesh for '%s': %s", obj.name, exc)
+            finally:
+                obj_eval.to_mesh_clear()
 
     memory_stats = {}
     try:
@@ -489,9 +490,10 @@ def _query_viewport_capture(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
             "mime_type": mime_type,
         }
     except (AttributeError, RuntimeError, OSError, IndexError):
+        raise
+    finally:
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
-        raise
 
 
 def _encode_image(

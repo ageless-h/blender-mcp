@@ -10,18 +10,25 @@ from ..response import _error, _ok, bpy_unavailable_error, check_bpy_available
 
 logger = logging.getLogger(__name__)
 
+# Cached Blender version check for VSE API
+_USE_LENGTH_PARAM: bool | None = None
+
 
 def _strips(sed: Any) -> Any:
     return sed.strips if hasattr(sed, "strips") else sed.sequences
 
 
 def _use_length_param() -> bool:
+    global _USE_LENGTH_PARAM
+    if _USE_LENGTH_PARAM is not None:
+        return _USE_LENGTH_PARAM
     try:
         import bpy as _bpy
 
-        return _bpy.app.version >= (5, 0)
+        _USE_LENGTH_PARAM = _bpy.app.version >= (5, 0)
     except Exception:
-        return False
+        _USE_LENGTH_PARAM = False
+    return _USE_LENGTH_PARAM
 
 
 def _new_effect_kwargs(

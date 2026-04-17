@@ -275,22 +275,27 @@ def _main_thread_poll() -> float | None:
             request, response_holder, done_event, _timeout = _dispatch_queue.get_nowait()
         except queue.Empty:
             break
+        capability = request.get("capability", "unknown")
+        started = _time.perf_counter()
+        result = None
+        elapsed_ms = 0.0
         try:
-            capability = request.get("capability", "unknown")
-            started = _time.perf_counter()
             result = execute_capability(request)
             elapsed_ms = (_time.perf_counter() - started) * 1000.0
             response_holder.append(result)
-            operation_log.record(capability, result.get("ok", False), elapsed_ms, result)
         except Exception as exc:
-            logger.exception("Main-thread execution error for %s: %s", request.get("capability", "unknown"), exc)
-            response_holder.append(
-                {
-                    "ok": False,
-                    "result": None,
-                    "error": {"code": "main_thread_error", "message": str(exc)},
-                }
-            )
+            logger.exception("Main-thread execution error for %s: %s", capability, exc)
+            result = {
+                "ok": False,
+                "result": None,
+                "error": {"code": "main_thread_error", "message": str(exc)},
+            }
+            elapsed_ms = (_time.perf_counter() - started) * 1000.0
+            response_holder.append(result)
+        try:
+            operation_log.record(capability, result.get("ok", False) if result else False, elapsed_ms, result)
+        except Exception as log_exc:
+            logger.warning("Failed to record operation log: %s", log_exc)
         finally:
             done_event.set()
 

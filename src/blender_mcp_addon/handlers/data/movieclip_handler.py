@@ -20,10 +20,12 @@ class MovieClipHandler(GenericCollectionHandler):
         """Create a new movie clip."""
         import bpy  # type: ignore
 
-        clip = bpy.data.movieclips.new(name=name)
         filepath = params.get("filepath")
-        if filepath:
-            clip.filepath = filepath
+        if not filepath:
+            raise ValueError("'filepath' parameter is required for movie clip creation")
+        clip = bpy.data.movieclips.load(filepath)
+        if name and name != clip.name:
+            clip.name = name
         return {"name": clip.name}
 
     def _read_summary(self, item: Any) -> dict[str, Any]:

@@ -92,14 +92,11 @@ class ImageHandler(BaseHandler):
 
         color = params.get("color")
         if color:
-            pixels = list(image.pixels)
-            for i in range(0, len(pixels), 4):
-                pixels[i] = color[0]
-                pixels[i + 1] = color[1]
-                pixels[i + 2] = color[2]
-                if len(color) > 3:
-                    pixels[i + 3] = color[3]
-            image.pixels[:] = pixels
+            # Efficient batch assignment: construct pixel data directly
+            # instead of iterating through 4M floats for a 1024x1024 image
+            r, g, b = color[0], color[1], color[2]
+            a = color[3] if len(color) > 3 else 1.0
+            image.pixels[:] = [r, g, b, a] * (width * height)
 
         return {
             "name": image.name,

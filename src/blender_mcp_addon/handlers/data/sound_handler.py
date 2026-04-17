@@ -20,10 +20,12 @@ class SoundHandler(GenericCollectionHandler):
         """Create a new sound."""
         import bpy  # type: ignore
 
-        sound = bpy.data.sounds.new(name=name)
         filepath = params.get("filepath")
-        if filepath:
-            sound.filepath = filepath
+        if not filepath:
+            raise ValueError("'filepath' parameter is required for sound creation")
+        sound = bpy.data.sounds.load(filepath)
+        if name and name != sound.name:
+            sound.name = name
         return {"name": sound.name}
 
     def _read_summary(self, item: Any) -> dict[str, Any]:

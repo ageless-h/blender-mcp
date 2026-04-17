@@ -187,6 +187,10 @@ _ENGLISH_NODE_NAMES: dict[str, str] = {
     "BoundingBox": "GeometryNodeBoundBox",
 }
 
+# Pre-computed lookup sets for O(1) resolution
+_IDNAME_SET: set[str] = set(_ENGLISH_NODE_NAMES.values())
+_NAME_TO_IDNAME: dict[str, str] = {name.lower(): idname for name, idname in _ENGLISH_NODE_NAMES.items()}
+
 
 # Commonly-mistyped bl_idnames that differ from the actual Blender identifier.
 _WRONG_BL_IDNAMES: dict[str, str] = {
@@ -215,27 +219,56 @@ def _resolve_node_type(type_str: str) -> str:
     """
     if not type_str:
         return type_str
-    if type_str in _ENGLISH_NODE_NAMES.values():
+    if type_str in _IDNAME_SET:
         return type_str
-    if type_str in _ENGLISH_NODE_NAMES:
-        return _ENGLISH_NODE_NAMES[type_str]
+    if type_str in _NAME_TO_IDNAME:
+        return _NAME_TO_IDNAME[type_str]
+    idname = _ENGLISH_NODE_NAMES.get(type_str)
+    if idname:
+        return idname
     if type_str in _WRONG_BL_IDNAMES:
         return _WRONG_BL_IDNAMES[type_str]
+    lower_type = type_str.lower()
+    if lower_type in _NAME_TO_IDNAME:
+        return _NAME_TO_IDNAME[lower_type]
     for entry in _discover_node_types():
-        if entry["name"].lower() == type_str.lower():
+        if entry["name"].lower() == lower_type:
             return entry["bl_idname"]
     return type_str
 
 
-def _get_node(node_tree, name_or_identifier: str):
+def _build_node_index(node_tree) -> dict[str, Any]:
+    """Build a triple-key index for O(1) node lookup.
+
+    Maps node.name, node.bl_idname, and English display name → node.
+    """
+    index: dict[str, Any] = {}
+    for node in node_tree.nodes:
+        index[node.name] = node
+        index[node.bl_idname] = node
+        for eng_name, idname in _ENGLISH_NODE_NAMES.items():
+            if idname == node.bl_idname:
+                index[eng_name] = node
+                index[eng_name.lower()] = node
+    return index
+
+
+def _get_node(node_tree, name_or_identifier: str, node_index: dict | None = None):
     """Get a node by name, label, or bl_idname (type) fallback.
 
     In localized Blender environments, default node names may differ from
     the English names that LLMs typically use.  This helper tries:
-    1. Exact name match  (``nodes.get(name)``).
+    1. Exact name match via index or nodes.get(name).
     2. Match by ``bl_idname`` (node type identifier, always English).
     3. English display-name lookup via ``_ENGLISH_NODE_NAMES`` mapping.
     """
+    if node_index:
+        if name_or_identifier in node_index:
+            return node_index[name_or_identifier]
+        bl_idname = _NAME_TO_IDNAME.get(name_or_identifier.lower())
+        if bl_idname and bl_idname in node_index:
+            return node_index[bl_idname]
+        return None
     node = node_tree.nodes.get(name_or_identifier)
     if node:
         return node
@@ -353,6 +386,8 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
                 started=started,
             )
 
+    node_index = _build_node_index(node_tree)
+
     results = []
     for i, op in enumerate(operations):
         action = op.get("action")
@@ -370,7 +405,7 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
 
             elif action == "remove_node":
                 node_name = op.get("name", "")
-                node = _get_node(node_tree, node_name)
+                node = _get_node(node_tree, node_name, node_index)
                 if node:
                     node_tree.nodes.remove(node)
                     results.append(
@@ -393,8 +428,8 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
                     )
 
             elif action == "connect":
-                from_node = _get_node(node_tree, op.get("from_node", ""))
-                to_node = _get_node(node_tree, op.get("to_node", ""))
+                from_node = _get_node(node_tree, op.get("from_node", ""), node_index)
+                to_node = _get_node(node_tree, op.get("to_node", ""), node_index)
                 if not from_node or not to_node:
                     results.append(
                         {
@@ -423,7 +458,7 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
             elif action == "disconnect":
                 node_name = op.get("node", "")
                 input_name = op.get("input", "")
-                node = _get_node(node_tree, node_name)
+                node = _get_node(node_tree, node_name, node_index)
                 if node:
                     inp = node.inputs.get(input_name)
                     if inp and inp.links:
@@ -453,7 +488,7 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
                 node_name = op.get("node", "")
                 input_name = op.get("input", "")
                 value = op.get("value")
-                node = _get_node(node_tree, node_name)
+                node = _get_node(node_tree, node_name, node_index)
                 if node:
                     inp = _find_input_by_name_and_type(node, input_name, value)
                     if inp and hasattr(inp, "default_value"):
@@ -493,7 +528,7 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
                 node_name = op.get("node", "")
                 prop_name = op.get("property", "")
                 value = op.get("value")
-                node = _get_node(node_tree, node_name)
+                node = _get_node(node_tree, node_name, node_index)
                 if node and hasattr(node, prop_name):
                     current = getattr(node, prop_name)
                     setattr(node, prop_name, coerce_value(value, current))

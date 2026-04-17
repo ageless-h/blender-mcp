@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import functools
 import time
 from typing import Any
 
@@ -40,9 +41,7 @@ def _error(
     """
     from .error_codes import DEFAULT_SUGGESTIONS
 
-    resolved_suggestion = (
-        suggestion if suggestion is not None else DEFAULT_SUGGESTIONS.get(code)
-    )
+    resolved_suggestion = suggestion if suggestion is not None else DEFAULT_SUGGESTIONS.get(code)
 
     err: dict[str, Any] = {"code": code, "message": message, "data": data}
     if resolved_suggestion is not None:
@@ -56,6 +55,7 @@ def _error(
     }
 
 
+@functools.lru_cache(maxsize=1)
 def check_bpy_available() -> tuple[bool, Any]:
     """Check if bpy is available and return it.
 

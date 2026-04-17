@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Base handler abstract class for unified data CRUD operations."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -110,9 +111,7 @@ class BaseHandler(ABC):
         Returns:
             Dict with 'action' ('link' or 'unlink') and result
         """
-        return {
-            "error": f"Link operation not supported for type {self.data_type.value}"
-        }
+        return {"error": f"Link operation not supported for type {self.data_type.value}"}
 
     def get_collection(self) -> Any:
         """Get the bpy.data collection for this handler's data type.
@@ -165,15 +164,16 @@ class BaseHandler(ABC):
         """
         current = obj
         for part in path.split("."):
-            if hasattr(current, part):
+            try:
                 current = getattr(current, part)
-            elif hasattr(current, "__getitem__"):
-                try:
-                    current = current[part]
-                except (KeyError, IndexError, TypeError):
-                    current = current[int(part)]
-            else:
-                raise AttributeError(f"Cannot access '{part}' on {type(current).__name__}")
+            except AttributeError:
+                if hasattr(current, "__getitem__"):
+                    try:
+                        current = current[part]
+                    except (KeyError, IndexError, TypeError):
+                        current = current[int(part)]
+                else:
+                    raise AttributeError(f"Cannot access '{part}' on {type(current).__name__}")
         return current
 
     def _set_nested_attr(self, obj: Any, path: str, value: Any) -> None:
@@ -190,26 +190,28 @@ class BaseHandler(ABC):
         parts = path.split(".")
         current = obj
         for part in parts[:-1]:
-            if hasattr(current, part):
+            try:
                 current = getattr(current, part)
-            elif hasattr(current, "__getitem__"):
-                try:
-                    current = current[part]
-                except (KeyError, IndexError, TypeError):
-                    current = current[int(part)]
-            else:
-                raise AttributeError(f"Cannot access '{part}' on {type(current).__name__}")
+            except AttributeError:
+                if hasattr(current, "__getitem__"):
+                    try:
+                        current = current[part]
+                    except (KeyError, IndexError, TypeError):
+                        current = current[int(part)]
+                else:
+                    raise AttributeError(f"Cannot access '{part}' on {type(current).__name__}")
 
         final_attr = parts[-1]
-        if hasattr(current, final_attr):
+        try:
             setattr(current, final_attr, value)
-        elif hasattr(current, "__setitem__"):
-            try:
-                current[final_attr] = value
-            except (KeyError, IndexError, TypeError):
-                current[int(final_attr)] = value
-        else:
-            raise AttributeError(f"Cannot set '{final_attr}' on {type(current).__name__}")
+        except AttributeError:
+            if hasattr(current, "__setitem__"):
+                try:
+                    current[final_attr] = value
+                except (KeyError, IndexError, TypeError):
+                    current[int(final_attr)] = value
+            else:
+                raise AttributeError(f"Cannot set '{final_attr}' on {type(current).__name__}")
 
 
 class GenericCollectionHandler(BaseHandler):
@@ -235,9 +237,7 @@ class GenericCollectionHandler(BaseHandler):
 
         Subclasses MUST override this method.
         """
-        raise NotImplementedError(
-            f"{type(self).__name__} must override _read_summary()"
-        )
+        raise NotImplementedError(f"{type(self).__name__} must override _read_summary()")
 
     def _list_fields(self, item: Any) -> dict[str, Any]:
         """Return the dict of fields for each item in ``list_items()``.
@@ -325,9 +325,5 @@ class GenericCollectionHandler(BaseHandler):
             return {"items": [], "count": 0}
 
         filter_params = filter_params or {}
-        items = [
-            self._list_fields(item)
-            for item in collection
-            if self._filter_item(item, filter_params)
-        ]
+        items = [self._list_fields(item) for item in collection if self._filter_item(item, filter_params)]
         return {"items": items, "count": len(items)}

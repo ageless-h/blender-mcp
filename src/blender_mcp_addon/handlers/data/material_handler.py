@@ -154,17 +154,20 @@ class MaterialHandler(BaseHandler):
             raise KeyError(f"Material '{name}' not found")
 
         modified = []
+        # Cache principled node lookup for PBR properties
+        principled = None
+        if any(p in properties for p in ("base_color", "metallic", "roughness")) and mat.use_nodes:
+            principled = _find_principled(mat.node_tree.nodes)
+
         for prop_path, value in properties.items():
-            if prop_path in ("base_color", "metallic", "roughness") and mat.use_nodes:
-                principled = _find_principled(mat.node_tree.nodes)
-                if principled:
-                    if prop_path == "base_color":
-                        principled.inputs["Base Color"].default_value = tuple(value)
-                    elif prop_path == "metallic":
-                        principled.inputs["Metallic"].default_value = value
-                    elif prop_path == "roughness":
-                        principled.inputs["Roughness"].default_value = value
-                    modified.append(prop_path)
+            if prop_path in ("base_color", "metallic", "roughness") and principled:
+                if prop_path == "base_color":
+                    principled.inputs["Base Color"].default_value = tuple(value)
+                elif prop_path == "metallic":
+                    principled.inputs["Metallic"].default_value = value
+                elif prop_path == "roughness":
+                    principled.inputs["Roughness"].default_value = value
+                modified.append(prop_path)
             else:
                 self._set_nested_attr(mat, prop_path, value)
                 modified.append(prop_path)

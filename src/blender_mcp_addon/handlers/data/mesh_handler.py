@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Mesh handler for unified CRUD operations."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -45,11 +46,7 @@ class MeshHandler(BaseHandler):
         faces = params.get("faces")
 
         if vertices is not None:
-            mesh.from_pydata(
-                vertices,
-                edges if edges else [],
-                faces if faces else []
-            )
+            mesh.from_pydata(vertices, edges if edges else [], faces if faces else [])
             mesh.validate()
             mesh.update()
 
@@ -106,29 +103,32 @@ class MeshHandler(BaseHandler):
                 if obj:
                     depsgraph = bpy.context.evaluated_depsgraph_get()
                     obj_eval = obj.evaluated_get(depsgraph)
-                    mesh = obj_eval.to_mesh()
 
-        result = {
-            "name": mesh.name,
-            "vertices_count": len(mesh.vertices),
-            "edges_count": len(mesh.edges),
-            "polygons_count": len(mesh.polygons),
-            "loops_count": len(mesh.loops),
-            "has_custom_normals": mesh.has_custom_normals,
-            "is_editmode": mesh.is_editmode,
-            "materials": [m.name if m else None for m in mesh.materials],
-        }
+        try:
+            if obj_eval is not None:
+                mesh = obj_eval.to_mesh()
 
-        if params.get("include_vertices"):
-            result["vertices"] = [list(v.co) for v in mesh.vertices]
+            result = {
+                "name": mesh.name,
+                "vertices_count": len(mesh.vertices),
+                "edges_count": len(mesh.edges),
+                "polygons_count": len(mesh.polygons),
+                "loops_count": len(mesh.loops),
+                "has_custom_normals": mesh.has_custom_normals,
+                "is_editmode": mesh.is_editmode,
+                "materials": [m.name if m else None for m in mesh.materials],
+            }
 
-        if params.get("include_faces"):
-            result["faces"] = [list(p.vertices) for p in mesh.polygons]
+            if params.get("include_vertices"):
+                result["vertices"] = [list(v.co) for v in mesh.vertices]
 
-        if obj_eval is not None:
-            obj_eval.to_mesh_clear()
+            if params.get("include_faces"):
+                result["faces"] = [list(p.vertices) for p in mesh.polygons]
 
-        return result
+            return result
+        finally:
+            if obj_eval is not None:
+                obj_eval.to_mesh_clear()
 
     def write(self, name: str, properties: dict[str, Any], params: dict[str, Any]) -> dict[str, Any]:
         """Write properties to a mesh.
@@ -193,11 +193,13 @@ class MeshHandler(BaseHandler):
 
         items = []
         for mesh in bpy.data.meshes:
-            items.append({
-                "name": mesh.name,
-                "vertices": len(mesh.vertices),
-                "polygons": len(mesh.polygons),
-                "users": mesh.users,
-            })
+            items.append(
+                {
+                    "name": mesh.name,
+                    "vertices": len(mesh.vertices),
+                    "polygons": len(mesh.polygons),
+                    "users": mesh.users,
+                }
+            )
 
         return {"items": items, "count": len(items)}

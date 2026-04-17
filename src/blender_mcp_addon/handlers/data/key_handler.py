@@ -46,19 +46,19 @@ class KeyHandler(BaseHandler):
             raise ValueError(f"Object '{object_name}' has no data block")
 
         if not hasattr(obj.data, "shape_keys"):
-            raise ValueError(
-                f"Object '{object_name}' data type does not support shape keys"
-            )
+            raise ValueError(f"Object '{object_name}' data type does not support shape keys")
 
-        shape_key = obj.data.shape_keys.key_blocks.get(name)
-        if shape_key is None:
-            obj.data.shape_keys.key_blocks.new(name=name)
+        # shape_keys is None before first shape key is added
+        if obj.data.shape_keys is None:
+            obj.shape_key_add(name=name)
+        else:
+            shape_key = obj.data.shape_keys.key_blocks.get(name)
+            if shape_key is None:
+                obj.shape_key_add(name=name)
 
         return {"name": name, "object": object_name}
 
-    def read(
-        self, name: str, path: str | None, params: dict[str, Any]
-    ) -> dict[str, Any]:
+    def read(self, name: str, path: str | None, params: dict[str, Any]) -> dict[str, Any]:
         """Read shape key properties.
 
         Args:
@@ -99,9 +99,7 @@ class KeyHandler(BaseHandler):
             "mute": shape_key.mute,
         }
 
-    def write(
-        self, name: str, properties: dict[str, Any], params: dict[str, Any]
-    ) -> dict[str, Any]:
+    def write(self, name: str, properties: dict[str, Any], params: dict[str, Any]) -> dict[str, Any]:
         """Write properties to a shape key.
 
         Args:
@@ -192,7 +190,5 @@ class KeyHandler(BaseHandler):
         if obj.data is None or not hasattr(obj.data, "shape_keys"):
             return {"items": [], "count": 0}
 
-        items = [
-            {"name": k.name, "value": k.value} for k in obj.data.shape_keys.key_blocks
-        ]
+        items = [{"name": k.name, "value": k.value} for k in obj.data.shape_keys.key_blocks]
         return {"items": items, "count": len(items)}
