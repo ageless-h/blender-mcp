@@ -1429,7 +1429,7 @@ _FALLBACK_TOOLS = [
             "properties": {
                 "operator": {
                     "type": "string",
-                    "description": "Operator ID in 'category.name' format (e.g., 'mesh.primitive_cube_add', 'uv.smart_project').",
+                    "description": "Operator ID in 'category.name' format (e.g., 'mesh.primitive_cube_add').",
                 },
                 "params": {"type": "object", "description": "Operator parameters."},
                 "context": {"type": "object", "description": "Context override (e.g., active_object, mode)."},
