@@ -36,7 +36,6 @@ from blender_mcp.adapters.mock import MockAdapter
 from blender_mcp.adapters.socket import SocketAdapter
 from blender_mcp import __version__ as pkg_version
 from blender_mcp.schemas.tools import TOOL_DEFINITIONS, get_tool
-from blender_mcp.prompts.registry import BLENDER_PROMPTS
 from blender_mcp.security.allowlist import Allowlist
 from blender_mcp.security.audit import (
     AuditEvent,
