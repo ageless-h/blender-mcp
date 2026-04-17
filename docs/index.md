@@ -8,7 +8,7 @@
 
 ## Tool Architecture
 
-The 26 tools are organized into four layers:
+The 29 tools are organized into four layers:
 
 | Layer | Doc | Description |
 |-------|-----|-------------|

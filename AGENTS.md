@@ -8,8 +8,8 @@ Blender MCP — MCP server for AI-assisted Blender automation. Python >=3.11, ze
 LLM Client ←MCP JSON-RPC→ blender_mcp (server) ←TCP socket→ blender_mcp_addon (Blender)
 ```
 
-- **146 Python files**, **~22,500 lines**
-- **26 tools**, **10 prompts**, **37 registered handlers** (across 29 files)
+- **105 Python files**, **~17,500 lines**
+- **29 tools**, **13 prompts**, **37 registered handlers** (across 29 files)
 - **Blender**: 4.2 LTS / 4.5 LTS / 5.0+ / 5.1
 
 ## STRUCTURE
@@ -17,7 +17,7 @@ LLM Client ←MCP JSON-RPC→ blender_mcp (server) ←TCP socket→ blender_mcp_
 ```
 src/
   blender_mcp/              # MCP server (PyPI) — see src/blender_mcp/AGENTS.md
-    mcp_protocol.py         # MCPServer: entry, 26 tools, 10 prompts, JSON-RPC dispatch
+    mcp_protocol.py         # MCPServer: entry, 29 tools, 13 prompts, JSON-RPC dispatch
     schemas/tools.py        # Tool schemas (WHAT/WHEN/NOT + annotations)
     adapters/               # SocketAdapter (TCP) + MockAdapter (testing)
     catalog/                # CapabilityCatalog — version-scoped registration
@@ -27,7 +27,7 @@ src/
     telemetry.py            # Usage telemetry
   blender_mcp_addon/        # Blender addon (runs inside Blender)
     __init__.py             # bl_info registration
-    capabilities/base.py    # 26-tool dispatcher + _push_undo_step()
+    capabilities/base.py    # 29-tool dispatcher + _push_undo_step()
     handlers/               # See src/blender_mcp_addon/handlers/AGENTS.md
       registry.py           # @HandlerRegistry.register decorator
       types.py              # DataType enum + DATA_TYPE_TO_COLLECTION

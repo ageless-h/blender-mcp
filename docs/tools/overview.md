@@ -13,14 +13,14 @@
 │  Perception Layer (11 tools)  — LLM's "eyes"               │
 │  Read Blender state deeply with controllable granularity    │
 ├─────────────────────────────────────────────────────────────┤
-│  Declarative Write Layer (3 tools) — LLM's "creative hands"│
-│  Node editor (6 contexts) + Animation + VSE Sequencer       │
+│  Declarative Write Layer (4 tools) — LLM's "creative hands"│
+│  Node editor (6 contexts) + Animation + VSE + Mesh editing  │
 ├─────────────────────────────────────────────────────────────┤
 │  Imperative Write Layer (9 tools) — Basic scene operations  │
 │  Object/Material/Modifier/UV/Constraint/Physics/Scene       │
 ├─────────────────────────────────────────────────────────────┤
-│  Fallback Layer (3 tools) — Escape hatches                  │
-│  execute_operator + execute_script + import_export          │
+│  Fallback Layer (5 tools) — Escape hatches + utilities      │
+│  execute_operator + script + import_export + render + batch │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -261,7 +261,7 @@
 
 ## Prompt 系统
 
-除了 26 个工具，Blender MCP 还提供 **10 个 prompt**，分为两类：
+除了 29 个工具，Blender MCP 还提供 **13 个 prompt**，分为两类：
 
 ### 工作流 Prompt（7 个）
 

@@ -19,14 +19,14 @@ MCP server integration for AI-assisted Blender automation.
 
 ### Layered Tool Architecture
 
-Blender MCP uses a **four-layer tool architecture** with **26 specialized tools** organized by intent:
+Blender MCP uses a **four-layer tool architecture** with **29 specialized tools** organized by intent:
 
 | Layer | Tool Count | Purpose |
 |-------|-----------|---------|
 | **Perception** | 11 tools | Read Blender state deeply with controllable granularity |
-| **Declarative Write** | 3 tools | Node editor (6 contexts) + Animation + VSE Sequencer |
+| **Declarative Write** | 4 tools | Node editor (6 contexts) + Animation + VSE Sequencer + Mesh editing |
 | **Imperative Write** | 9 tools | Object/Material/Modifier/UV/Constraint/Physics/Scene |
-| **Fallback** | 3 tools | execute_operator + execute_script + import_export |
+| **Fallback** | 5 tools | execute_operator + execute_script + import_export + render + batch |
 
 **Perception Layer (11 tools)**:
 | Tool | Description |
@@ -43,12 +43,13 @@ Blender MCP uses a **four-layer tool architecture** with **26 specialized tools*
 | `blender_capture_viewport` | Viewport screenshot |
 | `blender_get_selection` | Current selection/mode/active object |
 
-**Declarative Write Layer (3 tools)**:
+**Declarative Write Layer (4 tools)**:
 | Tool | Description |
 |------|-------------|
 | `blender_edit_nodes` | Edit any node tree (add/remove/connect/disconnect/set_value) ⭐ Core |
 | `blender_edit_animation` | Edit animation (keyframe/NLA/driver/shape_key/frame_range) |
 | `blender_edit_sequencer` | Edit VSE video sequence (strip/transition/effect) |
+| `blender_edit_mesh` | Edit mesh data (vertices/edges/faces) |
 
 **Imperative Write Layer (9 tools)**:
 | Tool | Description |
@@ -63,12 +64,14 @@ Blender MCP uses a **four-layer tool architecture** with **26 specialized tools*
 | `blender_manage_physics` | Physics simulation add/configure/bake |
 | `blender_setup_scene` | Render engine/world environment/timeline config |
 
-**Fallback Layer (3 tools)**:
+**Fallback Layer (5 tools)**:
 | Tool | Description |
 |------|-------------|
 | `blender_execute_operator` | Execute any bpy.ops.* operator |
 | `blender_execute_script` | Execute arbitrary Python code (⚠️ use with caution) |
 | `blender_import_export` | Import/export asset files (FBX/OBJ/GLTF/USD/Alembic/STL/etc.) |
+| `blender_render_scene` | Render scene to image/video |
+| `blender_batch_execute` | Execute multiple tool calls in a single request (performance optimization) |
 
 > **Note**: All tools use `blender_` prefix to avoid conflicts in multi-server environments. Tool names follow MCP specification with underscores. Payload wrapper is removed - all parameters are exposed directly as top-level inputSchema properties.
 
@@ -242,14 +245,14 @@ See [docs/versioning/support-matrix.md](docs/versioning/support-matrix.md) for d
 
 ### 分层工具架构
 
-Blender MCP 采用**四层工具架构**，**26 个专用工具**按意图组织：
+Blender MCP 采用**四层工具架构**，**29 个专用工具**按意图组织：
 
 | 层级 | 工具数量 | 用途 |
 |------|---------|------|
 | **感知层** | 11 个工具 | 以可控粒度深度读取 Blender 状态 |
-| **声明式写入层** | 3 个工具 | 节点编辑器（6种上下文）+ 动画 + VSE 序列编辑器 |
+| **声明式写入层** | 4 个工具 | 节点编辑器（6种上下文）+ 动画 + VSE 序列编辑器 + 网格编辑 |
 | **命令式写入层** | 9 个工具 | 对象/材质/修改器/UV/约束/物理/场景 |
-| **后备层** | 3 个工具 | execute_operator + execute_script + import_export |
+| **后备层** | 5 个工具 | execute_operator + execute_script + import_export + render + batch |
 
 **感知层（11 个工具）**：
 | 工具 | 描述 |
@@ -266,12 +269,13 @@ Blender MCP 采用**四层工具架构**，**26 个专用工具**按意图组织
 | `blender_capture_viewport` | 视口截图 |
 | `blender_get_selection` | 当前选择/模式/活动对象 |
 
-**声明式写入层（3 个工具）**：
+**声明式写入层（4 个工具）**：
 | 工具 | 描述 |
 |------|------|
 | `blender_edit_nodes` | 编辑任意节点树（添加/移除/连接/断开/设置值）⭐ 核心 |
 | `blender_edit_animation` | 编辑动画（关键帧/NLA/驱动器/形态键/帧范围） |
 | `blender_edit_sequencer` | 编辑 VSE 视频序列（片段/转场/特效） |
+| `blender_edit_mesh` | 编辑网格数据（顶点/边/面） |
 
 **命令式写入层（9 个工具）**：
 | 工具 | 描述 |
@@ -286,12 +290,14 @@ Blender MCP 采用**四层工具架构**，**26 个专用工具**按意图组织
 | `blender_manage_physics` | 物理模拟添加/配置/烘焙 |
 | `blender_setup_scene` | 渲染引擎/世界环境/时间线配置 |
 
-**后备层（3 个工具）**：
+**后备层（5 个工具）**：
 | 工具 | 描述 |
 |------|------|
 | `blender_execute_operator` | 执行任意 bpy.ops.* 操作符 |
 | `blender_execute_script` | 执行任意 Python 代码（⚠️ 谨慎使用） |
 | `blender_import_export` | 导入/导出资产文件（FBX/OBJ/GLTF/USD/Alembic/STL 等） |
+| `blender_render_scene` | 渲染场景到图像/视频 |
+| `blender_batch_execute` | 在单次请求中执行多个工具调用（性能优化） |
 
 > **注意**: 所有工具使用 `blender_` 前缀以避免多服务器环境下的命名冲突。工具名称符合 MCP 规范使用下划线。Payload 包装层已移除 - 所有参数直接暴露为顶层 inputSchema 属性。
 
