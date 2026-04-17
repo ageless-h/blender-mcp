@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Tests for adapter implementations."""
+
 from __future__ import annotations
 
 import unittest
@@ -76,7 +77,7 @@ class TestSocketAdapter(unittest.TestCase):
         adapter = SocketAdapter()
         self.assertEqual(adapter.host, "127.0.0.1")
         self.assertEqual(adapter.port, 9876)
-        self.assertEqual(adapter.timeout, 30.0)
+        self.assertEqual(adapter.timeout, 300.0)
 
     def test_custom_configuration(self) -> None:
         adapter = SocketAdapter(host="localhost", port=8080, timeout=10.0)
@@ -94,6 +95,7 @@ class TestSocketAdapter(unittest.TestCase):
     @patch("blender_mcp.adapters.socket.socket.socket")
     def test_timeout_returns_friendly_error(self, mock_socket_class: MagicMock) -> None:
         import socket
+
         mock_sock = MagicMock()
         mock_sock.connect.side_effect = socket.timeout("timed out")
         mock_socket_class.return_value.__enter__ = MagicMock(return_value=mock_sock)

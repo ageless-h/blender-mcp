@@ -16,7 +16,10 @@ class Guardrails:
     def allow(self, capability: str, payload: Dict[str, Any]) -> bool:
         if capability in self.blocked_capabilities:
             return False
-        payload_size = self._estimate_size(payload)
+        try:
+            payload_size = self._estimate_size(payload)
+        except TypeError:
+            return False
         if payload_size > self.max_payload_bytes:
             return False
         if len(payload) > self.max_payload_keys:
@@ -27,7 +30,7 @@ class Guardrails:
 
     @staticmethod
     def _estimate_size(obj: Any) -> int:
-        """Estimate JSON size without full serialization."""
+        """Estimate JSON size without full serialization. Raises TypeError for unserializable types."""
         if obj is None:
             return 4
         if isinstance(obj, bool):
@@ -49,7 +52,7 @@ class Guardrails:
             for item in obj:
                 size += Guardrails._estimate_size(item) + 2
             return size
-        return len(str(obj))
+        raise TypeError(f"Unserializable type: {type(obj).__name__}")
 
     @staticmethod
     def _check_depth(obj: Any, max_depth: int, current: int = 0) -> bool:

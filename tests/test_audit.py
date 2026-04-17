@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Tests for audit logging."""
+
 from __future__ import annotations
 
 import os
@@ -51,6 +52,7 @@ class TestJsonFileAuditLogger(unittest.TestCase):
             logger = JsonFileAuditLogger(path)
             logger.record(AuditEvent(capability="c", ok=True))
             logger.record(AuditEvent(capability="d", ok=False))
+            logger.flush()
             with open(path) as fh:
                 lines = fh.readlines()
             self.assertEqual(len(lines), 2)
