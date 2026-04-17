@@ -124,19 +124,19 @@ def resolve_property_value(
         Tuple of (container_path, actual_property_name, transformed_value)
         or None if property not found or unsupported.
     """
-    resolved = resolve_property_path(handler_type, category, prop_name, blender_version)
-    if resolved is None:
-        return None
-
-    container, prop = resolved
+    version = blender_version or get_blender_version()
 
     # Handle special MIRROR modifier use_axis case for Blender 5.0+
-    version = blender_version or get_blender_version()
     if handler_type == "MIRROR" and category == "modifier":
         if prop_name in ("use_x", "use_y", "use_z") and version >= (5, 0, 0):
             axis_index = {"use_x": 0, "use_y": 1, "use_z": 2}[prop_name]
             return ("", "use_axis", (axis_index, bool(value)))
 
+    resolved = resolve_property_path(handler_type, category, prop_name, version)
+    if resolved is None:
+        return None
+
+    container, prop = resolved
     return (container, prop, value)
 
 
