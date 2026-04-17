@@ -305,7 +305,8 @@ class TestExecutePersistent(unittest.TestCase):
     def test_empty_response_returns_error(self) -> None:
         """Empty response should return adapter_empty_response error."""
         mock_sock = MagicMock()
-        mock_sock.recv.return_value = b"\n"
+        # First recv returns b"\n" (empty line), second returns b"" (connection closed)
+        mock_sock.recv.side_effect = [b"\n", b""]
 
         with patch.object(self.adapter, "_ensure_connected", return_value=mock_sock):
             result = self.adapter._execute_persistent("blender.get_scene", {})
