@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-"""Schema validation tests for all 26 tools."""
+"""Schema validation tests for all 27 tools."""
+
 from __future__ import annotations
 
 import os
@@ -13,8 +14,8 @@ ANN_KEYS = ["readOnlyHint", "destructiveHint", "idempotentHint", "openWorldHint"
 
 
 class TestToolCount(unittest.TestCase):
-    def test_exactly_26(self):
-        self.assertEqual(len(TOOL_DEFINITIONS), 26)
+    def test_exactly_27(self):
+        self.assertEqual(len(TOOL_DEFINITIONS), 27)
 
     def test_unique_names(self):
         names = [t["name"] for t in TOOL_DEFINITIONS]
@@ -32,9 +33,7 @@ class TestSchemaStructure(unittest.TestCase):
 
     def test_no_additional_properties(self):
         for t in TOOL_DEFINITIONS:
-            self.assertFalse(
-                t["inputSchema"].get("additionalProperties", True), t["name"]
-            )
+            self.assertFalse(t["inputSchema"].get("additionalProperties", True), t["name"])
 
     def test_no_payload_wrapper(self):
         for t in TOOL_DEFINITIONS:
@@ -66,9 +65,9 @@ class TestAnnotations(unittest.TestCase):
 
     def test_perception_readonly(self):
         perception = [
-            t for t in TOOL_DEFINITIONS
-            if t["name"].startswith("blender_get_")
-            or t["name"] == "blender_capture_viewport"
+            t
+            for t in TOOL_DEFINITIONS
+            if t["name"].startswith("blender_get_") or t["name"] == "blender_capture_viewport"
         ]
         for t in perception:
             self.assertTrue(t["annotations"]["readOnlyHint"], t["name"])
@@ -93,7 +92,6 @@ class TestGetToolLookup(unittest.TestCase):
 
     def test_unknown_tool(self):
         self.assertIsNone(get_tool("nonexistent"))
-
 
 
 class TestEnumValues(unittest.TestCase):
@@ -165,9 +163,13 @@ class TestRequiredParams(unittest.TestCase):
 
     def test_no_required_for_optional_tools(self):
         optional = [
-            "blender_get_objects", "blender_get_materials", "blender_get_scene",
-            "blender_get_collections", "blender_get_images",
-            "blender_capture_viewport", "blender_get_selection",
+            "blender_get_objects",
+            "blender_get_materials",
+            "blender_get_scene",
+            "blender_get_collections",
+            "blender_get_images",
+            "blender_capture_viewport",
+            "blender_get_selection",
             "blender_setup_scene",
         ]
         for name in optional:

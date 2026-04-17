@@ -80,13 +80,14 @@ class TestCatalogSchemaSync(unittest.TestCase):
             "blender.execute_operator",
             "blender.execute_script",
             "blender.import_export",
+            "blender.render_scene",
         ]
         fallback = [c for c in catalog_caps if c.name in fallback_names]
-        self.assertEqual(len(fallback), 3)
+        self.assertEqual(len(fallback), 4)
 
     def test_total_capability_count(self):
         catalog_caps = minimal_capability_set()
-        self.assertEqual(len(catalog_caps), 26)
+        self.assertEqual(len(catalog_caps), 27)
 
 
 if __name__ == "__main__":

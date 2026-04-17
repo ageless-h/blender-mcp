@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Fallback layer handlers — 3 tools for operator/script/import_export."""
+"""Fallback layer handlers — 4 tools for operator/script/import_export/render."""
 
 from __future__ import annotations
 
@@ -30,8 +30,15 @@ def _handle_import_export(payload: dict[str, Any], started: float) -> dict[str, 
     return import_export(payload, started=started)
 
 
+def _handle_render_scene(payload: dict[str, Any], started: float) -> dict[str, Any]:
+    from ..handlers.render.handler import render_scene
+
+    return render_scene(payload, started=started)
+
+
 FALLBACK_HANDLERS = {
     "blender.execute_operator": _handle_execute_operator,
     "blender.execute_script": _handle_execute_script,
     "blender.import_export": _handle_import_export,
+    "blender.render_scene": _handle_render_scene,
 }

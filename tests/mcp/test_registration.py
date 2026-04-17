@@ -141,16 +141,17 @@ class MCPRegistrationTest(unittest.TestCase):
             "blender_manage_constraints",
             "blender_manage_physics",
             "blender_setup_scene",
-            # Fallback (3)
+            # Fallback (4)
             "blender_execute_operator",
             "blender_execute_script",
             "blender_import_export",
+            "blender_render_scene",
         ]
 
         for tool in expected_tools:
             self.assertIn(tool, tool_names, f"Tool '{tool}' should be present")
 
-        self.assertEqual(len(tools), 26, "Should have exactly 26 tools")
+        self.assertEqual(len(tools), 27, "Should have exactly 27 tools")
 
     def test_jsonrpc_compliance(self):
         """Test that responses conform to JSON-RPC 2.0 specification."""
@@ -327,7 +328,7 @@ class MCPRegistrationTest(unittest.TestCase):
 
         # blender_execute_operator should reference specialized tools
         desc = tool_map["blender_execute_operator"]["description"]
-        self.assertIn("blender_manage_uv", desc, "execute_operator should cross-reference blender_manage_uv")
+        self.assertIn("blender_create_object", desc, "execute_operator should cross-reference blender_create_object")
 
         # blender_manage_material should reference blender_edit_nodes
         desc = tool_map["blender_manage_material"]["description"]

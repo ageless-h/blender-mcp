@@ -28,7 +28,7 @@ class TestE2EFlow(unittest.TestCase):
         )
         self.assertIn("serverInfo", r1["result"])
         r2 = self._rpc("tools/list", {}, 2)
-        self.assertEqual(len(r2["result"]["tools"]), 26)
+        self.assertEqual(len(r2["result"]["tools"]), 27)
 
     def test_tools_call_perception(self):
         resp = self._rpc("tools/call", {"name": "blender_get_scene", "arguments": {"include": ["stats"]}}, 3)

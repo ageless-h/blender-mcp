@@ -1343,39 +1343,34 @@ _IMPERATIVE_TOOLS = [
 ]
 
 # ---------------------------------------------------------------------------
-# Fallback Layer (3 Tools)
+# Fallback Layer (4 Tools)
 # ---------------------------------------------------------------------------
 
 _FALLBACK_TOOLS = [
     _tool(
         name="blender_execute_operator",
         description=(
-            "Execute any Blender operator (bpy.ops.*). This is the escape hatch for operations "
-            "not covered by specialized tools.\n\n"
-            "Use this when: no specialized tool exists for the operation you need.\n\n"
-            "Always prefer specialized tools first: blender_manage_uv for UV, "
-            "blender_manage_modifier for modifiers, blender_manage_physics for physics, etc."
+            "Execute any Blender operator (bpy.ops.*) by name with parameters.\n\n"
+            "Use this when: you need a Blender operation not covered by other tools. "
+            "Prefer specialized tools first for better validation and error messages.\n\n"
+            "Do NOT use for: object creation (use blender_create_object), "
+            "script execution (use blender_execute_script), or import/export (use blender_import_export)."
         ),
         input_schema={
             "type": "object",
             "properties": {
                 "operator": {
                     "type": "string",
-                    "description": (
-                        "Operator ID in 'category.name' format (e.g. 'mesh.primitive_cube_add', 'uv.smart_project')."
-                    ),
+                    "description": "Operator ID in 'category.name' format (e.g., 'mesh.primitive_cube_add', 'uv.smart_project').",
                 },
-                "params": {"type": "object", "description": "Operator parameters as key-value pairs."},
-                "context": {
-                    "type": "object",
-                    "description": 'Context override (e.g. {"active_object": "Cube", "mode": "EDIT"}).',
-                },
+                "params": {"type": "object", "description": "Operator parameters."},
+                "context": {"type": "object", "description": "Context override (e.g., active_object, mode)."},
             },
             "required": ["operator"],
             "additionalProperties": False,
         },
         annotations={
-            "title": "Execute Operator",
+            "title": "Execute Blender Operator",
             "readOnlyHint": False,
             "destructiveHint": True,
             "idempotentHint": False,
@@ -1464,6 +1459,66 @@ _FALLBACK_TOOLS = [
             "openWorldHint": True,
         },
         internal_capability="blender.import_export",
+    ),
+    _tool(
+        name="blender_render_scene",
+        description=(
+            "Render the current scene to an image file. Supports both still images and animations.\n\n"
+            "Use this when: you need to render the scene to disk.\n\n"
+            "Do NOT use for: viewport screenshots (use blender_capture_viewport), "
+            "scene setup (use blender_setup_scene)."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "output_path": {
+                    "type": "string",
+                    "description": "Absolute file path to save the rendered image.",
+                    "maxLength": 4096,
+                },
+                "resolution_x": {
+                    "type": "integer",
+                    "description": "X resolution override.",
+                    "minimum": 1,
+                },
+                "resolution_y": {
+                    "type": "integer",
+                    "description": "Y resolution override.",
+                    "minimum": 1,
+                },
+                "samples": {
+                    "type": "integer",
+                    "description": "Render samples (Cycles only).",
+                    "minimum": 1,
+                },
+                "animation": {
+                    "type": "boolean",
+                    "description": "If True, render animation frames.",
+                },
+                "frame_start": {
+                    "type": "integer",
+                    "description": "Start frame for animation render.",
+                },
+                "frame_end": {
+                    "type": "integer",
+                    "description": "End frame for animation render.",
+                },
+                "use_viewport": {
+                    "type": "boolean",
+                    "description": "If True, use viewport render (EEVEE only).",
+                },
+            },
+            "required": ["output_path"],
+            "additionalProperties": False,
+        },
+        annotations={
+            "title": "Render Scene",
+            "readOnlyHint": False,
+            "destructiveHint": False,
+            "idempotentHint": False,
+            "openWorldHint": True,
+        },
+        internal_capability="blender.render_scene",
     ),
 ]
 

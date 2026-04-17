@@ -87,13 +87,13 @@ def capability_to_dict(capability: CapabilityMeta, version: str | None = None) -
 
 
 def minimal_capability_set() -> list[CapabilityMeta]:
-    """Return the 26-tool capability set.
+    """Return the 27-tool capability set.
 
     Four layers:
     - Perception (11): read-only queries
     - Declarative Write (3): node/animation/VSE batch edits
     - Imperative Write (9): object/material/modifier etc.
-    - Fallback (3): operator/script/import-export
+    - Fallback (4): operator/script/import-export/render
     """
     return [
         # Perception layer (11)
@@ -256,11 +256,18 @@ def minimal_capability_set() -> list[CapabilityMeta]:
             scopes=["data:write", "operator:execute"],
             min_version="4.2",
         ),
+        # Fallback layer - render (1)
+        CapabilityMeta(
+            name="blender.render_scene",
+            description="Render scene to image/animation",
+            scopes=["render:execute"],
+            min_version="4.2",
+        ),
     ]
 
 
 def new_tool_scope_map() -> dict[str, set[str]]:
-    """Return scope mappings for the 26-tool architecture.
+    """Return scope mappings for the 27-tool architecture.
 
     Maps internal capability names to required scopes.
     """
@@ -295,6 +302,7 @@ _TOOL_SCOPE_MAP: dict[str, set[str]] = {
     "blender.execute_operator": {"operator:execute"},
     "blender.execute_script": {"script:execute"},
     "blender.import_export": {"data:write", "operator:execute"},
+    "blender.render_scene": {"render:execute"},
 }
 
 
@@ -320,6 +328,9 @@ def get_dynamic_scopes(capability: str, payload: dict) -> set[str]:
 
     if capability == "blender.execute_script":
         return {"script:execute"}
+
+    if capability == "blender.render_scene":
+        return {"render:execute"}
 
     # Fall back to static scope map
     scope_map = new_tool_scope_map()
