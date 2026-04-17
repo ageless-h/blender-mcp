@@ -120,27 +120,27 @@ class SocketAdapter:
     def _ensure_connected(self) -> socket.socket:
         """Ensure we have a valid connection, reconnecting if necessary."""
         if self._socket is not None:
-            # Test if socket is still alive
             try:
-                # Use a zero-timeout poll to check if socket is readable
-                # (would indicate connection closed or error)
                 self._socket.setblocking(False)
                 try:
-                    data = self._socket.recv(1, socket.MSG_PEEK | socket.MSG_DONTWAIT)
+                    # MSG_DONTWAIT is not available on Windows
+                    # setblocking(False) already provides non-blocking behavior
+                    flags = socket.MSG_PEEK
+                    if hasattr(socket, "MSG_DONTWAIT"):
+                        flags |= socket.MSG_DONTWAIT
+                    data = self._socket.recv(1, flags)
                     if not data:
-                        # Connection closed
                         logger.debug("Socket connection closed, reconnecting")
                         self._close_socket()
                 except BlockingIOError:
-                    # No data available, socket is still good
                     pass
                 except (OSError, ConnectionError):
-                    # Socket error, need to reconnect
                     logger.debug("Socket error detected, reconnecting")
                     self._close_socket()
                 finally:
-                    self._socket.setblocking(True)
-                    self._socket.settimeout(self.timeout)
+                    if self._socket is not None:
+                        self._socket.setblocking(True)
+                        self._socket.settimeout(self.timeout)
             except (OSError, ConnectionError):
                 self._close_socket()
 
