@@ -3,11 +3,11 @@ from __future__ import annotations
 
 import threading
 from dataclasses import dataclass, field
-from typing import Iterable, Set
+from typing import Set
 
 from blender_mcp.security.audit import AuditEvent, AuditLogger
 
-# Default allowlist for 26-tool architecture (excludes blender.execute_script for safety)
+# Default allowlist for 29-tool architecture (excludes blender.execute_script for safety)
 DEFAULT_ALLOWED_TOOLS: Set[str] = {
     "blender.get_objects",
     "blender.get_object_data",
@@ -32,8 +32,11 @@ DEFAULT_ALLOWED_TOOLS: Set[str] = {
     "blender.manage_constraints",
     "blender.manage_physics",
     "blender.setup_scene",
+    "blender.edit_mesh",
     "blender.execute_operator",
     "blender.import_export",
+    "blender.render_scene",
+    "blender.batch_execute",
 }
 
 # Dangerous tools that require explicit enablement
@@ -82,44 +85,3 @@ class Allowlist:
                     data={"tool": "blender.execute_script"},
                 )
             )
-
-    def replace(self, capabilities: Iterable[str]) -> None:
-        with self._lock:
-            previous = self.allowed
-            new_capabilities = set(capabilities)
-
-            # Automatically filter out dangerous tools unless explicitly enabled
-            if not self.script_execute_enabled:
-                new_capabilities -= DANGEROUS_TOOLS
-
-            self.allowed = new_capabilities
-            added = sorted(self.allowed - previous)
-            removed = sorted(previous - self.allowed)
-        if self.audit_logger is not None:
-            self.audit_logger.record(
-                AuditEvent(
-                    capability="allowlist.update",
-                    ok=True,
-                    data={
-                        "count": len(self.allowed),
-                        "added": added,
-                        "removed": removed,
-                    },
-                )
-            )
-
-    def add_tool(self, capability: str) -> bool:
-        """Add a tool to the allowlist.
-
-        Returns False if the tool is dangerous and not enabled.
-        """
-        with self._lock:
-            if capability in DANGEROUS_TOOLS and not self.script_execute_enabled:
-                return False
-            self.allowed.add(capability)
-            return True
-
-    def remove_tool(self, capability: str) -> None:
-        """Remove a tool from the allowlist."""
-        with self._lock:
-            self.allowed.discard(capability)

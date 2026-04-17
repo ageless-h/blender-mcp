@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Tests for error codes and response schema."""
+
 from __future__ import annotations
 
 import time
@@ -7,7 +8,7 @@ import unittest
 
 from blender_mcp_addon.handlers.error_codes import ErrorCode
 from blender_mcp_addon.handlers.response import _error, _ok
-from blender_mcp_addon.handlers.response_schema import (
+from response_schema import (
     ResponseValidationError,
     get_error_code,
     is_error,
@@ -17,7 +18,6 @@ from blender_mcp_addon.handlers.response_schema import (
 
 
 class TestErrorCodes(unittest.TestCase):
-
     def test_count(self):
         self.assertEqual(len(ErrorCode), 15)
 
@@ -39,7 +39,6 @@ class TestErrorCodes(unittest.TestCase):
 
 
 class TestResponseSchema(unittest.TestCase):
-
     def _ok(self):
         return _ok(result={"k": "v"}, started=time.perf_counter())
 
@@ -61,22 +60,26 @@ class TestResponseSchema(unittest.TestCase):
             validate_response({"ok": True})
 
     def test_rejects_extra_keys(self):
-        r = self._ok(); r["extra"] = 1
+        r = self._ok()
+        r["extra"] = 1
         with self.assertRaises(ResponseValidationError):
             validate_response(r)
 
     def test_rejects_non_bool_ok(self):
-        r = self._ok(); r["ok"] = 1
+        r = self._ok()
+        r["ok"] = 1
         with self.assertRaises(ResponseValidationError):
             validate_response(r)
 
     def test_ok_with_none_result(self):
-        r = self._ok(); r["result"] = None
+        r = self._ok()
+        r["result"] = None
         with self.assertRaises(ResponseValidationError):
             validate_response(r)
 
     def test_err_with_non_none_result(self):
-        r = self._err(); r["result"] = {"x": 1}
+        r = self._err()
+        r["result"] = {"x": 1}
         with self.assertRaises(ResponseValidationError):
             validate_response(r)
 
