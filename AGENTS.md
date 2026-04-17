@@ -9,7 +9,7 @@ LLM Client ←MCP JSON-RPC→ blender_mcp (server) ←TCP socket→ blender_mcp_
 ```
 
 - **105 Python files**, **~17,500 lines**
-- **29 tools**, **13 prompts**, **37 registered handlers** (across 29 files)
+- **29 tools**, **0 prompts** (tools-only server), **37 registered handlers** (across 29 files)
 - **Blender**: 4.2 LTS / 4.5 LTS / 5.0+ / 5.1
 
 ## STRUCTURE
@@ -17,12 +17,12 @@ LLM Client ←MCP JSON-RPC→ blender_mcp (server) ←TCP socket→ blender_mcp_
 ```
 src/
   blender_mcp/              # MCP server (PyPI) — see src/blender_mcp/AGENTS.md
-    mcp_protocol.py         # MCPServer: entry, 29 tools, 13 prompts, JSON-RPC dispatch
+    mcp_protocol.py         # MCPServer: entry, 29 tools, JSON-RPC dispatch
     schemas/tools.py        # Tool schemas (WHAT/WHEN/NOT + annotations)
     adapters/               # SocketAdapter (TCP) + MockAdapter (testing)
     catalog/                # CapabilityCatalog — version-scoped registration
     security/               # Allowlist, Guardrails, RateLimiter, AuditLogger
-    prompts/registry.py     # 10 prompts (7 workflow + 3 strategy)
+    prompts/registry.py     # Empty prompt registry (prompts removed)
     versioning/             # Blender version compat checks
     telemetry.py            # Usage telemetry
   blender_mcp_addon/        # Blender addon (runs inside Blender)
@@ -96,3 +96,36 @@ python scripts/ci_run_blender_tests.py /path/to/blender         # E2E tests with
 ```
 
 CI (`.github/workflows/ci.yml`): lint + unit (3.11/3.12/3.13) + coverage (≥75%). Blender integration tests run locally via `scripts/ci_run_blender_tests.py`, not in CI.
+
+## BLENDER GUI CONTROL (macOS)
+
+### Start/Stop Workflow
+
+```bash
+# Start Blender GUI
+open -a Blender
+sleep 3  # Wait for startup
+
+# MCP operations via tools...
+
+# Save and quit (via MCP)
+blender_execute_operator(operator="wm.save_mainfile")      # Save current file
+blender_execute_operator(operator="wm.save_as_mainfile", params={"filepath": "/path/to/file.blend"})  # Save as
+blender_execute_operator(operator="wm.quit_blender")       # Quit (graceful, no confirmation dialog)
+
+# Alternative: force quit (not recommended)
+pkill -f "/Applications/Blender.app"
+```
+
+### Key Findings
+
+| Operation | Method | Notes |
+|-----------|--------|-------|
+| Start GUI | `open -a Blender` | macOS only; wait 3s for startup |
+| Save | `wm.save_mainfile` | Saves to current file path |
+| Save As | `wm.save_as_mainfile` | Requires filepath param |
+| Quit (graceful) | `wm.quit_blender` | No confirmation dialog, discards unsaved changes |
+| Quit (force) | `pkill -f Blender` | Use only if graceful quit fails |
+| Open file | `wm.open_mainfile` | Requires filepath param |
+
+**Important**: `wm.quit_blender` does NOT prompt for unsaved changes. Always call save operators first if you want to preserve changes.
