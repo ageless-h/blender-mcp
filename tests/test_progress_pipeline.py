@@ -4,12 +4,10 @@
 from __future__ import annotations
 
 import json
-import socket
 import unittest
 from unittest.mock import MagicMock, patch
 
 from blender_mcp.adapters.socket import SocketAdapter
-from blender_mcp.adapters.types import AdapterResult
 
 
 class TestProgressTokenInRequest(unittest.TestCase):
@@ -26,7 +24,7 @@ class TestProgressTokenInRequest(unittest.TestCase):
         adapter._connect = MagicMock(return_value=mock_sock)
         adapter._socket = None
 
-        result = adapter.execute("blender.get_scene", {}, progress_token="tok-123")
+        adapter.execute("blender.get_scene", {}, progress_token="tok-123")
 
         send_call_args = mock_sock.sendall.call_args[0][0]
         request = json.loads(send_call_args.decode().strip())
@@ -43,7 +41,7 @@ class TestProgressTokenInRequest(unittest.TestCase):
         adapter._connect = MagicMock(return_value=mock_sock)
         adapter._socket = None
 
-        result = adapter.execute("blender.get_scene", {})
+        adapter.execute("blender.get_scene", {})
 
         send_call_args = mock_sock.sendall.call_args[0][0]
         request = json.loads(send_call_args.decode().strip())
