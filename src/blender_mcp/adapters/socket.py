@@ -116,6 +116,8 @@ class SocketAdapter:
             error_suggestion=err_obj.get("suggestion") if err_obj else None,
             timing_ms=elapsed_ms,
         )
+
+    def _ensure_connected(self) -> socket.socket:
         """Ensure we have a valid connection, reconnecting if necessary."""
         if self._socket is not None:
             # Test if socket is still alive
