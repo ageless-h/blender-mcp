@@ -5,6 +5,23 @@ from __future__ import annotations
 
 from typing import Any
 
+# Cache Blender version check at module load to avoid repeated hasattr calls
+_USE_LAYERED_API: bool | None = None
+
+
+def _detect_layered_api() -> bool:
+    """Detect if Blender uses layered animation API (5.0+)."""
+    global _USE_LAYERED_API
+    if _USE_LAYERED_API is not None:
+        return _USE_LAYERED_API
+    try:
+        import bpy  # type: ignore
+
+        _USE_LAYERED_API = bpy.app.version >= (5, 0)
+    except Exception:
+        _USE_LAYERED_API = False
+    return _USE_LAYERED_API
+
 
 def iter_fcurves(action: Any):
     """Yield F-Curves from an action, supporting both legacy and Blender 5.0+ layered API.
@@ -16,8 +33,11 @@ def iter_fcurves(action: Any):
     Args:
         action: A bpy.types.Action (or similar) object.
     """
-    # Runtime check: Blender 5.0+ layered API
-    if hasattr(action, "layers"):
+    # Use cached version check for Blender 5.0+ layered API
+    if _USE_LAYERED_API is None:
+        _detect_layered_api()
+
+    if _USE_LAYERED_API and hasattr(action, "layers"):
         for layer in action.layers:
             for strip in layer.strips:
                 for cbag in strip.channelbags:
