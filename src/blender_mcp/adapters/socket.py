@@ -64,6 +64,8 @@ class SocketAdapter:
         self._socket: Optional[socket.socket] = None
         self._lock = threading.Lock()
         self._connected = False
+        self._progress_callback: Callable[[float, float | None, str | None], None] | None = None
+        self._progress_token: str | None = None
 
     def _connect(self) -> socket.socket:
         """Create a new socket connection."""
