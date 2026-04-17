@@ -31,6 +31,9 @@ def _configure_logging() -> None:
     )
 
 
+_PRETTY_JSON = os.environ.get("MCP_PRETTY_JSON", "").lower() in ("1", "true", "yes")
+
+
 from blender_mcp.adapters.mock import MockAdapter
 from blender_mcp.adapters.socket import SocketAdapter
 from blender_mcp import __version__ as pkg_version
@@ -83,6 +86,7 @@ class MCPServer:
             self._adapter = SocketAdapter(
                 host=os.environ.get("MCP_SOCKET_HOST", "127.0.0.1"),
                 port=int(os.environ.get("MCP_SOCKET_PORT", "9876")),
+                timeout=float(os.environ.get("MCP_SOCKET_TIMEOUT", "300.0")),
                 max_retries=int(os.environ.get("MCP_MAX_RETRIES", "3")),
             )
 
@@ -355,7 +359,7 @@ class MCPServer:
                 "content": [
                     {
                         "type": "text",
-                        "text": json.dumps(result.result, indent=2),
+                        "text": json.dumps(result.result, indent=2 if _PRETTY_JSON else None),
                     }
                 ]
             }

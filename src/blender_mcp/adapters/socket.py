@@ -4,8 +4,9 @@ from __future__ import annotations
 import json
 import logging
 import socket
+import threading
 import time
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, Optional
 
 from blender_mcp.adapters.types import AdapterResult
 
@@ -39,22 +40,86 @@ def _friendly_error(code: str) -> str:
 class SocketAdapter:
     """Adapter that communicates with Blender addon over TCP socket.
 
-    Supports automatic retry with exponential backoff for transient errors.
+    Supports persistent connection with automatic reconnection on failure.
+    Thread-safe: uses a lock to prevent concurrent access to the socket.
     """
 
     def __init__(
         self,
         host: str = "127.0.0.1",
         port: int = 9876,
-        timeout: float = 30.0,
+        timeout: float = 300.0,
         max_retries: int = 3,
         retry_base_delay: float = 1.0,
+        use_persistent_connection: bool = True,
     ) -> None:
         self.host = host
         self.port = port
         self.timeout = timeout
         self.max_retries = max_retries
         self.retry_base_delay = retry_base_delay
+        self.use_persistent_connection = use_persistent_connection
+
+        # Persistent connection state
+        self._socket: Optional[socket.socket] = None
+        self._lock = threading.Lock()
+        self._connected = False
+
+    def _connect(self) -> socket.socket:
+        """Create a new socket connection."""
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(self.timeout)
+        sock.connect((self.host, self.port))
+        logger.debug("Connected to %s:%d", self.host, self.port)
+        return sock
+
+    def _ensure_connected(self) -> socket.socket:
+        """Ensure we have a valid connection, reconnecting if necessary."""
+        if self._socket is not None:
+            # Test if socket is still alive
+            try:
+                # Use a zero-timeout poll to check if socket is readable
+                # (would indicate connection closed or error)
+                self._socket.setblocking(False)
+                try:
+                    data = self._socket.recv(1, socket.MSG_PEEK | socket.MSG_DONTWAIT)
+                    if not data:
+                        # Connection closed
+                        logger.debug("Socket connection closed, reconnecting")
+                        self._close_socket()
+                except BlockingIOError:
+                    # No data available, socket is still good
+                    pass
+                except (OSError, ConnectionError):
+                    # Socket error, need to reconnect
+                    logger.debug("Socket error detected, reconnecting")
+                    self._close_socket()
+                finally:
+                    self._socket.setblocking(True)
+                    self._socket.settimeout(self.timeout)
+            except (OSError, ConnectionError):
+                self._close_socket()
+
+        if self._socket is None:
+            self._socket = self._connect()
+            self._connected = True
+
+        return self._socket
+
+    def _close_socket(self) -> None:
+        """Close the current socket if it exists."""
+        if self._socket is not None:
+            try:
+                self._socket.close()
+            except (OSError, RuntimeError):
+                pass
+            self._socket = None
+            self._connected = False
+
+    def close(self) -> None:
+        """Close the persistent connection. Can be called externally for cleanup."""
+        with self._lock:
+            self._close_socket()
 
     def execute(
         self,
@@ -76,7 +141,10 @@ class SocketAdapter:
         last_result: AdapterResult | None = None
 
         for attempt in range(self.max_retries):
-            result = self._execute_once(capability, payload)
+            if self.use_persistent_connection:
+                result = self._execute_persistent(capability, payload)
+            else:
+                result = self._execute_once(capability, payload)
 
             if result.ok:
                 if attempt > 0:
@@ -89,6 +157,10 @@ class SocketAdapter:
             if error_code not in _RETRYABLE_ERRORS:
                 logger.debug("Non-retryable error: %s", error_code)
                 break
+
+            # On retryable error, close connection and retry
+            if self.use_persistent_connection:
+                self._close_socket()
 
             if attempt < self.max_retries - 1:
                 delay = self.retry_base_delay * (2**attempt)
@@ -105,8 +177,80 @@ class SocketAdapter:
         last_result.error = _friendly_error(last_result.error or "")
         return last_result
 
+    def _execute_persistent(self, capability: str, payload: Dict[str, Any]) -> AdapterResult:
+        """Execute using persistent connection with reconnection on failure."""
+        started = time.perf_counter()
+        logger.debug("Executing capability=%s (persistent connection)", capability)
+
+        with self._lock:
+            try:
+                sock = self._ensure_connected()
+
+                request = json.dumps({"capability": capability, "payload": payload}, ensure_ascii=False)
+                sock.sendall((request + "\n").encode("utf-8"))
+
+                response_chunks = []
+                while True:
+                    chunk = sock.recv(65536)
+                    if not chunk:
+                        break
+                    response_chunks.append(chunk)
+                    if b"\n" in chunk:
+                        break
+
+                response_data = b"".join(response_chunks)
+                elapsed_ms = (time.perf_counter() - started) * 1000.0
+                logger.debug("Response received in %.1fms", elapsed_ms)
+
+                if not response_data:
+                    # Empty response - connection may be in bad state
+                    self._close_socket()
+                    return AdapterResult(
+                        ok=False,
+                        error="adapter_empty_response",
+                        timing_ms=elapsed_ms,
+                    )
+
+                response = json.loads(response_data.decode("utf-8").strip())
+                err_obj = response.get("error")
+                return AdapterResult(
+                    ok=response.get("ok", False),
+                    result=response.get("result"),
+                    error=err_obj.get("code") if err_obj else None,
+                    error_message=err_obj.get("message") if err_obj else None,
+                    error_suggestion=err_obj.get("suggestion") if err_obj else None,
+                    timing_ms=elapsed_ms,
+                )
+
+            except socket.timeout:
+                elapsed_ms = (time.perf_counter() - started) * 1000.0
+                logger.debug("Socket timeout after %.1fms", elapsed_ms)
+                self._close_socket()
+                return AdapterResult(
+                    ok=False,
+                    error="adapter_timeout",
+                    timing_ms=elapsed_ms,
+                )
+            except (socket.error, ConnectionRefusedError, OSError) as exc:
+                elapsed_ms = (time.perf_counter() - started) * 1000.0
+                logger.debug("Connection error after %.1fms: %s", elapsed_ms, exc)
+                self._close_socket()
+                return AdapterResult(
+                    ok=False,
+                    error="adapter_unavailable",
+                    timing_ms=elapsed_ms,
+                )
+            except json.JSONDecodeError:
+                elapsed_ms = (time.perf_counter() - started) * 1000.0
+                logger.debug("Invalid JSON response after %.1fms", elapsed_ms)
+                return AdapterResult(
+                    ok=False,
+                    error="adapter_invalid_response",
+                    timing_ms=elapsed_ms,
+                )
+
     def _execute_once(self, capability: str, payload: Dict[str, Any]) -> AdapterResult:
-        """Execute a single attempt via socket connection to Blender addon."""
+        """Execute a single attempt via socket connection to Blender addon (non-persistent)."""
         started = time.perf_counter()
         logger.debug("Connecting to %s:%d for capability=%s", self.host, self.port, capability)
         try:
@@ -173,3 +317,7 @@ class SocketAdapter:
                 error="adapter_invalid_response",
                 timing_ms=elapsed_ms,
             )
+
+    def __del__(self) -> None:
+        """Cleanup on destruction."""
+        self._close_socket()

@@ -2,22 +2,20 @@
 
 ## Config File Location
 
-- **Windows**: `%APPDATA%\Code\User\settings.json`
-- **macOS**: `~/Library/Application Support/Code/User/settings.json`
-- **Linux**: `~/.config/Code/User/settings.json`
+VS Code stores MCP configuration in `mcp.json`, not `settings.json`. Options:
 
-Or create `.vscode/mcp.json` in your workspace root for project-specific configuration.
+- **Workspace**: `.vscode/mcp.json` in your project root (recommended)
+- **User profile**: Run `MCP: Open User Configuration` from the Command Palette (Ctrl+Shift+P)
 
 ## Configuration
 
-Create `.vscode/mcp.json` in your workspace root (recommended), or add to your VS Code `settings.json`:
-
-### `.vscode/mcp.json` (Recommended)
+Create `.vscode/mcp.json` in your workspace root:
 
 ```json
 {
   "servers": {
     "blender": {
+      "type": "stdio",
       "command": "uvx",
       "args": ["ageless-blender-mcp"],
       "env": {
@@ -58,3 +56,13 @@ Create `.vscode/mcp.json` in your workspace root (recommended), or add to your V
 - Ensure you have GitHub Copilot Chat extension installed
 - Reload VS Code window after configuration changes
 - Check Output panel > "GitHub Copilot Chat" for errors
+
+### MCP server shows but Copilot can't use tools
+- **Trust the server**: VS Code prompts you to trust new MCP servers. Check for a trust notification and approve it.
+- **Check MCP logs**: Open Output panel, select "MCP" or "GitHub Copilot Chat" from the dropdown.
+- **Model availability**: Some Copilot models may not support MCP tools. Try switching models in Copilot Chat (e.g., from a preview model to a stable one).
+
+## Notes
+
+- **Painting/Sculpting/Drawing**: These workflows typically go through `blender_execute_operator` rather than dedicated tools, since they rely on Blender's interactive operators.
+- **Root key**: VS Code MCP config uses `"servers"` as the root key, not `"mcpServers"` (which other clients use).

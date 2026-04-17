@@ -69,7 +69,7 @@ select = ["E", "F", "W", "I"]
 "src/blender_mcp_addon/handlers/nodes/reader.py" = ["E741"]
 
 [tool.coverage.run]
-source = ["src/blender_mcp"]
+source = ["src/blender_mcp", "src/blender_mcp_addon"]
 branch = true
 omit = [
   "*/tests/*",

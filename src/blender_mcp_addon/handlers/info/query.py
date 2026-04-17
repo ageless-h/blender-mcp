@@ -36,6 +36,9 @@ class InfoType(str, Enum):
     VERSION = "version"
     MEMORY = "memory"
     NODE_TYPES = "node_types"
+    WORLD = "world"
+    DEPSGRAPH = "depsgraph"
+    BATCH = "batch"
 
 
 _last_op_info: dict[str, Any] = {}
@@ -120,12 +123,69 @@ def info_query(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
             result = _query_memory(bpy, params)
         elif info_type == InfoType.NODE_TYPES:
             result = _query_node_types(bpy, params)
+        elif info_type == InfoType.WORLD:
+            result = _query_world(bpy, params)
+        elif info_type == InfoType.DEPSGRAPH:
+            result = _query_depsgraph(bpy, params)
+        elif info_type == InfoType.BATCH:
+            result = _query_batch(bpy, params)
         else:
             return invalid_params_error(f"Query type not implemented: {query_type}", started)
 
         return _ok(result=result, started=started)
     except (AttributeError, KeyError, TypeError, RuntimeError, ValueError) as exc:
         return operation_failed_error("info.query", exc, started)
+
+
+def _query_batch(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
+    """Batch query multiple info types in a single call."""
+    types = params.get("types", [])
+    results = {}
+    for query_type in types:
+        try:
+            if query_type == "scene_stats":
+                results["scene_stats"] = _query_scene_stats(bpy, {})
+            elif query_type == "version":
+                results["version"] = _query_version(bpy, {})
+            elif query_type == "memory":
+                results["memory"] = _query_memory(bpy, {})
+            elif query_type == "world":
+                results["world"] = _query_world(bpy, {})
+            elif query_type == "depsgraph":
+                results["depsgraph"] = _query_depsgraph(bpy, {})
+        except (AttributeError, KeyError, TypeError, RuntimeError, ValueError) as exc:
+            logger.debug("Batch query failed for %s: %s", query_type, exc)
+            results[query_type] = {"error": str(exc)}
+    return results
+
+
+def _query_world(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
+    """Query world/environment settings."""
+    world = bpy.context.scene.world
+    if world is None:
+        return {"world": None, "color": [0.05, 0.05, 0.05]}
+
+    result = {"name": world.name}
+
+    if world.use_nodes and world.node_tree:
+        result["use_nodes"] = True
+        result["node_tree"] = world.node_tree.name
+    else:
+        result["use_nodes"] = False
+
+    if hasattr(world, "color"):
+        result["color"] = list(world.color)
+
+    return result
+
+
+def _query_depsgraph(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
+    """Query depsgraph statistics."""
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    return {
+        "updates": len(list(depsgraph.updates)),
+        "view_layer": bpy.context.view_layer.name if bpy.context.view_layer else None,
+    }
 
 
 def _query_reports(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:

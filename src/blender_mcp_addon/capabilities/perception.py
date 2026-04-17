@@ -73,50 +73,72 @@ def _handle_get_materials(payload: dict[str, Any], started: float) -> dict[str, 
 def _handle_get_scene(payload: dict[str, Any], started: float) -> dict[str, Any]:
     include = payload.get("include", ["stats", "render", "timeline"])
     result: dict[str, Any] = {}
+
+    batch_types = []
     if any(s in include for s in ("stats", "render", "timeline")):
-        stats_resp = info_query({"type": "scene_stats"}, started=started)
-        if stats_resp.get("ok"):
-            stats = stats_resp.get("result", {})
-            if "stats" in include:
-                result["stats"] = {
-                    "scene_name": stats.get("scene_name"),
-                    "object_count": stats.get("object_count"),
-                    "mesh_objects": stats.get("mesh_objects"),
-                    "vertex_count": stats.get("vertex_count"),
-                    "edge_count": stats.get("edge_count"),
-                    "face_count": stats.get("face_count"),
-                }
-            if "render" in include:
-                result["render"] = {
-                    "engine": stats.get("render_engine"),
-                    "fps": stats.get("fps"),
-                    "fps_base": stats.get("fps_base"),
-                    "resolution_x": stats.get("resolution_x"),
-                    "resolution_y": stats.get("resolution_y"),
-                    "resolution_percentage": stats.get("resolution_percentage"),
-                }
-            if "timeline" in include:
-                result["timeline"] = {
-                    "frame_start": stats.get("frame_start"),
-                    "frame_end": stats.get("frame_end"),
-                    "frame_current": stats.get("frame_current"),
-                }
+        batch_types.append("scene_stats")
     if "world" in include:
-        world_resp = info_query({"type": "world"}, started=started)
-        if world_resp.get("ok"):
-            result["world"] = world_resp.get("result")
+        batch_types.append("world")
     if "version" in include:
-        version_resp = info_query({"type": "version"}, started=started)
-        if version_resp.get("ok"):
-            result["version"] = version_resp.get("result")
+        batch_types.append("version")
     if "memory" in include:
-        mem_resp = info_query({"type": "memory"}, started=started)
-        if mem_resp.get("ok"):
-            result["memory"] = mem_resp.get("result")
+        batch_types.append("memory")
     if "depsgraph" in include:
-        depsgraph_resp = info_query({"type": "depsgraph"}, started=started)
-        if depsgraph_resp.get("ok"):
-            result["depsgraph"] = depsgraph_resp.get("result")
+        batch_types.append("depsgraph")
+
+    if batch_types:
+        batch_resp = info_query({"type": "batch", "params": {"types": batch_types}}, started=started)
+        if batch_resp.get("ok"):
+            batch_result = batch_resp.get("result", {})
+
+            if "scene_stats" in batch_result:
+                stats = batch_result["scene_stats"]
+                if isinstance(stats, dict) and "error" not in stats:
+                    if "stats" in include:
+                        result["stats"] = {
+                            "scene_name": stats.get("scene_name"),
+                            "object_count": stats.get("object_count"),
+                            "mesh_objects": stats.get("mesh_objects"),
+                            "vertex_count": stats.get("vertex_count"),
+                            "edge_count": stats.get("edge_count"),
+                            "face_count": stats.get("face_count"),
+                        }
+                    if "render" in include:
+                        result["render"] = {
+                            "engine": stats.get("render_engine"),
+                            "fps": stats.get("fps"),
+                            "fps_base": stats.get("fps_base"),
+                            "resolution_x": stats.get("resolution_x"),
+                            "resolution_y": stats.get("resolution_y"),
+                            "resolution_percentage": stats.get("resolution_percentage"),
+                        }
+                    if "timeline" in include:
+                        result["timeline"] = {
+                            "frame_start": stats.get("frame_start"),
+                            "frame_end": stats.get("frame_end"),
+                            "frame_current": stats.get("frame_current"),
+                        }
+
+            if "world" in include and "world" in batch_result:
+                world_data = batch_result["world"]
+                if isinstance(world_data, dict) and "error" not in world_data:
+                    result["world"] = world_data
+
+            if "version" in include and "version" in batch_result:
+                version_data = batch_result["version"]
+                if isinstance(version_data, dict) and "error" not in version_data:
+                    result["version"] = version_data
+
+            if "memory" in include and "memory" in batch_result:
+                memory_data = batch_result["memory"]
+                if isinstance(memory_data, dict) and "error" not in memory_data:
+                    result["memory"] = memory_data
+
+            if "depsgraph" in include and "depsgraph" in batch_result:
+                depsgraph_data = batch_result["depsgraph"]
+                if isinstance(depsgraph_data, dict) and "error" not in depsgraph_data:
+                    result["depsgraph"] = depsgraph_data
+
     return _ok(result=result, started=started)
 
 

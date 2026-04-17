@@ -22,6 +22,7 @@ _server_thread: threading.Thread | None = None
 _shutdown_flag = threading.Event()
 
 MAX_REQUEST_SIZE = 10 * 1024 * 1024  # 10MB max request size
+MAX_CONNECTIONS = 10  # Maximum concurrent connections
 
 # Main-thread dispatch queue: items are (request, response_holder, done_event, timeout)
 _dispatch_queue: queue.Queue[tuple[dict, list, threading.Event, float]] = queue.Queue()
@@ -139,6 +140,32 @@ def _server_loop() -> None:
 
         try:
             client_socket, addr = sock.accept()
+
+            if get_active_client_count() >= MAX_CONNECTIONS:
+                response = {
+                    "ok": False,
+                    "result": None,
+                    "error": {
+                        "code": "connection_limit_exceeded",
+                        "message": f"Server busy (max {MAX_CONNECTIONS} connections)",
+                    },
+                }
+                try:
+                    client_socket.sendall((json.dumps(response) + "\n").encode("utf-8"))
+                except (OSError, RuntimeError):
+                    pass
+                try:
+                    client_socket.close()
+                except (OSError, RuntimeError):
+                    pass
+                logger.warning(
+                    "Rejected connection from %s: limit exceeded (%d/%d)",
+                    addr,
+                    get_active_client_count(),
+                    MAX_CONNECTIONS,
+                )
+                continue
+
             client_thread = threading.Thread(
                 target=_handle_client,
                 args=(client_socket,),
@@ -255,8 +282,8 @@ def _main_thread_poll() -> float | None:
             elapsed_ms = (_time.perf_counter() - started) * 1000.0
             response_holder.append(result)
             operation_log.record(capability, result.get("ok", False), elapsed_ms, result)
-        except (AttributeError, RuntimeError, TypeError) as exc:
-            logger.error("Main-thread execution error: %s", exc)
+        except Exception as exc:
+            logger.exception("Main-thread execution error for %s: %s", request.get("capability", "unknown"), exc)
             response_holder.append(
                 {
                     "ok": False,
