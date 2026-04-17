@@ -6,6 +6,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from ..error_codes import ErrorCode
 from ..response import _error, _ok, bpy_unavailable_error, check_bpy_available
 from ..utils.property_parser import coerce_value
 from .reader import _resolve_node_tree
@@ -325,13 +326,13 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
 
     if not tree_type or not context:
         return _error(
-            code="invalid_params",
+            code=ErrorCode.INVALID_PARAMS,
             message="tree_type and context are required",
             started=started,
         )
     if not operations:
         return _error(
-            code="invalid_params",
+            code=ErrorCode.INVALID_PARAMS,
             message="operations array is required",
             started=started,
         )
@@ -381,7 +382,7 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
                     node_tree = node_group
         if node_tree is None:
             return _error(
-                code="not_found",
+                code=ErrorCode.NOT_FOUND,
                 message=f"No node tree found for tree_type={tree_type}, context={context}",
                 started=started,
             )

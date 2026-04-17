@@ -6,13 +6,12 @@ from __future__ import annotations
 import unicodedata
 from typing import Any
 
+from ..error_codes import ErrorCode
 from ..response import _error, _ok, bpy_unavailable_error, check_bpy_available
 from . import iter_fcurves
 
 
-def _read_keyframes(
-    obj: Any, frame_range: list[int] | None = None
-) -> list[dict[str, Any]]:
+def _read_keyframes(obj: Any, frame_range: list[int] | None = None) -> list[dict[str, Any]]:
     """Read keyframe data from an object's animation data."""
     keyframes = []
     if not obj.animation_data or not obj.animation_data.action:
@@ -95,11 +94,7 @@ def _read_drivers(obj: Any) -> list[dict[str, Any]]:
 def _read_shape_keys(obj: Any) -> list[dict[str, Any]]:
     """Read shape keys from an object."""
     keys = []
-    if (
-        not hasattr(obj, "data")
-        or not hasattr(obj.data, "shape_keys")
-        or not obj.data.shape_keys
-    ):
+    if not hasattr(obj, "data") or not hasattr(obj.data, "shape_keys") or not obj.data.shape_keys:
         return keys
     for kb in obj.data.shape_keys.key_blocks:
         keys.append(
@@ -122,9 +117,7 @@ def animation_read(payload: dict[str, Any], *, started: float) -> dict[str, Any]
 
     target = payload.get("target", "")
     if not target:
-        return _error(
-            code="invalid_params", message="target is required", started=started
-        )
+        return _error(code=ErrorCode.INVALID_PARAMS, message="target is required", started=started)
     target = unicodedata.normalize("NFC", target)
 
     include = payload.get("include", ["keyframes"])
@@ -136,9 +129,7 @@ def animation_read(payload: dict[str, Any], *, started: float) -> dict[str, Any]
         obj = bpy.data.objects.get(target)
 
     if obj is None:
-        return _error(
-            code="not_found", message=f"Object '{target}' not found", started=started
-        )
+        return _error(code=ErrorCode.NOT_FOUND, message=f"Object '{target}' not found", started=started)
 
     result: dict[str, Any] = {"target": target}
 

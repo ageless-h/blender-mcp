@@ -6,6 +6,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from ..error_codes import ErrorCode
 from ..response import (
     _error,
     _ok,
@@ -25,7 +26,7 @@ def animation_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
 
     action = payload.get("action", "")
     if not action:
-        return _error(code="invalid_params", message="action is required", started=started)
+        return _error(code=ErrorCode.INVALID_PARAMS, message="action is required", started=started)
 
     try:
         if action == "insert_keyframe":
@@ -52,7 +53,7 @@ def animation_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
             return _set_frame_range(bpy, payload, started)
         else:
             return _error(
-                code="invalid_params",
+                code=ErrorCode.INVALID_PARAMS,
                 message=f"Unknown action: {action}",
                 started=started,
             )
@@ -64,10 +65,10 @@ def _get_object(bpy: Any, payload: dict[str, Any], started: float) -> tuple[Any,
     """Get object from payload, returning (obj, error_response_or_None)."""
     name = payload.get("object_name", "")
     if not name:
-        return None, _error(code="invalid_params", message="object_name is required", started=started)
+        return None, _error(code=ErrorCode.INVALID_PARAMS, message="object_name is required", started=started)
     obj = bpy.data.objects.get(name)
     if obj is None:
-        return None, _error(code="not_found", message=f"Object '{name}' not found", started=started)
+        return None, _error(code=ErrorCode.NOT_FOUND, message=f"Object '{name}' not found", started=started)
     return obj, None
 
 
@@ -142,7 +143,7 @@ def _modify_keyframe(bpy: Any, payload: dict[str, Any], started: float) -> dict[
     value = payload.get("value")
 
     if not obj.animation_data or not obj.animation_data.action:
-        return _error(code="not_found", message="No animation data on object", started=started)
+        return _error(code=ErrorCode.NOT_FOUND, message="No animation data on object", started=started)
 
     modified = 0
     action = obj.animation_data.action
@@ -192,7 +193,7 @@ def _add_nla_strip(bpy: Any, payload: dict[str, Any], started: float) -> dict[st
     nla_action = bpy.data.actions.get(action_name)
     if not nla_action:
         return _error(
-            code="not_found",
+            code=ErrorCode.NOT_FOUND,
             message=f"Action '{action_name}' not found",
             started=started,
         )
@@ -220,7 +221,7 @@ def _modify_nla_strip(bpy: Any, payload: dict[str, Any], started: float) -> dict
         return err
     strip_name = payload.get("nla_strip_name", "")
     if not obj.animation_data:
-        return _error(code="not_found", message="No animation data", started=started)
+        return _error(code=ErrorCode.NOT_FOUND, message="No animation data", started=started)
 
     for track in obj.animation_data.nla_tracks:
         for strip in track.strips:
@@ -231,7 +232,7 @@ def _modify_nla_strip(bpy: Any, payload: dict[str, Any], started: float) -> dict
                     result={"action": "modify_nla_strip", "strip": strip.name},
                     started=started,
                 )
-    return _error(code="not_found", message=f"NLA strip '{strip_name}' not found", started=started)
+    return _error(code=ErrorCode.NOT_FOUND, message=f"NLA strip '{strip_name}' not found", started=started)
 
 
 def _remove_nla_strip(bpy: Any, payload: dict[str, Any], started: float) -> dict[str, Any]:
@@ -240,7 +241,7 @@ def _remove_nla_strip(bpy: Any, payload: dict[str, Any], started: float) -> dict
         return err
     strip_name = payload.get("nla_strip_name", "")
     if not obj.animation_data:
-        return _error(code="not_found", message="No animation data", started=started)
+        return _error(code=ErrorCode.NOT_FOUND, message="No animation data", started=started)
 
     for track in obj.animation_data.nla_tracks:
         for strip in track.strips:
@@ -250,7 +251,7 @@ def _remove_nla_strip(bpy: Any, payload: dict[str, Any], started: float) -> dict
                     result={"action": "remove_nla_strip", "removed": strip_name},
                     started=started,
                 )
-    return _error(code="not_found", message=f"NLA strip '{strip_name}' not found", started=started)
+    return _error(code=ErrorCode.NOT_FOUND, message=f"NLA strip '{strip_name}' not found", started=started)
 
 
 def _add_driver(bpy: Any, payload: dict[str, Any], started: float) -> dict[str, Any]:
@@ -294,11 +295,11 @@ def _set_shape_key(bpy: Any, payload: dict[str, Any], started: float) -> dict[st
     sk_name = payload.get("shape_key_name", "")
     value = payload.get("value", 0)
     if not obj.data or not obj.data.shape_keys:
-        return _error(code="not_found", message="No shape keys on object", started=started)
+        return _error(code=ErrorCode.NOT_FOUND, message="No shape keys on object", started=started)
     kb = obj.data.shape_keys.key_blocks.get(sk_name)
     if not kb:
         return _error(
-            code="not_found",
+            code=ErrorCode.NOT_FOUND,
             message=f"Shape key '{sk_name}' not found",
             started=started,
         )

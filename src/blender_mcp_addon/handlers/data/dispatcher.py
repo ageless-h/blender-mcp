@@ -7,6 +7,7 @@ import logging
 import unicodedata
 from typing import Any
 
+from ..error_codes import ErrorCode
 from ..registry import HandlerRegistry
 from ..response import (
     _error,
@@ -209,7 +210,7 @@ def data_link(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
         result = handler.link(source_name, target_type, target_name, unlink, params)
         if "error" in result:
             return _error(
-                code="link_failed",
+                code=ErrorCode.LINK_FAILED,
                 message=result["error"],
                 started=started,
             )
@@ -217,7 +218,7 @@ def data_link(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
         return _ok(result=result, started=started)
     except KeyError as exc:
         return _error(
-            code="not_found",
+            code=ErrorCode.NOT_FOUND,
             message=str(exc),
             started=started,
         )

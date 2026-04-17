@@ -11,6 +11,7 @@ import traceback
 from collections import deque
 from typing import Any
 
+from ..error_codes import ErrorCode
 from ..response import (
     _error,
     _ok,
@@ -117,7 +118,7 @@ def script_execute(payload: dict[str, Any], *, started: float) -> dict[str, Any]
 
     if not _script_config["enabled"]:
         return _error(
-            code="script_disabled",
+            code=ErrorCode.SCRIPT_DISABLED,
             message="script.execute is disabled. Enable it in security configuration to use this tool.",
             data={"config_key": "script_execute.enabled"},
             started=started,
@@ -127,7 +128,7 @@ def script_execute(payload: dict[str, Any], *, started: float) -> dict[str, Any]
         consent_granted = payload.get("consent_granted", False)
         if not consent_granted:
             return _error(
-                code="consent_required",
+                code=ErrorCode.CONSENT_REQUIRED,
                 message="User consent is required before executing scripts. Set 'consent_granted: true' to proceed.",
                 data={"warning": "This will execute arbitrary Python code in your Blender session."},
                 started=started,
@@ -168,7 +169,7 @@ def script_execute(payload: dict[str, Any], *, started: float) -> dict[str, Any]
         _log_execution(code, False, None, error_msg, exec_duration)
 
         return _error(
-            code="execution_timeout",
+            code=ErrorCode.EXECUTION_TIMEOUT,
             message=error_msg,
             data={"timeout": timeout},
             started=started,
@@ -180,7 +181,7 @@ def script_execute(payload: dict[str, Any], *, started: float) -> dict[str, Any]
         _log_execution(code, False, None, error_msg, exec_duration)
 
         return _error(
-            code="execution_error",
+            code=ErrorCode.EXECUTION_ERROR,
             message=f"Script execution failed: {error_msg}",
             data={"traceback": tb},
             started=started,

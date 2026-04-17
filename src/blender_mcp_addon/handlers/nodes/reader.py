@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..error_codes import ErrorCode
 from ..response import _error, _ok, bpy_unavailable_error, check_bpy_available
 
 
@@ -35,9 +36,7 @@ def _read_node(node: Any, depth: str) -> dict[str, Any]:
 
         outputs = []
         for out in node.outputs:
-            outputs.append(
-                {"name": out.name, "type": out.type, "is_linked": out.is_linked}
-            )
+            outputs.append({"name": out.name, "type": out.type, "is_linked": out.is_linked})
         data["outputs"] = outputs
     return data
 
@@ -133,7 +132,7 @@ def node_tree_read(payload: dict[str, Any], *, started: float) -> dict[str, Any]
     context = payload.get("context")
     if not tree_type or not context:
         return _error(
-            code="invalid_params",
+            code=ErrorCode.INVALID_PARAMS,
             message="tree_type and context are required",
             started=started,
         )
@@ -141,7 +140,7 @@ def node_tree_read(payload: dict[str, Any], *, started: float) -> dict[str, Any]
     node_tree = _resolve_node_tree(bpy, payload)
     if node_tree is None:
         return _error(
-            code="not_found",
+            code=ErrorCode.NOT_FOUND,
             message=f"No node tree found for tree_type={tree_type}, context={context}, target={payload.get('target')}",
             started=started,
         )

@@ -7,6 +7,7 @@ import logging
 from typing import Any
 
 from ..context_utils import get_view3d_override
+from ..error_codes import ErrorCode
 from ..response import _error, _ok, bpy_unavailable_error, check_bpy_available
 
 logger = logging.getLogger(__name__)
@@ -22,13 +23,13 @@ def physics_manage(payload: dict[str, Any], *, started: float) -> dict[str, Any]
     object_name = payload.get("object_name", "")
 
     if not action:
-        return _error(code="invalid_params", message="action is required", started=started)
+        return _error(code=ErrorCode.INVALID_PARAMS, message="action is required", started=started)
     if not object_name:
-        return _error(code="invalid_params", message="object_name is required", started=started)
+        return _error(code=ErrorCode.INVALID_PARAMS, message="object_name is required", started=started)
 
     obj = bpy.data.objects.get(object_name)
     if obj is None:
-        return _error(code="not_found", message=f"Object '{object_name}' not found", started=started)
+        return _error(code=ErrorCode.NOT_FOUND, message=f"Object '{object_name}' not found", started=started)
 
     # Make active for operator calls
     bpy.context.view_layer.objects.active = obj
@@ -46,15 +47,15 @@ def physics_manage(payload: dict[str, Any], *, started: float) -> dict[str, Any]
         elif action == "free_bake":
             return _free_bake(bpy, payload, started)
         else:
-            return _error(code="invalid_params", message=f"Unknown action: {action}", started=started)
+            return _error(code=ErrorCode.INVALID_PARAMS, message=f"Unknown action: {action}", started=started)
     except (AttributeError, RuntimeError, TypeError) as exc:
-        return _error(code="operation_failed", message=f"Physics {action} failed: {exc}", started=started)
+        return _error(code=ErrorCode.OPERATION_FAILED, message=f"Physics {action} failed: {exc}", started=started)
 
 
 def _add_physics(bpy: Any, obj: Any, payload: dict[str, Any], started: float) -> dict[str, Any]:
     physics_type = payload.get("physics_type", "")
     if not physics_type:
-        return _error(code="invalid_params", message="physics_type is required for add", started=started)
+        return _error(code=ErrorCode.INVALID_PARAMS, message="physics_type is required for add", started=started)
 
     ctx = get_view3d_override(bpy, obj)
 
@@ -88,7 +89,7 @@ def _add_physics(bpy: Any, obj: Any, payload: dict[str, Any], started: float) ->
         ff_type = payload.get("force_field_type", "FORCE")
         obj.field.type = ff_type
     else:
-        return _error(code="invalid_params", message=f"Unknown physics_type: {physics_type}", started=started)
+        return _error(code=ErrorCode.INVALID_PARAMS, message=f"Unknown physics_type: {physics_type}", started=started)
 
     # Apply initial settings
     settings = payload.get("settings", {})
@@ -103,7 +104,7 @@ def _configure_physics(obj: Any, payload: dict[str, Any], started: float) -> dic
     settings = payload.get("settings", {})
 
     if not settings:
-        return _error(code="invalid_params", message="settings are required for configure", started=started)
+        return _error(code=ErrorCode.INVALID_PARAMS, message="settings are required for configure", started=started)
 
     _apply_settings(obj, physics_type, settings)
     return _ok(
@@ -156,7 +157,7 @@ def _remove_physics(bpy: Any, obj: Any, payload: dict[str, Any], started: float)
     elif physics_type == "FORCE_FIELD":
         obj.field.type = "NONE"
     else:
-        return _error(code="invalid_params", message=f"Unknown physics_type: {physics_type}", started=started)
+        return _error(code=ErrorCode.INVALID_PARAMS, message=f"Unknown physics_type: {physics_type}", started=started)
 
     return _ok(result={"action": "remove", "object": obj.name, "physics_type": physics_type}, started=started)
 

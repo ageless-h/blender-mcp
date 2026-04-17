@@ -6,6 +6,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from ..error_codes import ErrorCode
 from ..response import _error, _ok, bpy_unavailable_error, check_bpy_available
 
 logger = logging.getLogger(__name__)
@@ -17,7 +18,7 @@ def _resolve_target(bpy: Any, payload: dict[str, Any], started: float):
     target_name = payload.get("target_name", "")
 
     if not target_name:
-        return None, None, _error(code="invalid_params", message="target_name is required", started=started)
+        return None, None, _error(code=ErrorCode.INVALID_PARAMS, message="target_name is required", started=started)
 
     if target_type == "BONE" and "/" in target_name:
         armature_name, bone_name = target_name.split("/", 1)
@@ -26,16 +27,24 @@ def _resolve_target(bpy: Any, payload: dict[str, Any], started: float):
             return (
                 None,
                 None,
-                _error(code="not_found", message=f"Armature '{armature_name}' not found", started=started),
+                _error(code=ErrorCode.NOT_FOUND, message=f"Armature '{armature_name}' not found", started=started),
             )
         bone = obj.pose.bones.get(bone_name) if obj.pose else None
         if bone is None:
-            return None, None, _error(code="not_found", message=f"Bone '{bone_name}' not found", started=started)
+            return (
+                None,
+                None,
+                _error(code=ErrorCode.NOT_FOUND, message=f"Bone '{bone_name}' not found", started=started),
+            )
         return obj, bone, None
     else:
         obj = bpy.data.objects.get(target_name)
         if obj is None:
-            return None, None, _error(code="not_found", message=f"Object '{target_name}' not found", started=started)
+            return (
+                None,
+                None,
+                _error(code=ErrorCode.NOT_FOUND, message=f"Object '{target_name}' not found", started=started),
+            )
         return obj, None, None
 
 
@@ -47,7 +56,7 @@ def constraints_manage(payload: dict[str, Any], *, started: float) -> dict[str, 
 
     action = payload.get("action", "")
     if not action:
-        return _error(code="invalid_params", message="action is required", started=started)
+        return _error(code=ErrorCode.INVALID_PARAMS, message="action is required", started=started)
 
     obj, bone, err = _resolve_target(bpy, payload, started)
     if err:
@@ -60,7 +69,9 @@ def constraints_manage(payload: dict[str, Any], *, started: float) -> dict[str, 
         if action == "add":
             constraint_type = payload.get("constraint_type", "")
             if not constraint_type:
-                return _error(code="invalid_params", message="constraint_type is required for add", started=started)
+                return _error(
+                    code=ErrorCode.INVALID_PARAMS, message="constraint_type is required for add", started=started
+                )
             constraint_name = payload.get("constraint_name", constraint_type)
             c = constraints.new(type=constraint_type)
             c.name = constraint_name
@@ -80,7 +91,9 @@ def constraints_manage(payload: dict[str, Any], *, started: float) -> dict[str, 
             constraint_name = payload.get("constraint_name", "")
             c = constraints.get(constraint_name)
             if not c:
-                return _error(code="not_found", message=f"Constraint '{constraint_name}' not found", started=started)
+                return _error(
+                    code=ErrorCode.NOT_FOUND, message=f"Constraint '{constraint_name}' not found", started=started
+                )
             settings = payload.get("settings", {})
             for key, value in settings.items():
                 if key == "target":
@@ -95,7 +108,9 @@ def constraints_manage(payload: dict[str, Any], *, started: float) -> dict[str, 
             constraint_name = payload.get("constraint_name", "")
             c = constraints.get(constraint_name)
             if not c:
-                return _error(code="not_found", message=f"Constraint '{constraint_name}' not found", started=started)
+                return _error(
+                    code=ErrorCode.NOT_FOUND, message=f"Constraint '{constraint_name}' not found", started=started
+                )
             constraints.remove(c)
             return _ok(result={"action": "remove", "removed": constraint_name}, started=started)
 
@@ -103,7 +118,9 @@ def constraints_manage(payload: dict[str, Any], *, started: float) -> dict[str, 
             constraint_name = payload.get("constraint_name", "")
             c = constraints.get(constraint_name)
             if not c:
-                return _error(code="not_found", message=f"Constraint '{constraint_name}' not found", started=started)
+                return _error(
+                    code=ErrorCode.NOT_FOUND, message=f"Constraint '{constraint_name}' not found", started=started
+                )
             c.mute = action == "disable"
             return _ok(result={"action": action, "name": c.name, "muted": c.mute}, started=started)
 
@@ -124,7 +141,7 @@ def constraints_manage(payload: dict[str, Any], *, started: float) -> dict[str, 
             return _ok(result={"action": action, "name": constraint_name}, started=started)
 
         else:
-            return _error(code="invalid_params", message=f"Unknown action: {action}", started=started)
+            return _error(code=ErrorCode.INVALID_PARAMS, message=f"Unknown action: {action}", started=started)
 
     except (AttributeError, KeyError, TypeError, RuntimeError, ValueError) as exc:
-        return _error(code="operation_failed", message=f"Constraint {action} failed: {exc}", started=started)
+        return _error(code=ErrorCode.OPERATION_FAILED, message=f"Constraint {action} failed: {exc}", started=started)

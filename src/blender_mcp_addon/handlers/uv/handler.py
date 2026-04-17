@@ -7,6 +7,7 @@ import logging
 from typing import Any
 
 from ..context_utils import get_view3d_override
+from ..error_codes import ErrorCode
 from ..response import _error, _ok, bpy_unavailable_error, check_bpy_available
 
 logger = logging.getLogger(__name__)
@@ -22,15 +23,15 @@ def uv_manage(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
     object_name = payload.get("object_name", "")
 
     if not action:
-        return _error(code="invalid_params", message="action is required", started=started)
+        return _error(code=ErrorCode.INVALID_PARAMS, message="action is required", started=started)
     if not object_name:
-        return _error(code="invalid_params", message="object_name is required", started=started)
+        return _error(code=ErrorCode.INVALID_PARAMS, message="object_name is required", started=started)
 
     obj = bpy.data.objects.get(object_name)
     if obj is None:
-        return _error(code="not_found", message=f"Object '{object_name}' not found", started=started)
+        return _error(code=ErrorCode.NOT_FOUND, message=f"Object '{object_name}' not found", started=started)
     if obj.type != "MESH":
-        return _error(code="invalid_params", message=f"Object '{object_name}' is not a mesh", started=started)
+        return _error(code=ErrorCode.INVALID_PARAMS, message=f"Object '{object_name}' is not a mesh", started=started)
 
     try:
         # UV layer management (no mode switch needed)
@@ -43,7 +44,7 @@ def uv_manage(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
             uv_name = payload.get("uv_map_name", "")
             uv_layer = obj.data.uv_layers.get(uv_name)
             if not uv_layer:
-                return _error(code="not_found", message=f"UV map '{uv_name}' not found", started=started)
+                return _error(code=ErrorCode.NOT_FOUND, message=f"UV map '{uv_name}' not found", started=started)
             obj.data.uv_layers.remove(uv_layer)
             return _ok(result={"action": action, "removed": uv_name}, started=started)
 
@@ -51,7 +52,7 @@ def uv_manage(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
             uv_name = payload.get("uv_map_name", "")
             uv_layer = obj.data.uv_layers.get(uv_name)
             if not uv_layer:
-                return _error(code="not_found", message=f"UV map '{uv_name}' not found", started=started)
+                return _error(code=ErrorCode.NOT_FOUND, message=f"UV map '{uv_name}' not found", started=started)
             obj.data.uv_layers.active = uv_layer
             return _ok(result={"action": action, "active": uv_name}, started=started)
 
@@ -117,7 +118,9 @@ def uv_manage(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
                     bpy.ops.uv.average_islands_scale()
                     result_msg = "UV island scales averaged"
                 else:
-                    return _error(code="invalid_params", message=f"Unknown UV action: {action}", started=started)
+                    return _error(
+                        code=ErrorCode.INVALID_PARAMS, message=f"Unknown UV action: {action}", started=started
+                    )
         finally:
             if original_mode != "EDIT":
                 with bpy.context.temp_override(**ctx):
@@ -126,4 +129,4 @@ def uv_manage(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
         return _ok(result={"action": action, "object": object_name, "message": result_msg}, started=started)
 
     except (AttributeError, RuntimeError, TypeError) as exc:
-        return _error(code="operation_failed", message=f"UV {action} failed: {exc}", started=started)
+        return _error(code=ErrorCode.OPERATION_FAILED, message=f"UV {action} failed: {exc}", started=started)

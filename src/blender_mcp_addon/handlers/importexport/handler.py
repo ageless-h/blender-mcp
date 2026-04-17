@@ -6,6 +6,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..context_utils import get_view3d_override
+from ..error_codes import ErrorCode
 from ..response import _error, _ok, bpy_unavailable_error, check_bpy_available
 
 _IMPORT_OPERATORS = {
@@ -71,21 +72,21 @@ def import_export(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
     filepath = payload.get("filepath", "")
 
     if action not in ("import", "export"):
-        return _error(code="invalid_params", message="action must be 'import' or 'export'", started=started)
+        return _error(code=ErrorCode.INVALID_PARAMS, message="action must be 'import' or 'export'", started=started)
     if not fmt:
-        return _error(code="invalid_params", message="format is required", started=started)
+        return _error(code=ErrorCode.INVALID_PARAMS, message="format is required", started=started)
     if not filepath:
-        return _error(code="invalid_params", message="filepath is required", started=started)
+        return _error(code=ErrorCode.INVALID_PARAMS, message="filepath is required", started=started)
 
     validated_path = _validate_filepath(filepath)
     if validated_path is None:
-        return _error(code="invalid_params", message="Invalid or unsafe file path", started=started)
+        return _error(code=ErrorCode.INVALID_PARAMS, message="Invalid or unsafe file path", started=started)
     filepath = validated_path
 
     op_map = _IMPORT_OPERATORS if action == "import" else _EXPORT_OPERATORS
     operator_id = op_map.get(fmt)
     if not operator_id:
-        return _error(code="invalid_params", message=f"Unsupported format: {fmt}", started=started)
+        return _error(code=ErrorCode.INVALID_PARAMS, message=f"Unsupported format: {fmt}", started=started)
 
     # Build operator params
     params: dict[str, Any] = {"filepath": filepath}
@@ -110,7 +111,7 @@ def import_export(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
             result = op_func(**params)
         status = "FINISHED" if result == {"FINISHED"} else str(result)
     except (AttributeError, RuntimeError, OSError, KeyError, TypeError) as exc:
-        return _error(code="operation_failed", message=f"{action} {fmt} failed: {exc}", started=started)
+        return _error(code=ErrorCode.OPERATION_FAILED, message=f"{action} {fmt} failed: {exc}", started=started)
 
     return _ok(
         result={

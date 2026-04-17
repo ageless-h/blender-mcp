@@ -8,6 +8,7 @@ import time
 from collections import Counter
 from typing import Any
 
+from ..error_codes import ErrorCode
 from ..response import (
     _error,
     _ok,
@@ -133,7 +134,7 @@ def operator_execute(payload: dict[str, Any], *, started: float) -> dict[str, An
 
         if not hasattr(bpy.ops, category):
             return _error(
-                code="invalid_operator",
+                code=ErrorCode.INVALID_OPERATOR,
                 message=f"Operator category '{category}' not found",
                 data={"operator": operator_id},
                 started=started,
@@ -142,7 +143,7 @@ def operator_execute(payload: dict[str, Any], *, started: float) -> dict[str, An
         op_category = getattr(bpy.ops, category)
         if not hasattr(op_category, op_name):
             return _error(
-                code="invalid_operator",
+                code=ErrorCode.INVALID_OPERATOR,
                 message=f"Operator '{op_name}' not found in category '{category}'",
                 data={"operator": operator_id},
                 started=started,
@@ -188,14 +189,14 @@ def operator_execute(payload: dict[str, Any], *, started: float) -> dict[str, An
 
     except TypeError as exc:
         return _error(
-            code="invalid_params",
+            code=ErrorCode.INVALID_PARAMS,
             message=f"Invalid operator parameters: {str(exc)}",
             data={"operator": operator_id, "params": params},
             started=started,
         )
     except RuntimeError as exc:
         return _error(
-            code="operator_error",
+            code=ErrorCode.OPERATOR_ERROR,
             message=f"Operator execution error: {str(exc)}",
             data={"operator": operator_id},
             started=started,
