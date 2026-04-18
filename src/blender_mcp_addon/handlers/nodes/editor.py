@@ -380,6 +380,16 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
                     node_group.nodes.new("NodeGroupOutput")
                     mod.node_group = node_group
                     node_tree = node_group
+        if context == "NODE_GROUP" and target:
+            node_tree = bpy.data.node_groups.get(target)
+            if node_tree is None:
+                type_map = {
+                    "SHADER": "ShaderNodeTree",
+                    "GEOMETRY": "GeometryNodeTree",
+                    "COMPOSITOR": "CompositorNodeTree",
+                }
+                bl_type = type_map.get(tree_type, "ShaderNodeTree")
+                node_tree = bpy.data.node_groups.new(target, bl_type)
         if node_tree is None:
             return _error(
                 code=ErrorCode.NOT_FOUND,
@@ -541,6 +551,47 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
                             "action": "set_property",
                             "ok": False,
                             "error": "node or property not found",
+                        }
+                    )
+
+            elif action == "add_interface_socket":
+                socket_name = op.get("name", "Value")
+                in_out = op.get("in_out", "INPUT")
+                socket_type = op.get("socket_type", "NodeSocketFloat")
+                try:
+                    node_tree.interface.new_socket(
+                        name=socket_name,
+                        in_out=in_out,
+                        socket_type=socket_type,
+                    )
+                    results.append({"op": i, "action": "add_interface_socket", "name": socket_name, "ok": True})
+                except (AttributeError, TypeError) as exc:
+                    results.append(
+                        {
+                            "op": i,
+                            "action": "add_interface_socket",
+                            "ok": False,
+                            "error": str(exc),
+                        }
+                    )
+
+            elif action == "remove_interface_socket":
+                socket_name = op.get("socket_name", op.get("name", ""))
+                found = False
+                for item in node_tree.interface.items_tree:
+                    if item.item_type == "SOCKET" and item.name == socket_name:
+                        node_tree.interface.remove(item)
+                        found = True
+                        break
+                if found:
+                    results.append({"op": i, "action": "remove_interface_socket", "name": socket_name, "ok": True})
+                else:
+                    results.append(
+                        {
+                            "op": i,
+                            "action": "remove_interface_socket",
+                            "ok": False,
+                            "error": "socket not found",
                         }
                     )
 

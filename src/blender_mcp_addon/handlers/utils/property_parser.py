@@ -26,6 +26,7 @@ def coerce_value(value: Any, target: Any = None) -> Any:
       - str "Color(r,g,b,a)" → tuple
       - str "true"/"false"/"yes"/"no" → bool
       - numeric strings → float / int
+      - str → NodeTree reference (by name lookup in bpy.data.node_groups)
     """
     if value is None:
         return None
@@ -39,6 +40,10 @@ def coerce_value(value: Any, target: Any = None) -> Any:
         return value
 
     target_type = type(target).__name__
+
+    # Handle NodeTree references - allow setting node_tree property by name
+    if _is_node_tree_target(target):
+        return _to_node_tree(value, target)
 
     if target_type == "Color" or _is_color_target(target):
         return _to_color(value)
@@ -145,6 +150,26 @@ def _is_color_target(target: Any) -> bool:
 def _is_vector_target(target: Any) -> bool:
     tname = type(target).__name__
     return tname in ("Vector", "Euler")
+
+
+def _is_node_tree_target(target: Any) -> bool:
+    """Check if target is a NodeTree or None (for optional node_tree properties)."""
+    tname = type(target).__name__
+    return tname in ("NodeTree", "ShaderNodeTree", "CompositorNodeTree", "GeometryNodeTree") or target is None
+
+
+def _to_node_tree(value: Any, target: Any) -> Any:
+    """Convert string value to NodeTree reference by name lookup."""
+    if not isinstance(value, str):
+        return value
+    try:
+        import bpy
+        tree = bpy.data.node_groups.get(value)
+        if tree is not None:
+            return tree
+    except ImportError:
+        pass
+    return value
 
 
 def _to_color(value: Any) -> Any:

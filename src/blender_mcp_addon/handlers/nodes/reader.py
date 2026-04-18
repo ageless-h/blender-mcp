@@ -161,6 +161,11 @@ def _resolve_node_tree(bpy: Any, payload: dict[str, Any]) -> Any:
                     return mod.node_group
         return None
 
+    if context == "NODE_GROUP" and target:
+        node_tree = bpy.data.node_groups.get(target)
+        if node_tree:
+            return node_tree
+
     return None
 
 
