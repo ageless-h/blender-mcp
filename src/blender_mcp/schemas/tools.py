@@ -568,12 +568,12 @@ _DECLARATIVE_TOOLS = [
                 },
                 "context": {
                     "type": "string",
-                    "enum": ["OBJECT", "WORLD", "LINESTYLE", "SCENE", "MODIFIER", "TOOL"],
+                    "enum": ["OBJECT", "WORLD", "LINESTYLE", "SCENE", "MODIFIER", "TOOL", "NODE_GROUP"],
                     "description": (
                         "Context within the tree type. "
-                        "SHADER: OBJECT|WORLD|LINESTYLE. "
-                        "COMPOSITOR: SCENE. "
-                        "GEOMETRY: MODIFIER|TOOL."
+                        "SHADER: OBJECT|WORLD|LINESTYLE|NODE_GROUP. "
+                        "COMPOSITOR: SCENE|NODE_GROUP. "
+                        "GEOMETRY: MODIFIER|TOOL|NODE_GROUP."
                     ),
                 },
                 "target": {
@@ -582,7 +582,8 @@ _DECLARATIVE_TOOLS = [
                         "Target name. For SHADER/OBJECT: material name. "
                         "For SHADER/WORLD: world name. "
                         "For GEOMETRY/MODIFIER: 'ObjectName/ModifierName'. "
-                        "For COMPOSITOR/SCENE: omit or scene name."
+                        "For COMPOSITOR/SCENE: omit or scene name. "
+                        "For NODE_GROUP: node group name in bpy.data.node_groups."
                     ),
                 },
                 "operations": {
@@ -599,6 +600,8 @@ _DECLARATIVE_TOOLS = [
                                     "disconnect",
                                     "set_value",
                                     "set_property",
+                                    "add_interface_socket",
+                                    "remove_interface_socket",
                                 ],
                                 "description": "The node operation to perform.",
                             },
@@ -644,6 +647,22 @@ _DECLARATIVE_TOOLS = [
                             "to_socket": {
                                 "type": "string",
                                 "description": "For connect: destination input socket name.",
+                            },
+                            "in_out": {
+                                "type": "string",
+                                "enum": ["INPUT", "OUTPUT"],
+                                "description": "For add_interface_socket: whether this is an input or output socket.",
+                            },
+                            "socket_type": {
+                                "type": "string",
+                                "description": (
+                                    "For add_interface_socket: socket type identifier "
+                                    "(e.g. 'NodeSocketFloat', 'NodeSocketColor', 'NodeSocketShader')."
+                                ),
+                            },
+                            "socket_name": {
+                                "type": "string",
+                                "description": "For remove_interface_socket: name of the socket to remove.",
                             },
                         },
                         "required": ["action"],
