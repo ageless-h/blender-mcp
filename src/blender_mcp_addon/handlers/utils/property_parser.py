@@ -36,14 +36,15 @@ def coerce_value(value: Any, target: Any = None) -> Any:
         if not isinstance(value, str):
             return value
 
+    # Handle NodeTree references - check BEFORE returning for None target
+    # because node.node_tree can be None on new Group nodes
+    if _is_node_tree_target(target):
+        return _to_node_tree(value, target)
+
     if target is None:
         return value
 
     target_type = type(target).__name__
-
-    # Handle NodeTree references - allow setting node_tree property by name
-    if _is_node_tree_target(target):
-        return _to_node_tree(value, target)
 
     if target_type == "Color" or _is_color_target(target):
         return _to_color(value)
