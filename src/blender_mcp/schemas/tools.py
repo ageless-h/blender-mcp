@@ -233,6 +233,21 @@ _PERCEPTION_TOOLS = [
                         "'full' returns all parameters and connections."
                     ),
                 },
+                "expand_groups": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": (
+                        "If True, recursively expand node groups to show internal structure. "
+                        "Group nodes will include an 'internal_tree' field with nested nodes."
+                    ),
+                },
+                "max_depth": {
+                    "type": "integer",
+                    "default": 3,
+                    "minimum": 1,
+                    "maximum": 10,
+                    "description": "Maximum recursion depth for group expansion (prevents infinite nesting).",
+                },
             },
             "required": ["tree_type", "context"],
             "additionalProperties": False,
@@ -507,6 +522,8 @@ _PERCEPTION_TOOLS = [
         description=(
             "Return the current selection state — selected objects, active object, "
             "current interaction mode, and active tool.\n\n"
+            "Also returns node_editor selection if a Shader/Geometry/Compositor node editor is open, "
+            "including selected nodes and the active node.\n\n"
             "Use this when: you need to understand what the user is currently working on.\n\n"
             "Do NOT use for: listing all objects (use blender_get_objects)."
         ),

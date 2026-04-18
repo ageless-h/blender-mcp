@@ -397,7 +397,147 @@ def _query_selection(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
         except (AttributeError, RuntimeError, ImportError) as exc:
             logger.debug("Failed to query edit mesh selection: %s", exc)
 
+    # Query Node Editor selection state
+    node_editor = _query_node_editor_selection(bpy)
+    if node_editor is not None:
+        result["node_editor"] = node_editor
+
     return result
+
+
+def _query_node_editor_selection(bpy: Any) -> dict[str, Any] | None:
+    """Query node editor selection state if a node editor is active."""
+    try:
+        screen = bpy.context.screen
+        if screen is None:
+            return None
+
+        for area in screen.areas:
+            if area.type == "NODE_EDITOR":
+                for space in area.spaces:
+                    if space.type == "NODE_EDITOR" and space.node_tree:
+                        tree = space.node_tree
+                        selected_nodes = []
+                        active_node_info = None
+
+                        # Detect if we're inside a node group (nested editing)
+                        # space.path contains the hierarchy of node trees being edited
+                        parent_context = None
+                        current_tree_name = tree.name
+                        current_tree = tree
+
+                        if hasattr(space, "path") and len(space.path) > 1:
+                            # We're inside a nested node group
+                            path_entries = []
+                            for i, path_item in enumerate(space.path):
+                                node_name = None
+                                if hasattr(path_item, "node") and path_item.node:
+                                    node_name = path_item.node.name
+                                path_entries.append({
+                                    "tree_name": path_item.node_tree.name if path_item.node_tree else None,
+                                    "node_name": node_name,
+                                })
+                            parent_context = path_entries
+                            # The current tree being edited is the last item in path
+                            if space.path[-1].node_tree:
+                                current_tree = space.path[-1].node_tree
+                                current_tree_name = current_tree.name
+
+                        # Use current_tree (which may be a nested group) instead of tree
+                        for node in current_tree.nodes:
+                            try:
+                                if node.select:
+                                    node_info = _read_selected_node_detail(node)
+                                    selected_nodes.append(node_info)
+                            except (AttributeError, RuntimeError):
+                                pass
+
+                        try:
+                            active_node = current_tree.nodes.active
+                            if active_node:
+                                active_node_info = _read_selected_node_detail(active_node)
+                        except (AttributeError, RuntimeError):
+                            pass
+
+                        tree_type_map = {
+                            "ShaderNodeTree": "SHADER",
+                            "CompositorNodeTree": "COMPOSITOR",
+                            "GeometryNodeTree": "GEOMETRY",
+                        }
+
+                        result = {
+                            "tree_type": tree_type_map.get(current_tree.bl_idname, current_tree.bl_idname),
+                            "tree_name": current_tree_name,
+                            "selected_nodes": selected_nodes,
+                            "selected_count": len(selected_nodes),
+                            "active_node": active_node_info,
+                        }
+
+                        if parent_context:
+                            result["nested_path"] = parent_context
+
+                        return result
+    except (AttributeError, RuntimeError) as exc:
+        logger.debug("Failed to query node editor selection: %s", exc)
+
+    return None
+
+
+def _read_selected_node_detail(node: Any) -> dict[str, Any]:
+    """Read detailed info for a selected node including inputs/outputs."""
+    node_info: dict[str, Any] = {
+        "name": node.name,
+        "type": node.bl_idname,
+        "label": node.label or node.name,
+        "location": [node.location.x, node.location.y],
+    }
+
+    if node.type == "GROUP" and hasattr(node, "node_tree") and node.node_tree:
+        node_info["is_group"] = True
+        node_info["group_tree_name"] = node.node_tree.name
+
+    # Read inputs with values
+    inputs = []
+    for inp in node.inputs:
+        inp_data: dict[str, Any] = {"name": inp.name, "type": inp.type}
+        if hasattr(inp, "default_value"):
+            try:
+                val = inp.default_value
+                if hasattr(val, "__len__") and not isinstance(val, str):
+                    inp_data["value"] = list(val)
+                else:
+                    inp_data["value"] = val
+            except (AttributeError, ValueError):
+                inp_data["value"] = "<unreadable>"
+        inp_data["is_linked"] = inp.is_linked
+        if inp.is_linked:
+            try:
+                link = inp.links[0]
+                inp_data["linked_from"] = {
+                    "node": link.from_node.name,
+                    "socket": link.from_socket.name,
+                }
+            except (AttributeError, IndexError):
+                pass
+        inputs.append(inp_data)
+    node_info["inputs"] = inputs
+
+    # Read outputs
+    outputs = []
+    for out in node.outputs:
+        out_data: dict[str, Any] = {"name": out.name, "type": out.type, "is_linked": out.is_linked}
+        if out.is_linked:
+            try:
+                out_data["links"] = [
+                    {"node": link.to_node.name, "socket": link.to_socket.name}
+                    for link in out.links
+                ]
+            except (AttributeError, IndexError):
+                pass
+        outputs.append(out_data)
+    node_info["outputs"] = outputs
+
+    return node_info
 
 
 def _query_mode(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:

@@ -9,14 +9,35 @@ from ..error_codes import ErrorCode
 from ..response import _error, _ok, bpy_unavailable_error, check_bpy_available
 
 
-def _read_node(node: Any, depth: str) -> dict[str, Any]:
-    """Read a single node's data."""
+def _read_node(
+    node: Any,
+    depth: str,
+    expand_groups: bool = False,
+    max_depth: int = 3,
+    _current_depth: int = 0,
+) -> dict[str, Any]:
+    """Read a single node's data.
+
+    Args:
+        node: The Blender node to read
+        depth: 'summary' or 'full' - controls level of detail
+        expand_groups: If True, recursively expand node groups
+        max_depth: Maximum recursion depth for group expansion
+        _current_depth: Internal counter for recursion depth
+    """
     data: dict[str, Any] = {
         "name": node.name,
         "type": node.bl_idname,
         "label": node.label or node.name,
         "location": [node.location.x, node.location.y],
     }
+
+    # Mark if this is a group node
+    if node.type == "GROUP":
+        data["is_group"] = True
+        if hasattr(node, "node_tree") and node.node_tree:
+            data["group_tree_name"] = node.node_tree.name
+
     if depth == "full":
         inputs = []
         for inp in node.inputs:
@@ -38,6 +59,27 @@ def _read_node(node: Any, depth: str) -> dict[str, Any]:
         for out in node.outputs:
             outputs.append({"name": out.name, "type": out.type, "is_linked": out.is_linked})
         data["outputs"] = outputs
+
+    # Recursively expand node group if requested
+    if (
+        expand_groups
+        and node.type == "GROUP"
+        and hasattr(node, "node_tree")
+        and node.node_tree
+        and _current_depth < max_depth
+    ):
+        internal_tree = node.node_tree
+        data["internal_tree"] = {
+            "name": internal_tree.name,
+            "node_count": len(internal_tree.nodes),
+            "link_count": len(internal_tree.links),
+            "nodes": [
+                _read_node(n, depth, expand_groups, max_depth, _current_depth + 1)
+                for n in internal_tree.nodes
+            ],
+            "links": [_read_link(l) for l in internal_tree.links] if depth == "full" else [],
+        }
+
     return data
 
 
@@ -146,18 +188,24 @@ def node_tree_read(payload: dict[str, Any], *, started: float) -> dict[str, Any]
         )
 
     depth = payload.get("depth", "summary")
-    nodes = [_read_node(n, depth) for n in node_tree.nodes]
+    expand_groups = bool(payload.get("expand_groups", False))
+    max_depth = int(payload.get("max_depth", 3))
+
+    nodes = [_read_node(n, depth, expand_groups, max_depth) for n in node_tree.nodes]
     links = [_read_link(l) for l in node_tree.links] if depth == "full" else []
 
-    return _ok(
-        result={
-            "tree_name": node_tree.name,
-            "tree_type": tree_type,
-            "context": context,
-            "node_count": len(node_tree.nodes),
-            "link_count": len(node_tree.links),
-            "nodes": nodes,
-            "links": links,
-        },
-        started=started,
-    )
+    result = {
+        "tree_name": node_tree.name,
+        "tree_type": tree_type,
+        "context": context,
+        "node_count": len(node_tree.nodes),
+        "link_count": len(node_tree.links),
+        "nodes": nodes,
+        "links": links,
+    }
+
+    if expand_groups:
+        result["expand_groups"] = True
+        result["max_depth"] = max_depth
+
+    return _ok(result=result, started=started)
