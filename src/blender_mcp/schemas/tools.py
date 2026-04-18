@@ -193,7 +193,7 @@ _PERCEPTION_TOOLS = [
         name="blender_get_node_tree",
         description=(
             "Read the structure of any node tree in Blender — shader nodes, compositor nodes, "
-            "or geometry nodes. Returns nodes and links. Supports all 6 node tree contexts.\n\n"
+            "or geometry nodes. Returns nodes and links. Supports all 7 node tree contexts.\n\n"
             "Use this when: you need to understand a material's shader setup, compositor pipeline, "
             "or geometry nodes graph before editing.\n\n"
             "Do NOT use for: editing nodes (use blender_edit_nodes)."
@@ -208,12 +208,12 @@ _PERCEPTION_TOOLS = [
                 },
                 "context": {
                     "type": "string",
-                    "enum": ["OBJECT", "WORLD", "LINESTYLE", "SCENE", "MODIFIER", "TOOL"],
+                    "enum": ["OBJECT", "WORLD", "LINESTYLE", "SCENE", "MODIFIER", "TOOL", "NODE_GROUP"],
                     "description": (
                         "Context within the tree type. "
-                        "SHADER: OBJECT|WORLD|LINESTYLE. "
-                        "COMPOSITOR: SCENE. "
-                        "GEOMETRY: MODIFIER|TOOL."
+                        "SHADER: OBJECT|WORLD|LINESTYLE|NODE_GROUP. "
+                        "COMPOSITOR: SCENE|NODE_GROUP. "
+                        "GEOMETRY: MODIFIER|TOOL|NODE_GROUP."
                     ),
                 },
                 "target": {
@@ -221,7 +221,8 @@ _PERCEPTION_TOOLS = [
                     "description": (
                         "Target name. For SHADER/OBJECT: material name. "
                         "For SHADER/WORLD: world name. "
-                        "For GEOMETRY/MODIFIER: 'ObjectName/ModifierName'."
+                        "For GEOMETRY/MODIFIER: 'ObjectName/ModifierName'. "
+                        "For NODE_GROUP: node group name in bpy.data.node_groups."
                     ),
                 },
                 "depth": {
@@ -552,7 +553,7 @@ _DECLARATIVE_TOOLS = [
         name="blender_edit_nodes",
         description=(
             "Edit any node tree in Blender — add/remove nodes, connect/disconnect sockets, "
-            "set node input values and properties. Supports all 6 node tree contexts. "
+            "set node input values and properties. Supports all 7 node tree contexts. "
             "Operations are executed in order within a single call.\n\n"
             "Use this when: you need to build or modify shader, compositor, or geometry node graphs.\n\n"
             "Do NOT use for: high-level PBR properties (use blender_manage_material), "
@@ -642,11 +643,20 @@ _DECLARATIVE_TOOLS = [
                                 ),
                             },
                             "from_node": {"type": "string", "description": "For connect: source node name."},
-                            "from_socket": {"type": "string", "description": "For connect: source output socket name."},
+                            "from_socket": {
+                                "oneOf": [{"type": "string"}, {"type": "integer"}],
+                                "description": (
+                                    "For connect: source output socket name, index (int), "
+                                    "or 'Name[N]' for Nth socket with that name (0-based)."
+                                ),
+                            },
                             "to_node": {"type": "string", "description": "For connect: destination node name."},
                             "to_socket": {
-                                "type": "string",
-                                "description": "For connect: destination input socket name.",
+                                "oneOf": [{"type": "string"}, {"type": "integer"}],
+                                "description": (
+                                    "For connect: destination input socket name, index (int), "
+                                    "or 'Name[N]' for Nth socket with that name (0-based)."
+                                ),
                             },
                             "in_out": {
                                 "type": "string",

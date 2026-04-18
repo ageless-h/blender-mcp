@@ -85,6 +85,10 @@ def _insert_keyframe(bpy: Any, payload: dict[str, Any], started: float) -> dict[
         prop = obj.path_resolve(data_path)
         if hasattr(prop, "__len__") and index >= 0:
             prop[index] = value
+        elif hasattr(prop, "__len__") and index < 0 and isinstance(value, (list, tuple)):
+            for i, v in enumerate(value):
+                if i < len(prop):
+                    prop[i] = v
         elif not hasattr(prop, "__len__"):
             setattr(obj, data_path.split(".")[-1], value) if "." not in data_path else None
 

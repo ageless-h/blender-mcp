@@ -103,6 +103,13 @@ class ModifierHandler(BaseHandler):
         modifier_type = params.get("type", "SUBSURF")
         modifier = obj.modifiers.new(name=name, type=modifier_type)
 
+        # Auto-create a GeometryNodeTree for Geometry Nodes modifiers
+        if modifier_type == "NODES" and modifier.node_group is None:
+            tree = bpy.data.node_groups.new(name=name, type="GeometryNodeTree")
+            tree.interface.new_socket("Geometry", in_out="INPUT", socket_type="NodeSocketGeometry")
+            tree.interface.new_socket("Geometry", in_out="OUTPUT", socket_type="NodeSocketGeometry")
+            modifier.node_group = tree
+
         settings = params.get("settings", {})
         for key, value in settings.items():
             self._set_modifier_property(modifier, key, value)

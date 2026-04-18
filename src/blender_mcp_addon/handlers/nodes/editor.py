@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 from ..error_codes import ErrorCode
@@ -284,6 +285,36 @@ def _get_node(node_tree, name_or_identifier: str, node_index: dict | None = None
     return None
 
 
+_INDEX_SUFFIX_RE = re.compile(r"^(.+)\[(\d+)\]$")
+
+
+def _find_socket(collection, ref):
+    """Find a socket by name, integer index, or ``Name[N]`` suffix.
+
+    Supports:
+    - ``"Value"`` → first socket named ``Value``
+    - ``0`` → socket at index 0
+    - ``"Value[1]"`` → second socket named ``Value`` (0-based)
+    """
+    if isinstance(ref, int):
+        if 0 <= ref < len(collection):
+            return collection[ref]
+        return None
+
+    if not isinstance(ref, str):
+        return None
+
+    m = _INDEX_SUFFIX_RE.match(ref)
+    if m:
+        name, idx = m.group(1), int(m.group(2))
+        candidates = [s for s in collection if s.name == name]
+        if 0 <= idx < len(candidates):
+            return candidates[idx]
+        return None
+
+    return collection.get(ref)
+
+
 _SOCKET_TYPE_FOR_VALUE = {
     1: "VALUE",
     3: "VECTOR",
@@ -312,6 +343,19 @@ def _find_input_by_name_and_type(node, input_name: str, value: Any):
                 return inp
 
     return candidates[0]
+
+
+def _resolve_node_tree_ref(value: str):
+    """Resolve a string value to a NodeTree reference from bpy.data.node_groups."""
+    try:
+        import bpy  # type: ignore
+
+        tree = bpy.data.node_groups.get(value)
+        if tree is not None:
+            return tree
+    except ImportError:
+        pass
+    return value
 
 
 def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
@@ -457,8 +501,8 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
                         }
                     )
                     continue
-                from_socket = from_node.outputs.get(op.get("from_socket", ""))
-                to_socket = to_node.inputs.get(op.get("to_socket", ""))
+                from_socket = _find_socket(from_node.outputs, op.get("from_socket", ""))
+                to_socket = _find_socket(to_node.inputs, op.get("to_socket", ""))
                 if not from_socket or not to_socket:
                     results.append(
                         {
@@ -477,7 +521,7 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
                 input_name = op.get("input", "")
                 node = _get_node(node_tree, node_name, node_index)
                 if node:
-                    inp = node.inputs.get(input_name)
+                    inp = _find_socket(node.inputs, input_name)
                     if inp and inp.links:
                         for link in list(inp.links):
                             node_tree.links.remove(link)
@@ -548,7 +592,11 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
                 node = _get_node(node_tree, node_name, node_index)
                 if node and hasattr(node, prop_name):
                     current = getattr(node, prop_name)
-                    setattr(node, prop_name, coerce_value(value, current))
+                    if current is None and isinstance(value, str) and prop_name in ("node_tree",):
+                        coerced = _resolve_node_tree_ref(value)
+                    else:
+                        coerced = coerce_value(value, current)
+                    setattr(node, prop_name, coerced)
                     results.append({"op": i, "action": "set_property", "ok": True})
                 else:
                     results.append(

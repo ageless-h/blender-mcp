@@ -12,6 +12,14 @@ from ..response import _error, _ok, bpy_unavailable_error, check_bpy_available
 
 logger = logging.getLogger(__name__)
 
+# Common constraint type aliases — normalise user input before passing to Blender.
+_CONSTRAINT_TYPE_ALIASES: dict[str, str] = {
+    "TRANSFORMATION": "TRANSFORM",
+    "COPY_TRANSFORM": "COPY_TRANSFORMS",
+    "INVERSE_KINEMATICS": "IK",
+    "INVERSE_KINEMATIC": "IK",
+}
+
 
 def _apply_constraint_settings(constraint: Any, constraint_type: str, settings: dict[str, Any], bpy: Any) -> list[str]:
     """Apply settings to a constraint using metadata resolver.
@@ -140,6 +148,7 @@ def constraints_manage(payload: dict[str, Any], *, started: float) -> dict[str, 
                 return _error(
                     code=ErrorCode.INVALID_PARAMS, message="constraint_type is required for add", started=started
                 )
+            constraint_type = _CONSTRAINT_TYPE_ALIASES.get(constraint_type, constraint_type)
             constraint_name = payload.get("constraint_name", constraint_type)
             c = constraints.new(type=constraint_type)
             c.name = constraint_name

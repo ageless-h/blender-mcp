@@ -158,9 +158,21 @@ def _handle_get_collections(payload: dict[str, Any], started: float) -> dict[str
 
 
 def _handle_get_armature_data(payload: dict[str, Any], started: float) -> dict[str, Any]:
-    from ..handlers.animation.reader import armature_read
-
-    return armature_read(payload, started=started)
+    handler = HandlerRegistry.get(DataType.ARMATURE)
+    if handler is None:
+        return _error(code=ErrorCode.UNSUPPORTED_TYPE, message="armature handler not available", started=started)
+    armature_name = payload.get("armature_name", "")
+    if not armature_name:
+        return _error(code=ErrorCode.INVALID_PARAMS, message="armature_name is required", started=started)
+    read_params: dict[str, Any] = {}
+    if "include" in payload:
+        read_params["include"] = payload["include"]
+    if "bone_filter" in payload:
+        read_params["bone_filter"] = payload["bone_filter"]
+    try:
+        return _ok(result=handler.read(armature_name, None, read_params), started=started)
+    except (KeyError, AttributeError, TypeError, RuntimeError, ValueError) as exc:
+        return operation_failed_error("get_armature_data", exc, started)
 
 
 def _handle_get_images(payload: dict[str, Any], started: float) -> dict[str, Any]:

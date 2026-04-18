@@ -36,8 +36,8 @@ def coerce_value(value: Any, target: Any = None) -> Any:
         if not isinstance(value, str):
             return value
 
-    # Handle NodeTree references - check BEFORE returning for None target
-    # because node.node_tree can be None on new Group nodes
+    # Handle NodeTree references — resolve string names to bpy.data.node_groups objects.
+    # Must come before the None check so that non-None NodeTree targets are handled.
     if _is_node_tree_target(target):
         return _to_node_tree(value, target)
 
@@ -154,9 +154,11 @@ def _is_vector_target(target: Any) -> bool:
 
 
 def _is_node_tree_target(target: Any) -> bool:
-    """Check if target is a NodeTree or None (for optional node_tree properties)."""
+    """Check if target is a NodeTree type."""
+    if target is None:
+        return False
     tname = type(target).__name__
-    return tname in ("NodeTree", "ShaderNodeTree", "CompositorNodeTree", "GeometryNodeTree") or target is None
+    return tname in ("NodeTree", "ShaderNodeTree", "CompositorNodeTree", "GeometryNodeTree")
 
 
 def _to_node_tree(value: Any, target: Any) -> Any:
