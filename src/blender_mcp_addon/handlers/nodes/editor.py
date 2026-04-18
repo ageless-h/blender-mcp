@@ -412,13 +412,19 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
                     node.label = op["name"]
                 if op.get("location"):
                     node.location = tuple(op["location"])
+                node_index[node.name] = node
+                node_index[node.bl_idname] = node
                 results.append({"op": i, "action": "add_node", "name": node.name, "ok": True})
 
             elif action == "remove_node":
                 node_name = op.get("name", "")
                 node = _get_node(node_tree, node_name, node_index)
                 if node:
+                    actual_name = node.name
+                    bl_idname = node.bl_idname
                     node_tree.nodes.remove(node)
+                    node_index.pop(actual_name, None)
+                    node_index.pop(bl_idname, None)
                     results.append(
                         {
                             "op": i,
