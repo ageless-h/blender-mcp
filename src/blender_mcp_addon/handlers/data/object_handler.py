@@ -250,9 +250,11 @@ class ObjectHandler(BaseHandler):
                 mod_info: dict[str, Any] = {
                     "name": m.name,
                     "type": m.type,
-                    "show_viewport": m.show_viewport,
-                    "show_render": m.show_render,
                 }
+                if not m.show_viewport:
+                    mod_info["show_viewport"] = False
+                if not m.show_render:
+                    mod_info["show_render"] = False
                 mods.append(mod_info)
             result["modifiers"] = mods
 
@@ -411,6 +413,7 @@ class ObjectHandler(BaseHandler):
                 - visible: Filter by visibility
                 - name_pattern: Glob pattern to filter by name
                 - collection: Filter by collection name
+                - include_location: Include location in response (default: False)
 
         Returns:
             Dict with items list
@@ -425,6 +428,7 @@ class ObjectHandler(BaseHandler):
         visible_only = filter_params.get("visible")
         name_pattern = filter_params.get("name_pattern")
         collection_name = filter_params.get("collection")
+        include_location = filter_params.get("include_location", False)
 
         collection_objects = None
         if collection_name:
@@ -432,7 +436,7 @@ class ObjectHandler(BaseHandler):
             if col:
                 collection_objects = {obj.name for obj in col.objects}
             else:
-                return {"items": [], "count": 0}
+                return {"items": []}
 
         items = []
         for obj in bpy.data.objects:
@@ -447,17 +451,22 @@ class ObjectHandler(BaseHandler):
             if collection_objects is not None and obj.name not in collection_objects:
                 continue
 
-            items.append(
-                {
-                    "name": obj.name,
-                    "type": obj.type,
-                    "location": list(obj.location),
-                    "selected": obj.select_get(),
-                    "visible": obj.visible_get(),
-                }
-            )
+            item: dict[str, Any] = {"name": obj.name, "type": obj.type}
 
-        return {"items": items, "count": len(items)}
+            if include_location:
+                item["location"] = list(obj.location)
+
+            is_selected = obj.select_get()
+            if is_selected:
+                item["selected"] = True
+
+            is_visible = obj.visible_get()
+            if not is_visible:
+                item["visible"] = False
+
+            items.append(item)
+
+        return {"items": items}
 
     def link(
         self,

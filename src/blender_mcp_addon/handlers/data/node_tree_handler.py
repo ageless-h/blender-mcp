@@ -43,7 +43,9 @@ class NodeTreeHandler(BaseHandler):
         Args:
             name: Name of the node tree
             path: Optional property path
-            params: Read parameters
+            params: Read parameters:
+                - include_nodes: Include node list (default: False)
+                - include_links: Include link list (default: False)
 
         Returns:
             Dict with node tree properties
@@ -63,32 +65,38 @@ class NodeTreeHandler(BaseHandler):
                     pass
             return {"name": name, "path": path, "value": value}
 
-        nodes_info = []
-        for node in node_tree.nodes:
-            node_info = {
-                "name": node.name,
-                "type": node.type,
-                "label": node.label,
-                "location": list(node.location),
-            }
-            nodes_info.append(node_info)
-
-        links_info = []
-        for link in node_tree.links:
-            links_info.append({
-                "from_node": link.from_node.name,
-                "from_socket": link.from_socket.name,
-                "to_node": link.to_node.name,
-                "to_socket": link.to_socket.name,
-            })
-
-        return {
+        result: dict[str, Any] = {
             "name": node_tree.name,
             "tree_type": node_tree.bl_idname,
-            "nodes": nodes_info,
-            "links": links_info,
+            "nodes": len(node_tree.nodes),
+            "links": len(node_tree.links),
             "users": node_tree.users,
         }
+
+        if params.get("include_nodes", False):
+            nodes_info = []
+            for node in node_tree.nodes:
+                node_info: dict[str, Any] = {
+                    "name": node.name,
+                    "type": node.type,
+                }
+                if node.label and node.label != node.name:
+                    node_info["label"] = node.label
+                nodes_info.append(node_info)
+            result["node_list"] = nodes_info
+
+        if params.get("include_links", False):
+            links_info = []
+            for link in node_tree.links:
+                links_info.append({
+                    "from_node": link.from_node.name,
+                    "from_socket": link.from_socket.name,
+                    "to_node": link.to_node.name,
+                    "to_socket": link.to_socket.name,
+                })
+            result["link_list"] = links_info
+
+        return result
 
     def write(self, name: str, properties: dict[str, Any], params: dict[str, Any]) -> dict[str, Any]:
         """Write properties to a node tree.
@@ -174,11 +182,11 @@ class NodeTreeHandler(BaseHandler):
             items.append({
                 "name": node_tree.name,
                 "tree_type": node_tree.bl_idname,
-                "nodes_count": len(node_tree.nodes),
+                "nodes": len(node_tree.nodes),
                 "users": node_tree.users,
             })
 
-        return {"items": items, "count": len(items)}
+        return {"items": items}
 
     def link(
         self,

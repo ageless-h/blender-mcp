@@ -37,7 +37,7 @@ class SceneHandler(GenericCollectionHandler):
     def _read_summary(self, item: Any) -> dict[str, Any]:
         return {
             "name": item.name,
-            "objects_count": len(item.objects),
+            "objects": len(item.objects),
             "frame_start": item.frame_start,
             "frame_end": item.frame_end,
             "frame_current": item.frame_current,
@@ -52,7 +52,6 @@ class SceneHandler(GenericCollectionHandler):
     def _list_fields(self, item: Any) -> dict[str, Any]:
         return {
             "name": item.name,
-            "objects_count": len(item.objects),
             "frame_range": [item.frame_start, item.frame_end],
         }
 

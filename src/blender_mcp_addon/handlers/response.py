@@ -10,7 +10,7 @@ from typing import Any
 from .error_codes import ErrorCode
 
 
-def _ok(*, result: dict[str, Any], started: float) -> dict[str, Any]:
+def _ok(*, result: dict[str, Any] | list[Any] | None, started: float) -> dict[str, Any]:
     """Create a successful response.
 
     Args:
@@ -18,13 +18,12 @@ def _ok(*, result: dict[str, Any], started: float) -> dict[str, Any]:
         started: The start time from time.perf_counter()
 
     Returns:
-        Standard success response dict with ok=True
+        Standard success response dict (compact format)
     """
     return {
         "ok": True,
         "result": result,
-        "error": None,
-        "timing_ms": (time.perf_counter() - started) * 1000.0,
+        "timing_ms": round((time.perf_counter() - started) * 1000.0),
     }
 
 
@@ -53,15 +52,16 @@ def _error(
     code_str = code.value if isinstance(code, ErrorCode) else code
     resolved_suggestion = suggestion if suggestion is not None else DEFAULT_SUGGESTIONS.get(code_str)
 
-    err: dict[str, Any] = {"code": code_str, "message": message, "data": data}
-    if resolved_suggestion is not None:
+    err: dict[str, Any] = {"code": code_str, "message": message}
+    if data:
+        err["data"] = data
+    if resolved_suggestion:
         err["suggestion"] = resolved_suggestion
 
     return {
         "ok": False,
-        "result": None,
         "error": err,
-        "timing_ms": (time.perf_counter() - started) * 1000.0,
+        "timing_ms": round((time.perf_counter() - started) * 1000.0),
     }
 
 

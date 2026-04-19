@@ -19,7 +19,7 @@ class TestOkResponse(unittest.TestCase):
         result = _ok(result={"foo": "bar"}, started=_started())
         self.assertTrue(result["ok"])
         self.assertEqual(result["result"]["foo"], "bar")
-        self.assertIsNone(result["error"])
+        self.assertNotIn("error", result)
         self.assertIn("timing_ms", result)
 
     def test_timing_is_positive(self):
@@ -43,7 +43,7 @@ class TestErrorResponse(unittest.TestCase):
 
         result = _error(code="test_error", message="something broke", started=_started())
         self.assertFalse(result["ok"])
-        self.assertIsNone(result["result"])
+        self.assertNotIn("result", result)
         self.assertEqual(result["error"]["code"], "test_error")
         self.assertEqual(result["error"]["message"], "something broke")
 
@@ -70,7 +70,7 @@ class TestErrorResponse(unittest.TestCase):
         from blender_mcp_addon.handlers.response import _error
 
         result = _error(code="test_error", message="msg", started=_started())
-        self.assertIn("data", result["error"])
+        self.assertNotIn("data", result["error"])
 
 
 class TestBpyUnavailable(unittest.TestCase):

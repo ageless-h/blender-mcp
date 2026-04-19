@@ -21,14 +21,14 @@ class TestResponseHelpers(unittest.TestCase):
         r = _ok(result={"key": "val"}, started=t)
         self.assertTrue(r["ok"])
         self.assertEqual(r["result"]["key"], "val")
-        self.assertIsNone(r["error"])
+        self.assertNotIn("error", r)
         self.assertGreaterEqual(r["timing_ms"], 0)
 
     def test_error_response(self):
         t = time.perf_counter()
         r = _error(code="test", message="msg", started=t)
         self.assertFalse(r["ok"])
-        self.assertIsNone(r["result"])
+        self.assertNotIn("result", r)
         self.assertEqual(r["error"]["code"], "test")
 
     def test_not_found(self):

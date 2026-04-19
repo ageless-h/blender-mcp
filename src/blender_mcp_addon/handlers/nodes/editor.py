@@ -864,13 +864,18 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
             results.append({"op": i, "action": action, "ok": False, "error": str(exc)})
 
     success_count = sum(1 for r in results if r.get("ok"))
-    return _ok(
-        result={
-            "tree_name": node_tree.name,
-            "operations_total": len(operations),
-            "operations_succeeded": success_count,
-            "operations_failed": len(operations) - success_count,
-            "details": results,
-        },
-        started=started,
-    )
+    failed_count = len(operations) - success_count
+
+    result: dict[str, Any] = {
+        "completed": success_count,
+        "failed": failed_count,
+    }
+
+    if failed_count > 0:
+        result["errors"] = [
+            {"op": r["op"], "action": r["action"], "error": r["error"]}
+            for r in results
+            if not r.get("ok")
+        ]
+
+    return _ok(result=result, started=started)

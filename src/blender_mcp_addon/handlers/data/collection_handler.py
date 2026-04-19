@@ -89,11 +89,15 @@ class CollectionHandler(BaseHandler):
         result: dict[str, Any] = {
             "name": collection.name,
             "objects": [obj.name for obj in collection.objects],
-            "objects_count": len(collection.objects),
-            "hide_viewport": collection.hide_viewport,
-            "hide_render": collection.hide_render,
-            "color_tag": collection.color_tag,
         }
+
+        if collection.hide_viewport:
+            result["hide_viewport"] = True
+        if collection.hide_render:
+            result["hide_render"] = True
+        if collection.color_tag != "NONE":
+            result["color_tag"] = collection.color_tag
+
         if current_depth < max_depth and collection.children:
             result["children"] = [
                 CollectionHandler._read_collection_tree(child, max_depth, current_depth + 1)
@@ -101,7 +105,6 @@ class CollectionHandler(BaseHandler):
             ]
         else:
             result["children"] = [child.name for child in collection.children]
-            result["children_count"] = len(collection.children)
         return result
 
     def write(self, name: str, properties: dict[str, Any], params: dict[str, Any]) -> dict[str, Any]:
@@ -162,11 +165,10 @@ class CollectionHandler(BaseHandler):
         for collection in bpy.data.collections:
             items.append({
                 "name": collection.name,
-                "objects_count": len(collection.objects),
-                "children_count": len(collection.children),
+                "children": len(collection.children),
             })
 
-        return {"items": items, "count": len(items)}
+        return {"items": items}
 
     def link(
         self,

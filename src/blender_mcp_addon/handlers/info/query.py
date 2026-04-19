@@ -228,7 +228,7 @@ def _query_reports(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
     except (AttributeError, KeyError, RuntimeError) as exc:
         logger.debug("Failed to query reports: %s", exc)
 
-    return {"reports": reports, "count": len(reports)}
+    return {"reports": reports}
 
 
 def _query_last_op(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
@@ -782,11 +782,14 @@ def _query_node_types(bpy: Any, params: dict[str, Any]) -> dict[str, Any]:
     from ..nodes.editor import _discover_node_types
 
     filter_prefix = params.get("prefix", "")
+    max_results = params.get("max_results", 20)
+
     types = _discover_node_types()
     if filter_prefix:
         prefix = filter_prefix.lower()
         types = [t for t in types if t["bl_idname"].lower().startswith(prefix) or t["name"].lower().startswith(prefix)]
-    return {
-        "count": len(types),
-        "types": types,
-    }
+
+    truncated = len(types) > max_results
+    types = types[:max_results]
+
+    return {"types": types, "truncated": truncated}

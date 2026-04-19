@@ -164,58 +164,86 @@ def _read_node(
     depth: str,
     expand_groups: bool = False,
     max_depth: int = 3,
+    skip_defaults: bool = True,
     _current_depth: int = 0,
 ) -> dict[str, Any]:
     """Read a single node's data.
 
     Args:
         node: The Blender node to read
-        depth: 'summary' or 'full' - controls level of detail
+        depth: 'summary', 'topology', or 'full' - controls level of detail
         expand_groups: If True, recursively expand node groups
         max_depth: Maximum recursion depth for group expansion
+        skip_defaults: If True, skip inputs with default values (for 'topology'/'full')
         _current_depth: Internal counter for recursion depth
     """
     data: dict[str, Any] = {
         "name": node.name,
         "type": node.bl_idname,
-        "label": node.label or node.name,
-        "location": [node.location.x, node.location.y],
     }
 
-    # Mark if this is a group node
+    if node.label and node.label != node.name:
+        data["label"] = node.label
+
+    if depth == "full":
+        data["location"] = [node.location.x, node.location.y]
+
     if node.type == "GROUP":
         data["is_group"] = True
         if hasattr(node, "node_tree") and node.node_tree:
             data["group_tree_name"] = node.node_tree.name
 
-    if depth == "full":
+    if depth in ("topology", "full"):
         inputs = []
         for inp in node.inputs:
-            inp_data: dict[str, Any] = {"name": inp.name, "type": inp.type}
-            if hasattr(inp, "default_value"):
-                try:
-                    val = inp.default_value
-                    if hasattr(val, "__len__") and not isinstance(val, str):
-                        inp_data["value"] = list(val)
-                    else:
-                        inp_data["value"] = val
-                except (AttributeError, ValueError):
-                    inp_data["value"] = "<unreadable>"
-            inp_data["is_linked"] = inp.is_linked
+            if depth == "topology":
+                if not inp.is_linked and skip_defaults:
+                    continue
+                inp_data: dict[str, Any] = {"name": inp.name}
+                if inp.is_linked:
+                    inp_data["is_linked"] = True
+                else:
+                    if hasattr(inp, "default_value"):
+                        try:
+                            val = inp.default_value
+                            if hasattr(val, "__len__") and not isinstance(val, str):
+                                inp_data["value"] = [round(v, 4) for v in val]
+                            else:
+                                inp_data["value"] = round(val, 4) if isinstance(val, float) else val
+                        except (AttributeError, ValueError):
+                            pass
+            else:
+                inp_data = {"name": inp.name, "type": inp.type}
+                if hasattr(inp, "default_value"):
+                    try:
+                        val = inp.default_value
+                        if hasattr(val, "__len__") and not isinstance(val, str):
+                            inp_data["value"] = [round(v, 4) for v in val] if skip_defaults else list(val)
+                        else:
+                            inp_data["value"] = round(val, 4) if isinstance(val, float) else val
+                    except (AttributeError, ValueError):
+                        inp_data["value"] = "<unreadable>"
+                inp_data["is_linked"] = inp.is_linked
             inputs.append(inp_data)
-        data["inputs"] = inputs
+        if inputs:
+            data["inputs"] = inputs
 
         outputs = []
         for out in node.outputs:
-            outputs.append({"name": out.name, "type": out.type, "is_linked": out.is_linked})
-        data["outputs"] = outputs
+            if depth == "topology":
+                if not out.is_linked:
+                    continue
+                outputs.append({"name": out.name})
+            else:
+                outputs.append({"name": out.name, "type": out.type, "is_linked": out.is_linked})
+        if outputs:
+            data["outputs"] = outputs
 
-        # Node-specific properties (operation, color_ramp, image, etc.)
+    if depth == "full":
         props = _read_node_properties(node)
         if props:
             data["properties"] = props
 
-    # Recursively expand node group if requested
     if (
         expand_groups
         and node.type == "GROUP"
@@ -226,13 +254,11 @@ def _read_node(
         internal_tree = node.node_tree
         data["internal_tree"] = {
             "name": internal_tree.name,
-            "node_count": len(internal_tree.nodes),
-            "link_count": len(internal_tree.links),
             "nodes": [
-                _read_node(n, depth, expand_groups, max_depth, _current_depth + 1)
+                _read_node(n, depth, expand_groups, max_depth, skip_defaults, _current_depth + 1)
                 for n in internal_tree.nodes
             ],
-            "links": [_read_link(l) for l in internal_tree.links] if depth == "full" else [],
+            "links": [_read_link(l) for l in internal_tree.links] if depth in ("topology", "full") else [],
         }
 
     return data
@@ -350,22 +376,19 @@ def node_tree_read(payload: dict[str, Any], *, started: float) -> dict[str, Any]
     depth = payload.get("depth", "summary")
     expand_groups = bool(payload.get("expand_groups", False))
     max_depth = int(payload.get("max_depth", 3))
+    skip_defaults = bool(payload.get("skip_defaults", True))
 
-    nodes = [_read_node(n, depth, expand_groups, max_depth) for n in node_tree.nodes]
-    links = [_read_link(l) for l in node_tree.links] if depth == "full" else []
+    nodes = [_read_node(n, depth, expand_groups, max_depth, skip_defaults) for n in node_tree.nodes]
+    links = [_read_link(l) for l in node_tree.links] if depth in ("topology", "full") else []
 
     result = {
         "tree_name": node_tree.name,
         "tree_type": tree_type,
         "context": context,
-        "node_count": len(node_tree.nodes),
-        "link_count": len(node_tree.links),
         "nodes": nodes,
-        "links": links,
     }
 
-    if expand_groups:
-        result["expand_groups"] = True
-        result["max_depth"] = max_depth
+    if links:
+        result["links"] = links
 
     return _ok(result=result, started=started)

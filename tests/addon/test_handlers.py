@@ -168,8 +168,8 @@ class TestResponseHelpers(unittest.TestCase):
 
         self.assertTrue(result["ok"])
         self.assertEqual(result["result"], {"test": "value"})
-        self.assertIsNone(result["error"])
-        self.assertIsInstance(result["timing_ms"], float)
+        self.assertNotIn("error", result)
+        self.assertIsInstance(result["timing_ms"], int)
 
     def test_error_response(self):
         """Test _error creates correct response."""
@@ -183,7 +183,7 @@ class TestResponseHelpers(unittest.TestCase):
         )
 
         self.assertFalse(result["ok"])
-        self.assertIsNone(result["result"])
+        self.assertNotIn("result", result)
         self.assertEqual(result["error"]["code"], "test_error")
         self.assertEqual(result["error"]["message"], "Test message")
         self.assertEqual(result["error"]["data"], {"key": "value"})

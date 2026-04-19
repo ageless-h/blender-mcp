@@ -97,7 +97,8 @@ class MaterialHandler(BaseHandler):
         Args:
             name: Name of the material
             path: Optional property path
-            params: Read parameters
+            params: Read parameters:
+                - include_nodes: Include node list (default: False)
 
         Returns:
             Dict with material properties
@@ -117,13 +118,16 @@ class MaterialHandler(BaseHandler):
                     pass
             return {"name": name, "path": path, "value": value}
 
-        result = {
+        result: dict[str, Any] = {
             "name": mat.name,
             "use_nodes": mat.use_nodes,
-            "blend_method": mat.blend_method,
-            "shadow_method": mat.shadow_method,
             "users": mat.users,
         }
+
+        if mat.blend_method != "OPAQUE":
+            result["blend_method"] = mat.blend_method
+        if mat.shadow_method != "OPAQUE":
+            result["shadow_method"] = mat.shadow_method
 
         if mat.use_nodes and mat.node_tree:
             principled = _find_principled(mat.node_tree.nodes)
@@ -132,7 +136,8 @@ class MaterialHandler(BaseHandler):
                 result["metallic"] = principled.inputs["Metallic"].default_value
                 result["roughness"] = principled.inputs["Roughness"].default_value
 
-            result["nodes"] = [{"name": n.name, "type": n.type, "label": n.label} for n in mat.node_tree.nodes]
+            if params.get("include_nodes", False):
+                result["nodes"] = len(mat.node_tree.nodes)
 
         return result
 
@@ -197,15 +202,23 @@ class MaterialHandler(BaseHandler):
         """List all materials.
 
         Args:
-            filter_params: Optional filter criteria
+            filter_params: Optional filter criteria:
+                - filter: "all", "used_only", or "unused_only"
 
         Returns:
             Dict with items list
         """
         import bpy  # type: ignore
 
+        filter_params = filter_params or {}
+        filter_mode = filter_params.get("filter", "all")
+
         items = []
         for mat in bpy.data.materials:
+            if filter_mode == "used_only" and mat.users == 0:
+                continue
+            if filter_mode == "unused_only" and mat.users > 0:
+                continue
             items.append(
                 {
                     "name": mat.name,
@@ -214,7 +227,7 @@ class MaterialHandler(BaseHandler):
                 }
             )
 
-        return {"items": items, "count": len(items)}
+        return {"items": items}
 
     def link(
         self,

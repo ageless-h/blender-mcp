@@ -334,8 +334,8 @@ class GenericCollectionHandler(BaseHandler):
         """List all data blocks, using ``_list_fields`` per item."""
         collection = self.get_collection()
         if collection is None:
-            return {"items": [], "count": 0}
+            return {"items": []}
 
         filter_params = filter_params or {}
         items = [self._list_fields(item) for item in collection if self._filter_item(item, filter_params)]
-        return {"items": items, "count": len(items)}
+        return {"items": items}

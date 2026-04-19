@@ -119,9 +119,10 @@ class TestEnumValues(unittest.TestCase):
     def test_import_export_formats(self):
         t = get_tool("blender_import_export")
         assert t is not None
-        enum = t["inputSchema"]["properties"]["format"]["enum"]
+        # Format uses description instead of enum for token efficiency
+        desc = t["inputSchema"]["properties"]["format"]["description"]
         for val in ["FBX", "OBJ", "GLTF", "GLB", "USD", "STL"]:
-            self.assertIn(val, enum)
+            self.assertIn(val, desc)
 
 
 class TestRequiredParams(unittest.TestCase):

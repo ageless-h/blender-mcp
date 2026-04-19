@@ -8,7 +8,7 @@ import unittest
 
 from blender_mcp_addon.handlers.error_codes import ErrorCode
 from blender_mcp_addon.handlers.response import _error, _ok
-from response_schema import (
+from tests.response_schema import (
     ResponseValidationError,
     get_error_code,
     is_error,
@@ -72,12 +72,10 @@ class TestResponseSchema(unittest.TestCase):
             validate_response(r)
 
     def test_ok_with_none_result(self):
-        r = self._ok()
-        r["result"] = None
-        with self.assertRaises(ResponseValidationError):
-            validate_response(r)
+        r = _ok(result=None, started=time.perf_counter())
+        validate_response(r)
 
-    def test_err_with_non_none_result(self):
+    def test_err_with_result_key(self):
         r = self._err()
         r["result"] = {"x": 1}
         with self.assertRaises(ResponseValidationError):

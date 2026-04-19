@@ -57,21 +57,30 @@ class CameraHandler(GenericCollectionHandler):
     def _read_summary(self, item: Any) -> dict[str, Any]:
         refs = find_referencing_objects(item, "CAMERA")
 
-        return {
+        result: dict[str, Any] = {
             "name": item.name,
             "type": item.type,
             "lens": item.lens,
-            "lens_unit": item.lens_unit,
             "clip_start": item.clip_start,
             "clip_end": item.clip_end,
-            "sensor_width": item.sensor_width,
-            "sensor_height": item.sensor_height,
-            "dof_focus_distance": item.dof.focus_distance if item.dof else None,
-            "shift_x": item.shift_x,
-            "shift_y": item.shift_y,
             "objects": refs["objects"],
             "collections": refs["collections"],
         }
+
+        if item.lens_unit != "MILLIMETERS":
+            result["lens_unit"] = item.lens_unit
+        if item.sensor_width != 36.0:
+            result["sensor_width"] = item.sensor_width
+        if item.sensor_height != 24.0:
+            result["sensor_height"] = item.sensor_height
+        if item.dof and item.dof.focus_distance != 10.0:
+            result["dof_focus_distance"] = item.dof.focus_distance
+        if item.shift_x != 0.0:
+            result["shift_x"] = item.shift_x
+        if item.shift_y != 0.0:
+            result["shift_y"] = item.shift_y
+
+        return result
 
     def _list_fields(self, item: Any) -> dict[str, Any]:
         return {"name": item.name, "type": item.type, "lens": item.lens}
@@ -109,15 +118,19 @@ class LightHandler(GenericCollectionHandler):
     def _read_summary(self, item: Any) -> dict[str, Any]:
         refs = find_referencing_objects(item, "LIGHT")
 
-        return {
+        result: dict[str, Any] = {
             "name": item.name,
             "type": item.type,
             "energy": item.energy,
             "color": list(item.color),
-            "specular_factor": item.specular_factor,
             "objects": refs["objects"],
             "collections": refs["collections"],
         }
+
+        if item.specular_factor != 1.0:
+            result["specular_factor"] = item.specular_factor
+
+        return result
 
     def _list_fields(self, item: Any) -> dict[str, Any]:
         return {"name": item.name, "type": item.type, "energy": item.energy}
@@ -164,13 +177,16 @@ class ArmatureHandler(GenericCollectionHandler):
             value = self._get_nested_attr(armature, path)
             return {"name": name, "path": path, "value": value}
 
-        include = params.get("include", ["hierarchy"])
+        include = params.get("include", [])
         bone_filter = params.get("bone_filter")
 
         def _match(n: str) -> bool:
             return not bone_filter or fnmatch.fnmatch(n, bone_filter)
 
-        result: dict[str, Any] = {"name": armature.name, "bones_count": len(armature.bones)}
+        result: dict[str, Any] = {
+            "name": armature.name,
+            "bones": [b.name for b in armature.bones if _match(b.name)],
+        }
 
         if "hierarchy" in include:
             result["hierarchy"] = [
@@ -252,7 +268,7 @@ class ArmatureHandler(GenericCollectionHandler):
         return result
 
     def _read_summary(self, item: Any) -> dict[str, Any]:
-        return {"name": item.name, "bones_count": len(item.bones)}
+        return {"name": item.name, "bones": len(item.bones)}
 
     def _list_fields(self, item: Any) -> dict[str, Any]:
         return {"name": item.name, "bones_count": len(item.bones)}
@@ -546,14 +562,12 @@ class GreasePencilHandler(GenericCollectionHandler):
         if "layers" in params:
             self._create_layers(gp, params["layers"])
 
-        layers_count = len(gp.layers)
         frames_total = sum(len(layer.frames) for layer in gp.layers)
         strokes_total = sum(len(frame.strokes) for layer in gp.layers for frame in layer.frames)
 
         result = {
             "name": gp.name,
             "type": "grease_pencil",
-            "layers_count": layers_count,
             "frames_total": frames_total,
             "strokes_total": strokes_total,
         }
@@ -569,7 +583,6 @@ class GreasePencilHandler(GenericCollectionHandler):
         return {
             "name": item.name,
             "layers": layers,
-            "layers_count": len(item.layers),
             "frames_total": sum(len(layer.frames) for layer in item.layers),
             "strokes_total": sum(len(frame.strokes) for layer in item.layers for frame in layer.frames),
         }

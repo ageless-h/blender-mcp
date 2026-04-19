@@ -27,6 +27,8 @@ _script_config: dict[str, Any] = {
     "audit_log_enabled": True,
 }
 
+_MAX_OUTPUT_CHARS = 10000
+
 # Thread-local storage for stdout/stderr capture (avoids global competition)
 # This prevents multiple concurrent script executions from interfering with each other's output
 _stdout_state = threading.local()
@@ -266,10 +268,16 @@ def _execute_with_timeout(code: str, timeout: int, bpy: Any) -> dict[str, Any]:
                 if "_result" in exec_globals:
                     result_container["return_value"] = exec_globals["_result"]
 
-            result_container["output"] = stdout_capture.getvalue() + stderr_capture.getvalue()
+            output = stdout_capture.getvalue() + stderr_capture.getvalue()
+            if len(output) > _MAX_OUTPUT_CHARS:
+                output = output[:_MAX_OUTPUT_CHARS] + f"\n... [truncated, {len(output)} total chars]"
+            result_container["output"] = output
         except Exception as e:  # noqa: BLE001 — executes arbitrary user code
             result_container["error"] = e
-            result_container["output"] = stdout_capture.getvalue() + stderr_capture.getvalue()
+            output = stdout_capture.getvalue() + stderr_capture.getvalue()
+            if len(output) > _MAX_OUTPUT_CHARS:
+                output = output[:_MAX_OUTPUT_CHARS] + f"\n... [truncated, {len(output)} total chars]"
+            result_container["output"] = output
         finally:
             sys.stdout = old_stdout
             sys.stderr = old_stderr

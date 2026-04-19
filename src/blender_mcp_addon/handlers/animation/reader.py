@@ -11,26 +11,93 @@ from ..response import _error, _ok, bpy_unavailable_error, check_bpy_available
 from . import iter_fcurves
 
 
-def _read_keyframes(obj: Any, frame_range: list[int] | None = None) -> list[dict[str, Any]]:
-    """Read keyframe data from an object's animation data."""
-    keyframes = []
+def _read_keyframes(
+    obj: Any, frame_range: list[int] | None = None, max_keyframes: int | None = None
+) -> dict[str, Any]:
+    """Read keyframe data from an object's animation data.
+
+    Returns a dict with:
+    - fcurves: list of fcurve summaries (data_path, index, keyframe_count, frame_range)
+    - keyframes: list of individual keyframes (only if keyframe_detail=True)
+    - truncated: bool indicating if max_keyframes was exceeded
+    """
     if not obj.animation_data or not obj.animation_data.action:
-        return keyframes
-    for fcurve in iter_fcurves(obj.animation_data.action):
-        for kp in fcurve.keyframe_points:
+        return {"fcurves": [], "keyframes": [], "truncated": False}
+
+    fcurves_summary = []
+    total_keyframes = 0
+    truncated = False
+
+    for fc in iter_fcurves(obj.animation_data.action):
+        kf_count = len(fc.keyframe_points)
+        total_keyframes += kf_count
+
+        frames = [int(kp.co[0]) for kp in fc.keyframe_points]
+        fcurves_summary.append(
+            {
+                "data_path": fc.data_path,
+                "index": fc.array_index,
+                "keyframe_count": kf_count,
+                "frame_range": [min(frames), max(frames)] if frames else [0, 0],
+            }
+        )
+
+        if max_keyframes is not None and total_keyframes > max_keyframes:
+            truncated = True
+
+    result: dict[str, Any] = {"fcurves": fcurves_summary, "truncated": truncated}
+
+    return result
+
+
+def _read_keyframes_detail(
+    obj: Any, frame_range: list[int] | None = None, max_keyframes: int | None = None
+) -> dict[str, Any]:
+    """Read detailed keyframe data from an object's animation data."""
+    if not obj.animation_data or not obj.animation_data.action:
+        return {"fcurves": [], "keyframes": [], "truncated": False}
+
+    fcurves_summary = []
+    all_keyframes = []
+    total_keyframes = 0
+    truncated = False
+
+    for fc in iter_fcurves(obj.animation_data.action):
+        kf_count = len(fc.keyframe_points)
+        total_keyframes += kf_count
+
+        frames = [int(kp.co[0]) for kp in fc.keyframe_points]
+        fcurves_summary.append(
+            {
+                "data_path": fc.data_path,
+                "index": fc.array_index,
+                "keyframe_count": kf_count,
+                "frame_range": [min(frames), max(frames)] if frames else [0, 0],
+            }
+        )
+
+        for kp in fc.keyframe_points:
             frame = int(kp.co[0])
             if frame_range and (frame < frame_range[0] or frame > frame_range[1]):
                 continue
-            keyframes.append(
+            if max_keyframes is not None and len(all_keyframes) >= max_keyframes:
+                truncated = True
+                break
+            all_keyframes.append(
                 {
-                    "data_path": fcurve.data_path,
-                    "index": fcurve.array_index,
+                    "data_path": fc.data_path,
+                    "index": fc.array_index,
                     "frame": frame,
                     "value": kp.co[1],
                     "interpolation": kp.interpolation,
                 }
             )
-    return keyframes
+        if truncated:
+            break
+
+    result: dict[str, Any] = {"fcurves": fcurves_summary, "keyframes": all_keyframes, "truncated": truncated}
+
+    return result
 
 
 def _read_fcurves(obj: Any) -> list[dict[str, Any]]:
@@ -122,6 +189,8 @@ def animation_read(payload: dict[str, Any], *, started: float) -> dict[str, Any]
 
     include = payload.get("include", ["keyframes"])
     frame_range = payload.get("frame_range")
+    keyframe_detail = payload.get("keyframe_detail", False)
+    max_keyframes = payload.get("max_keyframes")
 
     if target.lower() == "scene":
         obj = bpy.context.scene
@@ -134,7 +203,10 @@ def animation_read(payload: dict[str, Any], *, started: float) -> dict[str, Any]
     result: dict[str, Any] = {"target": target}
 
     if "keyframes" in include:
-        result["keyframes"] = _read_keyframes(obj, frame_range)
+        if keyframe_detail:
+            result["keyframes"] = _read_keyframes_detail(obj, frame_range, max_keyframes)
+        else:
+            result["keyframes"] = _read_keyframes(obj, frame_range, max_keyframes)
     if "fcurves" in include:
         result["fcurves"] = _read_fcurves(obj)
     if "nla" in include:

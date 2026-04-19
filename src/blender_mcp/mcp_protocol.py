@@ -31,6 +31,9 @@ def _configure_logging() -> None:
 
 _PRETTY_JSON = os.environ.get("MCP_PRETTY_JSON", "").lower() in ("1", "true", "yes")
 
+# Maximum response size to prevent context explosion (approximately 7,500 tokens)
+_MAX_RESPONSE_CHARS = int(os.environ.get("MCP_MAX_RESPONSE_CHARS", "30000"))
+
 
 from blender_mcp.adapters.mock import MockAdapter
 from blender_mcp.adapters.socket import SocketAdapter
@@ -374,11 +377,22 @@ class MCPServer:
                     data={"elapsed_ms": round(elapsed_ms)},
                 )
             )
+            response_text = json.dumps(result.result, indent=2 if _PRETTY_JSON else None)
+            if len(response_text) > _MAX_RESPONSE_CHARS:
+                original_len = len(response_text)
+                response_text = response_text[:_MAX_RESPONSE_CHARS] + (
+                    f'\n... [TRUNCATED: {original_len} total chars, '
+                    f'max={_MAX_RESPONSE_CHARS}]'
+                )
+                logger.warning(
+                    "Response for %s truncated from %d to %d chars",
+                    name, original_len, _MAX_RESPONSE_CHARS
+                )
             return {
                 "content": [
                     {
                         "type": "text",
-                        "text": json.dumps(result.result, indent=2 if _PRETTY_JSON else None),
+                        "text": response_text,
                     }
                 ]
             }

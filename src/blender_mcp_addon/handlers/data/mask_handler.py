@@ -26,8 +26,8 @@ class MaskHandler(GenericCollectionHandler):
     def _read_summary(self, item: Any) -> dict[str, Any]:
         return {
             "name": item.name,
-            "layers_count": len(item.layers),
+            "layers": len(item.layers),
         }
 
     def _list_fields(self, item: Any) -> dict[str, Any]:
-        return {"name": item.name, "layers_count": len(item.layers)}
+        return {"name": item.name, "layers": len(item.layers)}

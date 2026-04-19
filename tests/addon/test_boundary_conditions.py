@@ -68,7 +68,7 @@ class TestErrorResponseBoundaries(unittest.TestCase):
 
     def test_error_with_none_data(self):
         result = _error(code="test", message="msg", started=_started(), data=None)
-        self.assertIn("data", result["error"])
+        self.assertNotIn("data", result["error"])
 
     def test_error_with_complex_data(self):
         complex_data = {"nested": {"list": [1, 2, {"key": "value"}]}}
@@ -99,7 +99,7 @@ class TestInvalidParamsBoundaries(unittest.TestCase):
 
     def test_invalid_params_with_none_data(self):
         result = invalid_params_error("test", _started(), data=None)
-        self.assertIn("data", result["error"])
+        self.assertNotIn("data", result["error"])
 
 
 class TestOperationFailedBoundaries(unittest.TestCase):
@@ -148,7 +148,7 @@ class TestResponseTimingBoundaries(unittest.TestCase):
     def test_timing_with_future_start(self):
         future = time.perf_counter() + 1000
         result = _ok(result={}, started=future)
-        self.assertIsInstance(result["timing_ms"], float)
+        self.assertIsInstance(result["timing_ms"], int)
 
 
 if __name__ == "__main__":

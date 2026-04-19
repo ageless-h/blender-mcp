@@ -133,18 +133,22 @@ class ImageHandler(BaseHandler):
                     pass
             return {"name": name, "path": path, "value": value}
 
-        result = {
+        result: dict[str, Any] = {
             "name": image.name,
             "width": image.size[0],
             "height": image.size[1],
-            "channels": image.channels,
-            "depth": image.depth,
-            "is_float": image.is_float,
             "filepath": image.filepath,
             "source": image.source,
             "type": image.type,
             "users": image.users,
         }
+
+        if image.channels != 4:
+            result["channels"] = image.channels
+        if image.depth != 32:
+            result["depth"] = image.depth
+        if image.is_float:
+            result["is_float"] = True
 
         output_format = params.get("format")
         if output_format == "base64":

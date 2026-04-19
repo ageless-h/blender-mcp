@@ -83,7 +83,7 @@ _PERCEPTION_TOOLS = [
         name="blender_get_objects",
         description=(
             "List objects in the Blender scene with optional filters. "
-            "Returns name, type, location, and collection for each object.\n\n"
+            "Returns name and type for each object by default.\n\n"
             "Use this as the first call to understand what exists in a scene.\n\n"
             "Do NOT use for: detailed object properties (use blender_get_object_data), "
             "material listing (use blender_get_materials), or collection tree (use blender_get_collections)."
@@ -93,20 +93,7 @@ _PERCEPTION_TOOLS = [
             "properties": {
                 "type_filter": {
                     "type": "string",
-                    "enum": [
-                        "MESH",
-                        "LIGHT",
-                        "CAMERA",
-                        "CURVE",
-                        "EMPTY",
-                        "ARMATURE",
-                        "LATTICE",
-                        "FONT",
-                        "GPENCIL",
-                        "SPEAKER",
-                        "VOLUME",
-                    ],
-                    "description": "Filter by object type.",
+                    "description": "Filter by object type (MESH, LIGHT, CAMERA, CURVE, EMPTY, etc.).",
                 },
                 "collection": {
                     "type": "string",
@@ -126,11 +113,15 @@ _PERCEPTION_TOOLS = [
                     "type": "string",
                     "description": "Glob pattern to filter by name (e.g. 'SM_*' or '*_high').",
                 },
+                "include_location": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": "Include location [x, y, z] for each object (increases response size).",
+                },
             },
             "additionalProperties": False,
         },
         annotations={
-            "title": "List Scene Objects",
             "readOnlyHint": True,
             "destructiveHint": False,
             "idempotentHint": True,
@@ -181,7 +172,6 @@ _PERCEPTION_TOOLS = [
             "additionalProperties": False,
         },
         annotations={
-            "title": "Get Object Details",
             "readOnlyHint": True,
             "destructiveHint": False,
             "idempotentHint": True,
@@ -192,10 +182,9 @@ _PERCEPTION_TOOLS = [
     _tool(
         name="blender_get_node_tree",
         description=(
-            "Read the structure of any node tree in Blender — shader nodes, compositor nodes, "
-            "or geometry nodes. Returns nodes and links. Supports all 7 node tree contexts.\n\n"
-            "Use this when: you need to understand a material's shader setup, compositor pipeline, "
-            "or geometry nodes graph before editing.\n\n"
+            "Read the structure of any node tree — shader, compositor, or geometry nodes. "
+            "Supports all 7 contexts.\n\n"
+            "Use this when: you need to understand node graph structure before editing.\n\n"
             "Do NOT use for: editing nodes (use blender_edit_nodes)."
         ),
         input_schema={
@@ -204,57 +193,48 @@ _PERCEPTION_TOOLS = [
                 "tree_type": {
                     "type": "string",
                     "enum": ["SHADER", "COMPOSITOR", "GEOMETRY"],
-                    "description": "Type of node tree to read.",
+                    "description": "Node tree type.",
                 },
                 "context": {
                     "type": "string",
                     "enum": ["OBJECT", "WORLD", "LINESTYLE", "SCENE", "MODIFIER", "TOOL", "NODE_GROUP"],
-                    "description": (
-                        "Context within the tree type. "
-                        "SHADER: OBJECT|WORLD|LINESTYLE|NODE_GROUP. "
-                        "COMPOSITOR: SCENE|NODE_GROUP. "
-                        "GEOMETRY: MODIFIER|TOOL|NODE_GROUP."
-                    ),
+                    "description": "Context: SHADER uses OBJECT|WORLD|LINESTYLE|NODE_GROUP, "
+                    "COMPOSITOR uses SCENE|NODE_GROUP, GEOMETRY uses MODIFIER|TOOL|NODE_GROUP.",
                 },
                 "target": {
                     "type": "string",
-                    "description": (
-                        "Target name. For SHADER/OBJECT: material name. "
-                        "For SHADER/WORLD: world name. "
-                        "For GEOMETRY/MODIFIER: 'ObjectName/ModifierName'. "
-                        "For NODE_GROUP: node group name in bpy.data.node_groups."
-                    ),
+                    "description": "Target: material name (SHADER/OBJECT), world name (SHADER/WORLD), "
+                    "'Object/Modifier' (GEOMETRY/MODIFIER), or node group name (NODE_GROUP).",
                 },
                 "depth": {
                     "type": "string",
-                    "enum": ["summary", "full"],
-                    "default": "summary",
-                    "description": (
-                        "Level of detail. 'summary' returns node names and types only. "
-                        "'full' returns all parameters and connections."
-                    ),
+                    "enum": ["summary", "topology", "full"],
+                    "default": "topology",
+                    "description": "'summary': name/type only. 'topology': connected sockets + non-default values "
+                    "(recommended). 'full': all data.",
+                },
+                "skip_defaults": {
+                    "type": "boolean",
+                    "default": True,
+                    "description": "If True, omit inputs with default values (reduces tokens).",
                 },
                 "expand_groups": {
                     "type": "boolean",
                     "default": False,
-                    "description": (
-                        "If True, recursively expand node groups to show internal structure. "
-                        "Group nodes will include an 'internal_tree' field with nested nodes."
-                    ),
+                    "description": "Recursively expand node groups.",
                 },
                 "max_depth": {
                     "type": "integer",
                     "default": 3,
                     "minimum": 1,
                     "maximum": 10,
-                    "description": "Maximum recursion depth for group expansion (prevents infinite nesting).",
+                    "description": "Max recursion for group expansion.",
                 },
             },
             "required": ["tree_type", "context"],
             "additionalProperties": False,
         },
         annotations={
-            "title": "Read Node Tree",
             "readOnlyHint": True,
             "destructiveHint": False,
             "idempotentHint": True,
@@ -293,12 +273,20 @@ _PERCEPTION_TOOLS = [
                     "maxItems": 2,
                     "description": "Optional [start, end] frame range to limit keyframe data.",
                 },
+                "keyframe_detail": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": "If true, return individual keyframes. Default: fcurve summaries only.",
+                },
+                "max_keyframes": {
+                    "type": "integer",
+                    "description": "Max keyframes to return (prevents large responses).",
+                },
             },
             "required": ["target"],
             "additionalProperties": False,
         },
         annotations={
-            "title": "Read Animation Data",
             "readOnlyHint": True,
             "destructiveHint": False,
             "idempotentHint": True,
@@ -331,7 +319,6 @@ _PERCEPTION_TOOLS = [
             "additionalProperties": False,
         },
         annotations={
-            "title": "List Materials",
             "readOnlyHint": True,
             "destructiveHint": False,
             "idempotentHint": True,
@@ -363,7 +350,6 @@ _PERCEPTION_TOOLS = [
             "additionalProperties": False,
         },
         annotations={
-            "title": "Get Scene Info",
             "readOnlyHint": True,
             "destructiveHint": False,
             "idempotentHint": True,
@@ -396,7 +382,6 @@ _PERCEPTION_TOOLS = [
             "additionalProperties": False,
         },
         annotations={
-            "title": "Get Collection Tree",
             "readOnlyHint": True,
             "destructiveHint": False,
             "idempotentHint": True,
@@ -437,7 +422,6 @@ _PERCEPTION_TOOLS = [
             "additionalProperties": False,
         },
         annotations={
-            "title": "Get Armature/Bone Data",
             "readOnlyHint": True,
             "destructiveHint": False,
             "idempotentHint": True,
@@ -470,7 +454,6 @@ _PERCEPTION_TOOLS = [
             "additionalProperties": False,
         },
         annotations={
-            "title": "List Images/Textures",
             "readOnlyHint": True,
             "destructiveHint": False,
             "idempotentHint": True,
@@ -510,7 +493,6 @@ _PERCEPTION_TOOLS = [
             "additionalProperties": False,
         },
         annotations={
-            "title": "Capture Viewport Screenshot",
             "readOnlyHint": True,
             "destructiveHint": False,
             "idempotentHint": True,
@@ -534,7 +516,6 @@ _PERCEPTION_TOOLS = [
             "additionalProperties": False,
         },
         annotations={
-            "title": "Get Selection State",
             "readOnlyHint": True,
             "destructiveHint": False,
             "idempotentHint": True,
@@ -729,7 +710,6 @@ _DECLARATIVE_TOOLS = [
             "additionalProperties": False,
         },
         annotations={
-            "title": "Edit Node Tree",
             "readOnlyHint": False,
             "destructiveHint": True,
             "idempotentHint": False,
@@ -809,7 +789,6 @@ _DECLARATIVE_TOOLS = [
             "additionalProperties": False,
         },
         annotations={
-            "title": "Edit Animation",
             "readOnlyHint": False,
             "destructiveHint": True,
             "idempotentHint": False,
@@ -876,7 +855,6 @@ _DECLARATIVE_TOOLS = [
             "additionalProperties": False,
         },
         annotations={
-            "title": "Edit Video Sequencer",
             "readOnlyHint": False,
             "destructiveHint": True,
             "idempotentHint": False,
@@ -963,7 +941,6 @@ _IMPERATIVE_TOOLS = [
             "additionalProperties": False,
         },
         annotations={
-            "title": "Create Object",
             "readOnlyHint": False,
             "destructiveHint": False,
             "idempotentHint": False,
@@ -1013,7 +990,6 @@ _IMPERATIVE_TOOLS = [
             "additionalProperties": False,
         },
         annotations={
-            "title": "Modify Object",
             "readOnlyHint": False,
             "destructiveHint": True,
             "idempotentHint": False,
@@ -1063,7 +1039,6 @@ _IMPERATIVE_TOOLS = [
             "additionalProperties": False,
         },
         annotations={
-            "title": "Manage Material",
             "readOnlyHint": False,
             "destructiveHint": True,
             "idempotentHint": False,
@@ -1091,46 +1066,11 @@ _IMPERATIVE_TOOLS = [
                 "modifier_name": {"type": "string", "description": "Modifier name."},
                 "modifier_type": {
                     "type": "string",
-                    "enum": [
-                        "SUBSURF",
-                        "MIRROR",
-                        "ARRAY",
-                        "BOOLEAN",
-                        "SOLIDIFY",
-                        "BEVEL",
-                        "SHRINKWRAP",
-                        "DECIMATE",
-                        "REMESH",
-                        "WEIGHTED_NORMAL",
-                        "SIMPLE_DEFORM",
-                        "SKIN",
-                        "WIREFRAME",
-                        "SCREW",
-                        "DISPLACE",
-                        "CAST",
-                        "SMOOTH",
-                        "LAPLACIANSMOOTH",
-                        "CORRECTIVE_SMOOTH",
-                        "CURVE",
-                        "LATTICE",
-                        "WARP",
-                        "WAVE",
-                        "CLOTH",
-                        "COLLISION",
-                        "ARMATURE",
-                        "MESH_DEFORM",
-                        "HOOK",
-                        "SURFACE_DEFORM",
-                        "DATA_TRANSFER",
-                        "NORMAL_EDIT",
-                        "UV_PROJECT",
-                        "UV_WARP",
-                        "VERTEX_WEIGHT_EDIT",
-                        "VERTEX_WEIGHT_MIX",
-                        "VERTEX_WEIGHT_PROXIMITY",
-                        "NODES",
-                    ],
-                    "description": "Modifier type. For add action only.",
+                    "description": (
+                        "Modifier type for add. Common: SUBSURF, MIRROR, ARRAY, BOOLEAN, "
+                        "SOLIDIFY, BEVEL, SHRINKWRAP, DECIMATE, REMESH, CLOTH, ARMATURE, NODES. "
+                        "Full list in bpy.types.Modifier bl_idname."
+                    ),
                 },
                 "settings": {
                     "type": "object",
@@ -1141,7 +1081,6 @@ _IMPERATIVE_TOOLS = [
             "additionalProperties": False,
         },
         annotations={
-            "title": "Manage Modifier",
             "readOnlyHint": False,
             "destructiveHint": True,
             "idempotentHint": False,
@@ -1189,7 +1128,6 @@ _IMPERATIVE_TOOLS = [
             "additionalProperties": False,
         },
         annotations={
-            "title": "Manage Collection",
             "readOnlyHint": False,
             "destructiveHint": True,
             "idempotentHint": False,
@@ -1258,7 +1196,6 @@ _IMPERATIVE_TOOLS = [
             "additionalProperties": False,
         },
         annotations={
-            "title": "Manage UV Mapping",
             "readOnlyHint": False,
             "destructiveHint": True,
             "idempotentHint": False,
@@ -1292,31 +1229,11 @@ _IMPERATIVE_TOOLS = [
                 "constraint_name": {"type": "string", "description": "Constraint name."},
                 "constraint_type": {
                     "type": "string",
-                    "enum": [
-                        "COPY_LOCATION",
-                        "COPY_ROTATION",
-                        "COPY_SCALE",
-                        "COPY_TRANSFORMS",
-                        "LIMIT_DISTANCE",
-                        "LIMIT_LOCATION",
-                        "LIMIT_ROTATION",
-                        "LIMIT_SCALE",
-                        "TRACK_TO",
-                        "DAMPED_TRACK",
-                        "LOCKED_TRACK",
-                        "IK",
-                        "STRETCH_TO",
-                        "FLOOR",
-                        "CHILD_OF",
-                        "FOLLOW_PATH",
-                        "CLAMP_TO",
-                        "PIVOT",
-                        "MAINTAIN_VOLUME",
-                        "TRANSFORMATION",
-                        "SHRINKWRAP",
-                        "ACTION",
-                    ],
-                    "description": "Constraint type for add action.",
+                    "description": (
+                        "Constraint type for add. Common: COPY_LOCATION, COPY_ROTATION, "
+                        "TRACK_TO, DAMPED_TRACK, IK, STRETCH_TO, CHILD_OF. "
+                        "Full list in bpy.types.Constraint bl_idname."
+                    ),
                 },
                 "settings": {"type": "object", "description": "Constraint settings as key-value pairs."},
             },
@@ -1324,7 +1241,6 @@ _IMPERATIVE_TOOLS = [
             "additionalProperties": False,
         },
         annotations={
-            "title": "Manage Constraints",
             "readOnlyHint": False,
             "destructiveHint": True,
             "idempotentHint": False,
@@ -1376,7 +1292,6 @@ _IMPERATIVE_TOOLS = [
             "additionalProperties": False,
         },
         annotations={
-            "title": "Manage Physics",
             "readOnlyHint": False,
             "destructiveHint": True,
             "idempotentHint": False,
@@ -1423,7 +1338,6 @@ _IMPERATIVE_TOOLS = [
             "additionalProperties": False,
         },
         annotations={
-            "title": "Setup Scene",
             "readOnlyHint": False,
             "destructiveHint": False,
             "idempotentHint": True,
@@ -1491,7 +1405,6 @@ _IMPERATIVE_TOOLS = [
             "additionalProperties": False,
         },
         annotations={
-            "title": "Edit Mesh",
             "readOnlyHint": False,
             "destructiveHint": True,
             "idempotentHint": False,
@@ -1529,7 +1442,6 @@ _FALLBACK_TOOLS = [
             "additionalProperties": False,
         },
         annotations={
-            "title": "Execute Blender Operator",
             "readOnlyHint": False,
             "destructiveHint": True,
             "idempotentHint": False,
@@ -1558,7 +1470,6 @@ _FALLBACK_TOOLS = [
             "additionalProperties": False,
         },
         annotations={
-            "title": "Execute Python Script",
             "readOnlyHint": False,
             "destructiveHint": True,
             "idempotentHint": False,
@@ -1583,22 +1494,7 @@ _FALLBACK_TOOLS = [
                 },
                 "format": {
                     "type": "string",
-                    "enum": [
-                        "FBX",
-                        "OBJ",
-                        "GLTF",
-                        "GLB",
-                        "USD",
-                        "USDC",
-                        "USDA",
-                        "ALEMBIC",
-                        "STL",
-                        "PLY",
-                        "SVG",
-                        "DAE",
-                        "X3D",
-                    ],
-                    "description": "File format.",
+                    "description": "File format: FBX, OBJ, GLTF, GLB, USD, USDC, USDA, ALEMBIC, STL, PLY, etc.",
                 },
                 "filepath": {
                     "type": "string",
@@ -1611,7 +1507,6 @@ _FALLBACK_TOOLS = [
             "additionalProperties": False,
         },
         annotations={
-            "title": "Import/Export Assets",
             "readOnlyHint": False,
             "destructiveHint": False,
             "idempotentHint": False,
@@ -1671,7 +1566,6 @@ _FALLBACK_TOOLS = [
             "additionalProperties": False,
         },
         annotations={
-            "title": "Render Scene",
             "readOnlyHint": False,
             "destructiveHint": False,
             "idempotentHint": False,
@@ -1721,7 +1615,6 @@ _FALLBACK_TOOLS = [
             "additionalProperties": False,
         },
         annotations={
-            "title": "Batch Execute",
             "readOnlyHint": False,
             "destructiveHint": True,
             "idempotentHint": False,

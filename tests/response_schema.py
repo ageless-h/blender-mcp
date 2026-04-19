@@ -9,8 +9,8 @@ from __future__ import annotations
 
 from typing import Any
 
-# ── Canonical envelope keys ──────────────────────────────────────
-_OK_KEYS = {"ok", "result", "error", "timing_ms"}
+_OK_KEYS = {"ok", "result", "timing_ms"}
+_ERROR_KEYS = {"ok", "error", "timing_ms"}
 
 
 class ResponseValidationError(Exception):
@@ -18,16 +18,15 @@ class ResponseValidationError(Exception):
 
 
 def validate_response(resp: dict[str, Any]) -> None:
-    """Validate that *resp* matches the unified response envelope.
+    """Validate that *resp* matches the compact response envelope.
 
     Rules:
       1. Must be a dict.
-      2. Must contain exactly {ok, result, error, timing_ms}.
-      3. ok must be bool.
-      4. timing_ms must be a number >= 0.
-      5. If ok is True:  result must be a dict, error must be None.
-      6. If ok is False: result must be None, error must be a dict
-         with at least {code, message}.
+      2. If ok is True: must have {ok, result, timing_ms}, no error key.
+      3. If ok is False: must have {ok, error, timing_ms}, no result key.
+      4. ok must be bool.
+      5. timing_ms must be a number >= 0.
+      6. No extra keys allowed beyond required keys.
 
     Raises:
         ResponseValidationError: on any violation.
@@ -37,22 +36,16 @@ def validate_response(resp: dict[str, Any]) -> None:
             f"Response must be a dict, got {type(resp).__name__}"
         )
 
-    missing = _OK_KEYS - resp.keys()
-    if missing:
-        raise ResponseValidationError(
-            f"Response missing keys: {missing}"
-        )
-
-    extra = resp.keys() - _OK_KEYS
-    if extra:
-        raise ResponseValidationError(
-            f"Response has unexpected keys: {extra}"
-        )
+    if "ok" not in resp:
+        raise ResponseValidationError("Response missing required key: 'ok'")
 
     if not isinstance(resp["ok"], bool):
         raise ResponseValidationError(
             f"\"ok\" must be bool, got {type(resp['ok']).__name__}"
         )
+
+    if "timing_ms" not in resp:
+        raise ResponseValidationError("Response missing required key: 'timing_ms'")
 
     timing = resp["timing_ms"]
     if not isinstance(timing, (int, float)) or timing < 0:
@@ -61,19 +54,38 @@ def validate_response(resp: dict[str, Any]) -> None:
         )
 
     if resp["ok"]:
-        if not isinstance(resp["result"], dict):
+        missing = _OK_KEYS - resp.keys()
+        if missing:
             raise ResponseValidationError(
-                "Success response must have dict \"result\", "
-                f"got {type(resp['result']).__name__}"
+                f"Success response missing keys: {missing}"
             )
-        if resp["error"] is not None:
+        if "error" in resp:
             raise ResponseValidationError(
-                "Success response must have \"error\": None"
+                "Success response should not have 'error' key"
+            )
+        extra = resp.keys() - _OK_KEYS
+        if extra:
+            raise ResponseValidationError(
+                f"Response has unexpected keys: {extra}"
+            )
+        if resp["result"] is not None and not isinstance(resp["result"], (dict, list)):
+            raise ResponseValidationError(
+                f"Success response 'result' must be dict/list/None, got {type(resp['result']).__name__}"
             )
     else:
-        if resp["result"] is not None:
+        missing = _ERROR_KEYS - resp.keys()
+        if missing:
             raise ResponseValidationError(
-                "Error response must have \"result\": None"
+                f"Error response missing keys: {missing}"
+            )
+        if "result" in resp:
+            raise ResponseValidationError(
+                "Error response should not have 'result' key"
+            )
+        extra = resp.keys() - _ERROR_KEYS
+        if extra:
+            raise ResponseValidationError(
+                f"Response has unexpected keys: {extra}"
             )
         err = resp["error"]
         if not isinstance(err, dict):

@@ -108,19 +108,23 @@ class MeshHandler(BaseHandler):
             if obj_eval is not None:
                 mesh = obj_eval.to_mesh()
 
-            result = {
+            result: dict[str, Any] = {
                 "name": mesh.name,
-                "vertices_count": len(mesh.vertices),
-                "edges_count": len(mesh.edges),
-                "polygons_count": len(mesh.polygons),
-                "loops_count": len(mesh.loops),
-                "has_custom_normals": mesh.has_custom_normals,
-                "is_editmode": mesh.is_editmode,
+                "vertices": len(mesh.vertices),
+                "edges": len(mesh.edges),
+                "polygons": len(mesh.polygons),
                 "materials": [m.name if m else None for m in mesh.materials],
             }
 
+            if mesh.loops:
+                result["loops"] = len(mesh.loops)
+            if mesh.has_custom_normals:
+                result["has_custom_normals"] = True
+            if mesh.is_editmode:
+                result["is_editmode"] = True
+
             if params.get("include_vertices"):
-                result["vertices"] = [list(v.co) for v in mesh.vertices]
+                result["vertices_data"] = [list(v.co) for v in mesh.vertices]
 
             if params.get("include_faces"):
                 result["faces"] = [list(p.vertices) for p in mesh.polygons]
@@ -202,4 +206,4 @@ class MeshHandler(BaseHandler):
                 }
             )
 
-        return {"items": items, "count": len(items)}
+        return {"items": items}
