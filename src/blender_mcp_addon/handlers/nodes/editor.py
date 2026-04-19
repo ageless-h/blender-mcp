@@ -358,6 +358,21 @@ def _resolve_node_tree_ref(value: str):
     return value
 
 
+def _resolve_dotted_path(root: Any, path: str) -> tuple[Any, str]:
+    """Resolve a dotted property path like ``color_ramp.interpolation``.
+
+    Returns ``(parent_object, final_attribute_name)`` so the caller can do
+    ``setattr(parent, attr, value)``.
+
+    Raises ``AttributeError`` if any intermediate segment doesn't exist.
+    """
+    parts = path.split(".")
+    obj = root
+    for part in parts[:-1]:
+        obj = getattr(obj, part)
+    return obj, parts[-1]
+
+
 def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]:
     """Edit a node tree by executing operations in order."""
     available, bpy = check_bpy_available()
@@ -590,21 +605,207 @@ def node_tree_edit(payload: dict[str, Any], *, started: float) -> dict[str, Any]
                 prop_name = op.get("property", "")
                 value = op.get("value")
                 node = _get_node(node_tree, node_name, node_index)
-                if node and hasattr(node, prop_name):
-                    current = getattr(node, prop_name)
+                if not node:
+                    results.append(
+                        {"op": i, "action": "set_property", "ok": False, "error": "node not found"}
+                    )
+                else:
+                    try:
+                        target_obj, final_attr = _resolve_dotted_path(node, prop_name)
+                    except AttributeError:
+                        results.append(
+                            {
+                                "op": i,
+                                "action": "set_property",
+                                "ok": False,
+                                "error": f"property path '{prop_name}' not found",
+                            }
+                        )
+                        continue
+
+                    if not hasattr(target_obj, final_attr):
+                        results.append(
+                            {
+                                "op": i,
+                                "action": "set_property",
+                                "ok": False,
+                                "error": f"property '{final_attr}' not found on {type(target_obj).__name__}",
+                            }
+                        )
+                        continue
+
+                    current = getattr(target_obj, final_attr)
                     if current is None and isinstance(value, str) and prop_name in ("node_tree",):
                         coerced = _resolve_node_tree_ref(value)
                     else:
                         coerced = coerce_value(value, current)
-                    setattr(node, prop_name, coerced)
+                    setattr(target_obj, final_attr, coerced)
                     results.append({"op": i, "action": "set_property", "ok": True})
+
+            elif action == "set_color_ramp_element":
+                node_name = op.get("node", "")
+                element_index = op.get("index", 0)
+                position = op.get("position")
+                color = op.get("color")
+                node = _get_node(node_tree, node_name, node_index)
+                if node and hasattr(node, "color_ramp"):
+                    elements = node.color_ramp.elements
+                    if 0 <= element_index < len(elements):
+                        element = elements[element_index]
+                        if position is not None:
+                            element.position = float(position)
+                        if color is not None:
+                            element.color = tuple(color)
+                        results.append(
+                            {
+                                "op": i,
+                                "action": "set_color_ramp_element",
+                                "index": element_index,
+                                "position": element.position,
+                                "color": list(element.color),
+                                "ok": True,
+                            }
+                        )
+                    else:
+                        results.append(
+                            {
+                                "op": i,
+                                "action": "set_color_ramp_element",
+                                "ok": False,
+                                "error": f"element index {element_index} out of range (0-{len(elements)-1})",
+                            }
+                        )
                 else:
                     results.append(
                         {
                             "op": i,
-                            "action": "set_property",
+                            "action": "set_color_ramp_element",
                             "ok": False,
-                            "error": "node or property not found",
+                            "error": "node not found or has no color_ramp",
+                        }
+                    )
+
+            elif action == "add_color_ramp_element":
+                node_name = op.get("node", "")
+                position = op.get("position", 0.5)
+                color = op.get("color")
+                node = _get_node(node_tree, node_name, node_index)
+                if node and hasattr(node, "color_ramp"):
+                    new_elem = node.color_ramp.elements.new(float(position))
+                    if color is not None:
+                        new_elem.color = tuple(color)
+                    results.append(
+                        {
+                            "op": i,
+                            "action": "add_color_ramp_element",
+                            "index": list(node.color_ramp.elements).index(new_elem),
+                            "position": new_elem.position,
+                            "color": list(new_elem.color),
+                            "ok": True,
+                        }
+                    )
+                else:
+                    results.append(
+                        {
+                            "op": i,
+                            "action": "add_color_ramp_element",
+                            "ok": False,
+                            "error": "node not found or has no color_ramp",
+                        }
+                    )
+
+            elif action == "remove_color_ramp_element":
+                node_name = op.get("node", "")
+                element_index = op.get("index", 0)
+                node = _get_node(node_tree, node_name, node_index)
+                if node and hasattr(node, "color_ramp"):
+                    elements = node.color_ramp.elements
+                    if len(elements) <= 1:
+                        results.append(
+                            {
+                                "op": i,
+                                "action": "remove_color_ramp_element",
+                                "ok": False,
+                                "error": "cannot remove last element",
+                            }
+                        )
+                    elif 0 <= element_index < len(elements):
+                        node.color_ramp.elements.remove(elements[element_index])
+                        results.append(
+                            {"op": i, "action": "remove_color_ramp_element", "index": element_index, "ok": True}
+                        )
+                    else:
+                        results.append(
+                            {
+                                "op": i,
+                                "action": "remove_color_ramp_element",
+                                "ok": False,
+                                "error": f"element index {element_index} out of range (0-{len(elements)-1})",
+                            }
+                        )
+                else:
+                    results.append(
+                        {
+                            "op": i,
+                            "action": "remove_color_ramp_element",
+                            "ok": False,
+                            "error": "node not found or has no color_ramp",
+                        }
+                    )
+
+            elif action == "set_curve_mapping_point":
+                node_name = op.get("node", "")
+                curve_index = op.get("curve_index", 0)
+                point_index = op.get("point_index", 0)
+                location = op.get("location")
+                handle_type = op.get("handle_type")
+                node = _get_node(node_tree, node_name, node_index)
+                if node and hasattr(node, "mapping"):
+                    mapping = node.mapping
+                    if 0 <= curve_index < len(mapping.curves):
+                        curve = mapping.curves[curve_index]
+                        if 0 <= point_index < len(curve.points):
+                            point = curve.points[point_index]
+                            if location is not None:
+                                point.location = tuple(location)
+                            if handle_type is not None:
+                                point.handle_type = handle_type
+                            mapping.update()
+                            results.append(
+                                {
+                                    "op": i,
+                                    "action": "set_curve_mapping_point",
+                                    "curve_index": curve_index,
+                                    "point_index": point_index,
+                                    "location": list(point.location),
+                                    "ok": True,
+                                }
+                            )
+                        else:
+                            results.append(
+                                {
+                                    "op": i,
+                                    "action": "set_curve_mapping_point",
+                                    "ok": False,
+                                    "error": f"point_index {point_index} out of range",
+                                }
+                            )
+                    else:
+                        results.append(
+                            {
+                                "op": i,
+                                "action": "set_curve_mapping_point",
+                                "ok": False,
+                                "error": f"curve_index {curve_index} out of range",
+                            }
+                        )
+                else:
+                    results.append(
+                        {
+                            "op": i,
+                            "action": "set_curve_mapping_point",
+                            "ok": False,
+                            "error": "node not found or has no mapping",
                         }
                     )
 

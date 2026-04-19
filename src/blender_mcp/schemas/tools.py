@@ -601,6 +601,10 @@ _DECLARATIVE_TOOLS = [
                                     "disconnect",
                                     "set_value",
                                     "set_property",
+                                    "set_color_ramp_element",
+                                    "add_color_ramp_element",
+                                    "remove_color_ramp_element",
+                                    "set_curve_mapping_point",
                                     "add_interface_socket",
                                     "remove_interface_socket",
                                 ],
@@ -639,7 +643,9 @@ _DECLARATIVE_TOOLS = [
                             "property": {
                                 "type": "string",
                                 "description": (
-                                    "For set_property: node property name (e.g. 'interpolation', 'blend_type')."
+                                    "For set_property: node property name or dotted path "
+                                    "(e.g. 'interpolation', 'blend_type', 'color_ramp.interpolation', "
+                                    "'color_ramp.color_mode')."
                                 ),
                             },
                             "from_node": {"type": "string", "description": "For connect: source node name."},
@@ -673,6 +679,45 @@ _DECLARATIVE_TOOLS = [
                             "socket_name": {
                                 "type": "string",
                                 "description": "For remove_interface_socket: name of the socket to remove.",
+                            },
+                            "index": {
+                                "type": "integer",
+                                "description": (
+                                    "For set_color_ramp_element/remove_color_ramp_element: "
+                                    "element index (0-based)."
+                                ),
+                            },
+                            "position": {
+                                "type": "number",
+                                "description": (
+                                    "For set_color_ramp_element/add_color_ramp_element: "
+                                    "element position (0.0 to 1.0)."
+                                ),
+                            },
+                            "color": {
+                                "type": "array",
+                                "items": {"type": "number"},
+                                "minItems": 4,
+                                "maxItems": 4,
+                                "description": (
+                                    "For set_color_ramp_element/add_color_ramp_element: "
+                                    "element color [r, g, b, a]."
+                                ),
+                            },
+                            "curve_index": {
+                                "type": "integer",
+                                "description": "For set_curve_mapping_point: curve index (0-based).",
+                            },
+                            "point_index": {
+                                "type": "integer",
+                                "description": "For set_curve_mapping_point: point index (0-based).",
+                            },
+                            "handle_type": {
+                                "type": "string",
+                                "description": (
+                                    "For set_curve_mapping_point: handle type "
+                                    "('AUTO', 'AUTO_CLAMPED', 'VECTOR')."
+                                ),
                             },
                         },
                         "required": ["action"],
