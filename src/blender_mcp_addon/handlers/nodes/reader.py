@@ -8,6 +8,156 @@ from typing import Any
 from ..error_codes import ErrorCode
 from ..response import _error, _ok, bpy_unavailable_error, check_bpy_available
 
+# ---------------------------------------------------------------------------
+# Helpers: node-specific property reading via Blender RNA introspection
+# ---------------------------------------------------------------------------
+
+# Cached set of base-Node property identifiers (populated on first use).
+_BASE_NODE_PROPS: frozenset[str] | None = None
+
+# Properties to skip even if not in the base Node class (handled elsewhere).
+_EXTRA_SKIP_PROPS = frozenset({"node_tree"})
+
+
+def _get_base_node_props() -> frozenset[str]:
+    """Return identifiers of properties inherited from the base Node class."""
+    global _BASE_NODE_PROPS
+    if _BASE_NODE_PROPS is not None:
+        return _BASE_NODE_PROPS
+    try:
+        import bpy  # type: ignore
+
+        _BASE_NODE_PROPS = frozenset(p.identifier for p in bpy.types.Node.bl_rna.properties)
+    except ImportError:
+        # Fallback for unit-test environments without bpy.
+        _BASE_NODE_PROPS = frozenset({
+            "bl_description", "bl_height_default", "bl_height_max", "bl_height_min",
+            "bl_icon", "bl_idname", "bl_label", "bl_static_type",
+            "bl_width_default", "bl_width_max", "bl_width_min",
+            "color", "dimensions", "height", "hide", "internal_links",
+            "inputs", "label", "location", "mute", "name", "outputs",
+            "parent", "rna_type", "select", "show_options", "show_preview",
+            "show_texture", "type", "use_custom_color", "width", "width_hidden",
+        })
+    return _BASE_NODE_PROPS
+
+
+def _serialize_color_ramp(color_ramp: Any) -> dict[str, Any]:
+    """Serialize a ``ColorRamp`` to a JSON-safe dict."""
+    elements = []
+    for elem in color_ramp.elements:
+        elements.append({
+            "position": round(elem.position, 5),
+            "color": [round(c, 5) for c in elem.color],
+        })
+    return {
+        "interpolation": color_ramp.interpolation,
+        "color_mode": color_ramp.color_mode,
+        "hue_interpolation": color_ramp.hue_interpolation,
+        "elements": elements,
+    }
+
+
+def _serialize_curve_mapping(mapping: Any) -> dict[str, Any]:
+    """Serialize a ``CurveMapping`` to a JSON-safe dict."""
+    curves = []
+    for curve in mapping.curves:
+        points = []
+        for point in curve.points:
+            points.append({
+                "location": [round(v, 5) for v in point.location],
+                "handle_type": point.handle_type,
+            })
+        curves.append({"points": points})
+    return {
+        "use_clip": mapping.use_clip,
+        "clip_min_x": mapping.clip_min_x,
+        "clip_min_y": mapping.clip_min_y,
+        "clip_max_x": mapping.clip_max_x,
+        "clip_max_y": mapping.clip_max_y,
+        "curves": curves,
+    }
+
+
+def _serialize_prop_value(node: Any, prop: Any) -> Any:
+    """Serialize a single RNA property value to a JSON-safe value.
+
+    Returns ``None`` for unsupported or unreadable properties.
+    """
+    try:
+        value = getattr(node, prop.identifier)
+    except (AttributeError, RuntimeError):
+        return None
+    if value is None:
+        return None
+
+    # -- Pointer properties --------------------------------------------------
+    if prop.type == "POINTER":
+        type_name = type(value).__name__
+        if type_name == "ColorRamp":
+            return _serialize_color_ramp(value)
+        if type_name == "CurveMapping":
+            return _serialize_curve_mapping(value)
+        if type_name == "Image":
+            info: dict[str, Any] = {"name": value.name}
+            if hasattr(value, "filepath") and value.filepath:
+                info["filepath"] = value.filepath
+            return info
+        # Other named data-block references → return name only.
+        if hasattr(value, "name"):
+            return value.name
+        return None
+
+    # -- Simple types --------------------------------------------------------
+    if prop.type in ("ENUM", "INT", "FLOAT", "BOOLEAN", "STRING"):
+        return value
+
+    return None
+
+
+def _read_node_properties(node: Any) -> dict[str, Any]:
+    """Read node-specific RNA properties (excludes base-Node & socket data).
+
+    Iterates over ``node.bl_rna.properties`` and returns a dict of
+    *property-identifier* → *serialised value* for all non-base,
+    user-relevant properties.  Readonly POINTER properties (e.g.
+    ``color_ramp``, ``mapping``) are included because their *content*
+    is mutable even though the pointer itself is not.
+    """
+    base_props = _get_base_node_props() | _EXTRA_SKIP_PROPS
+    properties: dict[str, Any] = {}
+
+    try:
+        rna_props = node.bl_rna.properties
+    except AttributeError:
+        return properties
+
+    for prop in rna_props:
+        if prop.identifier in base_props:
+            continue
+
+        # POINTER: always try (even when readonly, e.g. color_ramp).
+        if prop.type == "POINTER":
+            value = _serialize_prop_value(node, prop)
+            if value is not None:
+                properties[prop.identifier] = value
+            continue
+
+        # Skip readonly simple properties and collections.
+        if prop.is_readonly or prop.type == "COLLECTION":
+            continue
+
+        value = _serialize_prop_value(node, prop)
+        if value is not None:
+            properties[prop.identifier] = value
+
+    return properties
+
+
+# ---------------------------------------------------------------------------
+# Main node reader
+# ---------------------------------------------------------------------------
+
 
 def _read_node(
     node: Any,
@@ -59,6 +209,11 @@ def _read_node(
         for out in node.outputs:
             outputs.append({"name": out.name, "type": out.type, "is_linked": out.is_linked})
         data["outputs"] = outputs
+
+        # Node-specific properties (operation, color_ramp, image, etc.)
+        props = _read_node_properties(node)
+        if props:
+            data["properties"] = props
 
     # Recursively expand node group if requested
     if (
