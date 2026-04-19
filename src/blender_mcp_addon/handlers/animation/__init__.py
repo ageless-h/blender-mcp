@@ -3,7 +3,10 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 # Cache Blender version check at module load to avoid repeated hasattr calls
 _USE_LAYERED_API: bool | None = None
@@ -19,6 +22,7 @@ def _detect_layered_api() -> bool:
 
         _USE_LAYERED_API = bpy.app.version >= (5, 0)
     except Exception:
+        logger.debug("bpy not available, defaulting to legacy animation API")
         _USE_LAYERED_API = False
     return _USE_LAYERED_API
 

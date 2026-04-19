@@ -33,6 +33,7 @@ def _use_length_param() -> bool:
 
         _USE_LENGTH_PARAM = _bpy.app.version >= (5, 0)
     except Exception:
+        logger.debug("bpy not available, defaulting to legacy VSE API (frame_end param)")
         _USE_LENGTH_PARAM = False
     return _USE_LENGTH_PARAM
 

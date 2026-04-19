@@ -76,3 +76,6 @@ desktop.ini
 *.bak
 *.swp
 .cache/
+
+# AI planning/working directories (local only)
+.sisyphus/

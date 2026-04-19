@@ -1,33 +1,41 @@
 # Roadmap
 
-> Last Updated: 2026-04-15
+> Last Updated: 2026-04-19
 
-This document outlines planned features and enhancements for Blender MCP (current: v1.2.0).
+This document outlines planned features and enhancements for Blender MCP (current: v1.3.0).
+
+---
+
+## ✅ Completed Features
+
+### batch_execute - Batch Tool Execution
+
+**Status**: ✅ Completed (v1.3.0)  
+**Commit**: 5efe659
+
+**Description**:
+Batch execution mechanism to process multiple tool requests in a single round-trip, reducing network overhead for common workflows like creating multiple objects or applying materials to many meshes.
+
+**Tool**: `blender_batch_execute`
+
+---
+
+### MCP Progress - Long-Running Operation Feedback
+
+**Status**: ✅ Completed (v1.3.0)
+
+**Description**:
+Progress reporting for long-running operations (rendering, baking, complex geometry processing) using MCP Progress protocol.
+
+**Features**:
+- Progress callbacks in `SocketAdapter`
+- Rate-limited notifications (100ms minimum interval)
+- Thread-safe progress token management
+- Works with `blender_render_scene` and other long operations
 
 ---
 
 ## 🔵 P3: Future Enhancements
-
-### Performance & Efficiency
-
-#### batch_execute - Batch Tool Execution
-
-**Priority**: High  
-**Expected Impact**: 10-100x performance improvement for bulk operations
-
-**Description**:
-Implement batch execution mechanism to process multiple tool requests in a single round-trip, reducing network overhead for common workflows like creating multiple objects or applying materials to many meshes.
-
-**Reference**: Unity MCP's batch_execute implementation
-
-**Implementation Plan**:
-- [ ] Design batch request/response schema
-- [ ] Implement request batching logic in MCP server
-- [ ] Update addon to handle batched operations
-- [ ] Add batch-specific error handling
-- [ ] Document batch execution patterns
-
----
 
 ### MCP Protocol Features
 
@@ -49,24 +57,6 @@ Expose Blender's internal asset library (Materials, Node Groups, Scenes, etc.) t
 - [ ] Implement `read_resource` handler
 - [ ] Add filtering and search capabilities
 - [ ] Document resource URIs structure
-
-#### MCP Progress - Long-Running Operation Feedback
-
-**Priority**: Medium
-
-**Description**:
-Add progress reporting for long-running operations (rendering, baking, complex geometry processing) using MCP Progress protocol.
-
-**Use Cases**:
-- Rendering operations can report % complete
-- Physics simulation baking progress
-- Large mesh processing feedback
-
-**Implementation Plan**:
-- [ ] Identify long-running operations
-- [ ] Integrate progress callbacks
-- [ ] Map Blender progress to MCP progress schema
-- [ ] Test with rendering workflow
 
 ---
 
@@ -142,8 +132,8 @@ Want to help implement these features?
 
 | Version | Planned Features | Status |
 |---------|------------------|--------|
-| v1.3.0 | batch_execute, MCP Resources | Planned |
-| v1.4.0 | WebSocket transport, MCP Progress | Planned |
+| v1.3.0 | batch_execute, MCP Progress | ✅ Released |
+| v1.4.0 | WebSocket transport, MCP Resources | Planned |
 | v1.5.0 | External integrations (PolyHaven, Sketchfab) | Planned |
 
 *Priorities subject to change based on community feedback.*
